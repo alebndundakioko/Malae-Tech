@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { 
   User, 
   Zap, 
@@ -18,7 +20,8 @@ import {
   ChevronLeft, 
   Upload,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 
 // --- Types ---
@@ -173,8 +176,52 @@ export default function App() {
   const [formData, setFormData] = useState<any>({});
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const currentStep = STEPS[currentStepIndex];
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
+
+  const handleCompileReport = async () => {
+    setIsGenerating(true);
+    try {
+      // Wait for the report view to be rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const reportElement = reportRef.current;
+      
+      if (!reportElement) throw new Error("Report element not found");
+
+      const sections = reportElement.querySelectorAll('.report-section');
+      
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i] as HTMLElement;
+        const canvas = await html2canvas(section, {
+          scale: 2, // High quality
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#F0F4F8'
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      }
+      
+      const patientName = formData.fullName || 'Patient';
+      pdf.save(`Medical_History_${patientName.replace(/\s+/g, '_')}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF report. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleNext = () => {
     if (currentStepIndex < STEPS.length - 1) {
@@ -201,8 +248,8 @@ export default function App() {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const renderStepContent = () => {
-    switch (currentStep.id) {
+  const renderStepContent = (stepId: StepId) => {
+    switch (stepId) {
       case 'demographics':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -397,7 +444,7 @@ export default function App() {
                 </div>
 
                 <div className="bg-white rounded-[32px] p-10 shadow-sm border border-slate-100">
-                  {renderStepContent()}
+                  {renderStepContent(currentStep.id)}
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -428,10 +475,21 @@ export default function App() {
 
           {currentStepIndex === STEPS.length - 1 ? (
             <button 
-              className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+              onClick={handleCompileReport}
+              disabled={isGenerating}
+              className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FileText className="w-4 h-4" />
-              COMPILE REPORT
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  GENERATING...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4" />
+                  COMPILE REPORT
+                </>
+              )}
             </button>
           ) : (
             <button 
@@ -444,6 +502,58 @@ export default function App() {
           )}
         </footer>
       </main>
+
+      {/* Hidden Report View for PDF Generation */}
+      <div className="fixed -left-[9999px] top-0 w-[800px] bg-[#F0F4F8]" ref={reportRef}>
+        {STEPS.map((step) => (
+          <div key={step.id} className="report-section p-12 flex flex-col gap-10 min-h-[1123px]">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-6">
+              <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-bold text-slate-800">Malae Clinical Intelligence</h1>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Medical History Report</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-500">{new Date().toLocaleDateString()}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{step.label}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-800">{step.title}</h2>
+              <p className="text-base text-slate-400 font-medium">{step.subtitle}</p>
+            </div>
+
+            <div className="bg-white rounded-[32px] p-10 shadow-sm border border-slate-100">
+              {renderStepContent(step.id)}
+            </div>
+
+            <div className="mt-auto pt-10 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+              <span>Confidential Medical Record</span>
+              <span>Page {STEPS.indexOf(step) + 1} of {STEPS.length}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {isGenerating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center gap-4"
+          >
+            <div className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-[#8B5E3C] animate-spin" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-slate-800">Compiling Report</h3>
+              <p className="text-sm text-slate-400 font-medium">Capturing clinical data and generating PDF...</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
