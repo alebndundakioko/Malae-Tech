@@ -5,8 +5,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { 
+  Document, 
+  Page, 
+  Text, 
+  View, 
+  StyleSheet, 
+  pdf, 
+  Font 
+} from '@react-pdf/renderer';
 import { 
   User, 
   Zap, 
@@ -169,6 +176,333 @@ const FileUpload = ({ label, subtitle }: any) => (
   </div>
 );
 
+// --- PDF Styles ---
+
+const pdfStyles = StyleSheet.create({
+  page: {
+    padding: 40,
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'Helvetica',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 20,
+    marginBottom: 30,
+  },
+  brand: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+  },
+  reportType: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  meta: {
+    textAlign: 'right',
+  },
+  date: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#64748B',
+  },
+  stepLabel: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  content: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -10,
+  },
+  gridItem: {
+    width: '50%',
+    paddingHorizontal: 10,
+    marginBottom: 15,
+  },
+  fullWidth: {
+    width: '100%',
+    paddingHorizontal: 10,
+    marginBottom: 15,
+  },
+  fieldLabel: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  fieldValue: {
+    fontSize: 10,
+    color: '#334155',
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  systemSection: {
+    marginBottom: 20,
+  },
+  systemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  systemDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#8B5E3C',
+    marginRight: 6,
+  },
+  systemTitle: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#334155',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 40,
+    right: 40,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 10,
+  },
+  footerText: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: '#CBD5E1',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+});
+
+// --- PDF Document Component ---
+
+const MedicalReportPDF = ({ formData }: { formData: any }) => (
+  <Document>
+    {STEPS.map((step, index) => (
+      <Page key={step.id} size="A4" style={pdfStyles.page}>
+        <View style={pdfStyles.header}>
+          <View>
+            <Text style={pdfStyles.brand}>Malae Clinical Intelligence</Text>
+            <Text style={pdfStyles.reportType}>Medical History Report</Text>
+          </View>
+          <View style={pdfStyles.meta}>
+            <Text style={pdfStyles.date}>{new Date().toLocaleDateString()}</Text>
+            <Text style={pdfStyles.stepLabel}>{step.label}</Text>
+          </View>
+        </View>
+
+        <View style={pdfStyles.titleSection}>
+          <Text style={pdfStyles.title}>{step.title}</Text>
+          <Text style={pdfStyles.subtitle}>{step.subtitle}</Text>
+        </View>
+
+        <View style={pdfStyles.content}>
+          {step.id === 'demographics' && (
+            <View style={pdfStyles.grid}>
+              {[
+                { label: 'Date of Admission', value: formData.admissionDate },
+                { label: 'Patient Full Name', value: formData.fullName },
+                { label: 'Age (years)', value: formData.age },
+                { label: 'Sex', value: formData.sex },
+                { label: 'Tribe/Ethnicity', value: formData.ethnicity },
+                { label: 'Address/Location', value: formData.address },
+                { label: 'Religion', value: formData.religion },
+                { label: 'Occupation', value: formData.occupation },
+                { label: 'Next of Kin (Initials)', value: formData.nextOfKin },
+                { label: 'Relationship', value: formData.relationship },
+              ].map((field, i) => (
+                <View key={i} style={pdfStyles.gridItem}>
+                  <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
+                  <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {step.id === 'presenting_complaint' && (
+            <View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Chief Complaint</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.chiefComplaint || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Duration</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.duration || 'N/A'}</Text>
+              </View>
+            </View>
+          )}
+
+          {step.id === 'hpc_details' && (
+            <View style={pdfStyles.grid}>
+              {[
+                { label: 'Onset', value: formData.onset },
+                { label: 'Progression', value: formData.progression },
+                { label: 'Character', value: formData.character },
+                { label: 'Severity', value: formData.severity },
+                { label: 'Location', value: formData.location },
+                { label: 'Radiation', value: formData.radiation },
+              ].map((field, i) => (
+                <View key={i} style={pdfStyles.gridItem}>
+                  <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
+                  <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
+                </View>
+              ))}
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Associated Symptoms (Present)</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.associatedSymptoms || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Important Negative Findings</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.negativeFindings || 'N/A'}</Text>
+              </View>
+              {[
+                { label: 'Aggravating Factors', value: formData.aggravating },
+                { label: 'Relieving Factors', value: formData.relieving },
+                { label: 'Previous Treatment', value: formData.prevTreatment },
+                { label: 'Response to Treatment', value: formData.respTreatment },
+              ].map((field, i) => (
+                <View key={i} style={pdfStyles.gridItem}>
+                  <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
+                  <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
+                </View>
+              ))}
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Impact on Daily Activities</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.impact || 'N/A'}</Text>
+              </View>
+            </View>
+          )}
+
+          {step.id === 'review_of_systems' && (
+            <View>
+              {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL'].map(system => (
+                <View key={system} style={pdfStyles.systemSection}>
+                  <View style={pdfStyles.systemHeader}>
+                    <View style={pdfStyles.systemDot} />
+                    <Text style={pdfStyles.systemTitle}>{system}</Text>
+                  </View>
+                  <View style={pdfStyles.grid}>
+                    <View style={pdfStyles.gridItem}>
+                      <Text style={pdfStyles.fieldLabel}>Symptoms Present</Text>
+                      <Text style={pdfStyles.fieldValue}>{formData[`${system}_present`] || 'N/A'}</Text>
+                    </View>
+                    <View style={pdfStyles.gridItem}>
+                      <Text style={pdfStyles.fieldLabel}>Symptoms Denied</Text>
+                      <Text style={pdfStyles.fieldValue}>{formData[`${system}_denied`] || 'N/A'}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {step.id === 'past_medical_hx' && (
+            <View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Chronic Medical Conditions</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.chronicConditions || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Current Pharmacotherapy</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.medications || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Allergies & Hypersensitivities</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.allergies || 'N/A'}</Text>
+              </View>
+            </View>
+          )}
+
+          {step.id === 'past_surgical_hx' && (
+            <View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Previous Surgeries</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.surgeries || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Major Trauma/Fractures</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.trauma || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Blood Transfusion History</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.transfusions || 'N/A'}</Text>
+              </View>
+            </View>
+          )}
+
+          {step.id === 'family_social_hx' && (
+            <View>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Familial Health Patterns</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.familyHistory || 'N/A'}</Text>
+              </View>
+              <View style={pdfStyles.grid}>
+                {[
+                  { label: 'Alcohol Consumption', value: formData.alcohol },
+                  { label: 'Tobacco Consumption', value: formData.tobacco },
+                  { label: 'Current Marital Status', value: formData.maritalStatus },
+                  { label: 'Household Dependents', value: formData.dependents },
+                ].map((field, i) => (
+                  <View key={i} style={pdfStyles.gridItem}>
+                    <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
+                    <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View style={pdfStyles.footer}>
+          <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
+          <Text style={pdfStyles.footerText}>Page {index + 1} of {STEPS.length}</Text>
+        </View>
+      </Page>
+    ))}
+  </Document>
+);
+
 // --- Main App ---
 
 export default function App() {
@@ -185,39 +519,33 @@ export default function App() {
   const handleCompileReport = async () => {
     setIsGenerating(true);
     try {
-      // Wait for the report view to be rendered
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log("Generating high-quality PDF using @react-pdf/renderer...");
       
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const reportElement = reportRef.current;
-      
-      if (!reportElement) throw new Error("Report element not found");
-
-      const sections = reportElement.querySelectorAll('.report-section');
-      
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i] as HTMLElement;
-        const canvas = await html2canvas(section, {
-          scale: 2, // High quality
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#F0F4F8'
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      }
+      // Generate PDF blob
+      const blob = await pdf(<MedicalReportPDF formData={formData} />).toBlob();
       
       const patientName = formData.fullName || 'Patient';
-      pdf.save(`Medical_History_${patientName.replace(/\s+/g, '_')}.pdf`);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      alert("Failed to generate PDF report. Please try again.");
+      const fileName = `Medical_History_${patientName.trim().replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      console.log("PDF download triggered successfully.");
+    } catch (error: any) {
+      console.error("PDF Generation Error:", error);
+      alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -502,38 +830,6 @@ export default function App() {
           )}
         </footer>
       </main>
-
-      {/* Hidden Report View for PDF Generation */}
-      <div className="fixed -left-[9999px] top-0 w-[800px] bg-[#F0F4F8]" ref={reportRef}>
-        {STEPS.map((step) => (
-          <div key={step.id} className="report-section p-12 flex flex-col gap-10 min-h-[1123px]">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-6">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-slate-800">Malae Clinical Intelligence</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Medical History Report</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold text-slate-500">{new Date().toLocaleDateString()}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{step.label}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-800">{step.title}</h2>
-              <p className="text-base text-slate-400 font-medium">{step.subtitle}</p>
-            </div>
-
-            <div className="bg-white rounded-[32px] p-10 shadow-sm border border-slate-100">
-              {renderStepContent(step.id)}
-            </div>
-
-            <div className="mt-auto pt-10 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-              <span>Confidential Medical Record</span>
-              <span>Page {STEPS.indexOf(step) + 1} of {STEPS.length}</span>
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* Loading Overlay */}
       <AnimatePresence>
