@@ -14,6 +14,7 @@ import {
   pdf, 
   Font 
 } from '@react-pdf/renderer';
+import { GoogleGenAI } from "@google/genai";
 import { 
   User, 
   Zap, 
@@ -30,7 +31,9 @@ import {
   CheckCircle2,
   Loader2,
   Menu,
-  X
+  X,
+  BookOpen,
+  Download
 } from 'lucide-react';
 
 // --- Types ---
@@ -315,9 +318,66 @@ const pdfStyles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  // Story Report Specific Styles
+  coverPage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 60,
+  },
+  coverTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  coverSubtitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  coverTopic: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 40,
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#1E293B',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 4,
+  },
+  paragraph: {
+    fontSize: 10,
+    lineHeight: 1.6,
+    color: '#334155',
+    marginBottom: 10,
+    textAlign: 'justify',
+  },
+  listItem: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    paddingLeft: 10,
+  },
+  bullet: {
+    width: 15,
+    fontSize: 10,
+  },
+  listContent: {
+    flex: 1,
+    fontSize: 10,
+    lineHeight: 1.4,
+    color: '#334155',
+  },
 });
 
-// --- PDF Document Component ---
+// --- PDF Document Components ---
 
 const MedicalReportPDF = ({ formData }: { formData: any }) => (
   <Document>
@@ -505,6 +565,117 @@ const MedicalReportPDF = ({ formData }: { formData: any }) => (
   </Document>
 );
 
+const SurgicalCaseWriteUpPDF = ({ formData, storyData }: { formData: any, storyData: any }) => (
+  <Document>
+    {/* Cover Page */}
+    <Page size="A4" style={pdfStyles.page}>
+      <View style={pdfStyles.coverPage}>
+        <Text style={pdfStyles.coverTitle}>{formData.fullName || 'PATIENT NAME'}</Text>
+        <Text style={pdfStyles.coverSubtitle}>SURGICAL CASE WRITE UP</Text>
+        <Text style={pdfStyles.coverTopic}>TOPIC: {formData.chiefComplaint || 'CLINICAL CASE'}</Text>
+      </View>
+      <View style={pdfStyles.footer}>
+        <Text style={pdfStyles.footerText}>Malae Clinical Intelligence</Text>
+        <Text style={pdfStyles.footerText}>Page 1</Text>
+      </View>
+    </Page>
+
+    {/* Narrative Content */}
+    <Page size="A4" style={pdfStyles.page}>
+      <View style={pdfStyles.header}>
+        <View>
+          <Text style={pdfStyles.brand}>Malae Clinical Intelligence</Text>
+          <Text style={pdfStyles.reportType}>Surgical Case Write Up</Text>
+        </View>
+        <View style={pdfStyles.meta}>
+          <Text style={pdfStyles.date}>{new Date().toLocaleDateString()}</Text>
+        </View>
+      </View>
+
+      <View style={pdfStyles.grid}>
+        {[
+          { label: 'Date of Admission', value: formData.admissionDate },
+          { label: 'Name', value: formData.fullName },
+          { label: 'Age', value: formData.age },
+          { label: 'Sex', value: formData.sex },
+          { label: 'Tribe', value: formData.ethnicity },
+          { label: 'Address', value: formData.address },
+          { label: 'Religion', value: formData.religion },
+          { label: 'Occupation', value: formData.occupation },
+        ].map((field, i) => (
+          <View key={i} style={pdfStyles.gridItem}>
+            <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
+            <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={pdfStyles.sectionTitle}>Presenting Complaint</Text>
+      <Text style={pdfStyles.paragraph}>{formData.chiefComplaint} x {formData.duration}</Text>
+
+      <Text style={pdfStyles.sectionTitle}>History of Presenting Complaint</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.hpcNarrative}</Text>
+
+      <Text style={pdfStyles.sectionTitle}>Review of Other Systems</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.rosNarrative}</Text>
+
+      <Text style={pdfStyles.sectionTitle}>Past Medical History</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.pmhNarrative}</Text>
+
+      <Text style={pdfStyles.sectionTitle}>Past Surgical History</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.pshNarrative}</Text>
+
+      <View style={pdfStyles.footer}>
+        <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
+        <Text style={pdfStyles.footerText}>Page 2</Text>
+      </View>
+    </Page>
+
+    {/* Differentials & Examination */}
+    <Page size="A4" style={pdfStyles.page}>
+      <Text style={pdfStyles.sectionTitle}>Family Social History</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.fshNarrative}</Text>
+
+      <Text style={pdfStyles.sectionTitle}>Differential Diagnoses</Text>
+      {storyData.differentials?.map((diff: any, i: number) => (
+        <View key={i} style={pdfStyles.listItem}>
+          <Text style={pdfStyles.bullet}>{i + 1}.</Text>
+          <Text style={pdfStyles.listContent}>
+            <Text style={{ fontWeight: 'bold' }}>{diff.diagnosis}:</Text> {diff.reasoning}
+          </Text>
+        </View>
+      ))}
+
+      <Text style={pdfStyles.sectionTitle}>On Examination</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.examinationNarrative}</Text>
+
+      <View style={pdfStyles.footer}>
+        <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
+        <Text style={pdfStyles.footerText}>Page 3</Text>
+      </View>
+    </Page>
+
+    {/* Case Discussion */}
+    <Page size="A4" style={pdfStyles.page}>
+      <Text style={pdfStyles.sectionTitle}>Case Discussion</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.caseDiscussion}</Text>
+
+      <Text style={pdfStyles.sectionTitle}>References</Text>
+      {storyData.references?.map((ref: string, i: number) => (
+        <View key={i} style={pdfStyles.listItem}>
+          <Text style={pdfStyles.bullet}>{i + 1}.</Text>
+          <Text style={pdfStyles.listContent}>{ref}</Text>
+        </View>
+      ))}
+
+      <View style={pdfStyles.footer}>
+        <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
+        <Text style={pdfStyles.footerText}>Page 4</Text>
+      </View>
+    </Page>
+  </Document>
+);
+
 // --- Main App ---
 
 export default function App() {
@@ -512,46 +683,99 @@ export default function App() {
   const [formData, setFormData] = useState<any>({});
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
 
   const currentStep = STEPS[currentStepIndex];
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
 
   const handleCompileReport = async () => {
+    setShowReportModal(true);
+  };
+
+  const downloadOriginalReport = async () => {
+    setShowReportModal(false);
     setIsGenerating(true);
+    setGenerationStatus("Generating clinical data report...");
     try {
-      console.log("Generating high-quality PDF using @react-pdf/renderer...");
-      
-      // Generate PDF blob
       const blob = await pdf(<MedicalReportPDF formData={formData} />).toBlob();
-      
-      const patientName = formData.fullName || 'Patient';
-      const fileName = `Medical_History_${patientName.trim().replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
-      
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
-      
-      console.log("PDF download triggered successfully.");
+      triggerDownload(blob, `Clinical_Report_${formData.fullName || 'Patient'}`);
     } catch (error: any) {
       console.error("PDF Generation Error:", error);
       alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const downloadStoryReport = async () => {
+    setShowReportModal(false);
+    setIsGenerating(true);
+    setGenerationStatus("AI is analyzing clinical data and writing case story...");
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const model = "gemini-3.1-pro-preview";
+      
+      const prompt = `
+        You are a senior surgical consultant. Based on the following patient data, write a high-level, cohesive surgical case write-up story.
+        Use professional medical vocabulary and a formal academic tone.
+        
+        Patient Data:
+        ${JSON.stringify(formData, null, 2)}
+        
+        Return the response in JSON format with the following structure:
+        {
+          "hpcNarrative": "A detailed chronological story of the presenting complaint...",
+          "rosNarrative": "A cohesive summary of the review of systems...",
+          "pmhNarrative": "A summary of medical history and chronic conditions...",
+          "pshNarrative": "A summary of surgical history...",
+          "fshNarrative": "A summary of family and social history...",
+          "examinationNarrative": "A professional write-up of physical examination findings (General, Local, Systemic)...",
+          "differentials": [
+            { "diagnosis": "Diagnosis Name", "reasoning": "Detailed medical reasoning why this is a differential..." }
+          ],
+          "caseDiscussion": "A deep academic discussion about the likely primary diagnosis, its pathophysiology, typical clinical features, and management principles.",
+          "references": ["Reference 1", "Reference 2"]
+        }
+      `;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+
+      const storyData = JSON.parse(response.text || "{}");
+      
+      setGenerationStatus("Compiling story into high-level PDF...");
+      const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={storyData} />).toBlob();
+      triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}`);
+      
+    } catch (error: any) {
+      console.error("Story Generation Error:", error);
+      alert(`Error generating Story Report: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const triggerDownload = (blob: Blob, baseName: string) => {
+    const fileName = `${baseName}_${new Date().getTime()}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const handleNext = () => {
@@ -932,11 +1156,76 @@ export default function App() {
             <div className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center">
               <Loader2 className="w-8 h-8 text-[#8B5E3C] animate-spin" />
             </div>
-            <div className="text-center">
+            <div className="text-center px-6">
               <h3 className="text-xl font-bold text-slate-800">Compiling Report</h3>
-              <p className="text-sm text-slate-400 font-medium">Capturing clinical data and generating PDF...</p>
+              <p className="text-sm text-slate-400 font-medium">{generationStatus || "Capturing clinical data and generating PDF..."}</p>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Report Selection Modal */}
+      <AnimatePresence>
+        {showReportModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowReportModal(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 flex flex-col gap-6">
+                <div className="flex flex-col gap-2 text-center">
+                  <h3 className="text-2xl font-bold text-slate-800">Choose Report Type</h3>
+                  <p className="text-sm text-slate-400">Select how you would like your clinical data compiled.</p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={downloadOriginalReport}
+                    className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all group text-left"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#8B5E3C] group-hover:text-white transition-all">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-slate-700">Original Report</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-tight">Structured clinical data capture</p>
+                    </div>
+                    <Download className="w-4 h-4 text-slate-300" />
+                  </button>
+
+                  <button 
+                    onClick={downloadStoryReport}
+                    className="flex items-center gap-4 p-4 rounded-2xl border border-[#8B5E3C]/20 bg-[#8B5E3C]/5 hover:bg-[#8B5E3C]/10 transition-all group text-left"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#8B5E3C] flex items-center justify-center text-white transition-all">
+                      <BookOpen className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-[#8B5E3C]">Story Write-Up (AI)</p>
+                      <p className="text-[10px] text-[#8B5E3C]/60 uppercase tracking-tight">Cohesive narrative surgical flow</p>
+                    </div>
+                    <Zap className="w-4 h-4 text-[#8B5E3C]" />
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setShowReportModal(false)}
+                  className="w-full py-3 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
