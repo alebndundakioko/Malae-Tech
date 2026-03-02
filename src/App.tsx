@@ -28,7 +28,9 @@ import {
   Upload,
   FileText,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Menu,
+  X
 } from 'lucide-react';
 
 // --- Types ---
@@ -509,6 +511,7 @@ export default function App() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<any>({});
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -676,9 +679,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] flex font-sans text-slate-900">
-      {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 sticky top-0 h-screen">
+    <div className="min-h-screen bg-[#F0F4F8] flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex w-72 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen">
         <div className="p-8 flex flex-col items-center gap-1">
           <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 mb-2">
             <div className="w-2 h-2 rounded-full bg-[#8B5E3C] animate-pulse" />
@@ -689,7 +692,7 @@ export default function App() {
           </p>
         </div>
 
-        <nav className="flex-1 px-4 py-4 flex flex-col gap-1">
+        <nav className="flex-1 px-4 py-4 flex flex-col gap-1 overflow-y-auto">
           {STEPS.map((step, index) => {
             const isActive = currentStepIndex === index;
             const isCompleted = completedSteps.has(step.id);
@@ -737,25 +740,108 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
+            />
+            <motion.aside 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-72 bg-white z-50 flex flex-col shadow-2xl md:hidden"
+            >
+              <div className="p-6 flex items-center justify-between border-b border-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#8B5E3C] flex items-center justify-center text-white">
+                    <Stethoscope className="w-4 h-4" />
+                  </div>
+                  <span className="font-bold text-slate-800">Malae</span>
+                </div>
+                <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <nav className="flex-1 px-4 py-6 flex flex-col gap-1 overflow-y-auto">
+                {STEPS.map((step, index) => {
+                  const isActive = currentStepIndex === index;
+                  const isCompleted = completedSteps.has(step.id);
+                  const Icon = step.icon;
+
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => {
+                        setCurrentStepIndex(index);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all
+                        ${isActive ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
+                      `}
+                    >
+                      <div className={`
+                        w-8 h-8 rounded-xl flex items-center justify-center
+                        ${isActive ? 'bg-white/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                      `}>
+                        {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                      </div>
+                      <span className="text-sm font-semibold tracking-tight">{step.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+              <div className="p-6 border-t border-slate-50 bg-slate-50/50">
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Case Mastery</span>
+                  <span className="text-xs font-bold text-[#8B5E3C]">{Math.round(progress)}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                  <div style={{ width: `${progress}%` }} className="h-full bg-[#8B5E3C] rounded-full" />
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-100 px-10 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Module</span>
-            <span className="text-sm font-bold text-slate-800">{currentStep.label}</span>
+        <header className="h-16 md:h-20 bg-white border-b border-slate-100 px-4 md:px-10 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl md:hidden"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module {currentStepIndex + 1}/{STEPS.length}</span>
+              <span className="text-xs md:text-sm font-bold text-slate-800 truncate max-w-[150px] md:max-w-none">{currentStep.label}</span>
+            </div>
           </div>
-          <button 
-            onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#8B5E3C] text-white text-xs font-bold hover:bg-[#7D5233] transition-colors shadow-sm"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            RESET SESSION
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleReset}
+              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-[#8B5E3C] text-white text-[10px] md:text-xs font-bold hover:bg-[#7D5233] transition-colors shadow-sm"
+            >
+              <RotateCcw className="w-3 md:w-3.5 h-3 md:h-3.5" />
+              <span className="hidden sm:inline">RESET SESSION</span>
+              <span className="sm:hidden">RESET</span>
+            </button>
+          </div>
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto px-10 py-12">
+        <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-12">
           <div className="max-w-4xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
@@ -764,14 +850,14 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="flex flex-col gap-10"
+                className="flex flex-col gap-6 md:gap-10"
               >
-                <div className="flex flex-col gap-2 text-center md:text-left">
-                  <h2 className="text-4xl font-bold tracking-tight text-slate-800">{currentStep.title}</h2>
-                  <p className="text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
+                  <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-slate-800">{currentStep.title}</h2>
+                  <p className="text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
                 </div>
 
-                <div className="bg-white rounded-[32px] p-10 shadow-sm border border-slate-100">
+                <div className="bg-white rounded-2xl md:rounded-[32px] p-5 md:p-10 shadow-sm border border-slate-100">
                   {renderStepContent(currentStep.id)}
                 </div>
               </motion.div>
@@ -780,51 +866,54 @@ export default function App() {
         </div>
 
         {/* Footer Navigation */}
-        <footer className="h-24 bg-white border-t border-slate-100 px-10 flex items-center justify-between sticky bottom-0 z-10">
+        <footer className="h-20 md:h-24 bg-white border-t border-slate-100 px-4 md:px-10 flex items-center justify-between sticky bottom-0 z-30">
           <button 
             onClick={handlePrev}
             disabled={currentStepIndex === 0}
             className={`
-              flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all
+              flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all
               ${currentStepIndex === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
             <ChevronLeft className="w-4 h-4" />
-            PREVIOUS
+            <span className="hidden sm:inline">PREVIOUS</span>
           </button>
 
           <button 
             onClick={handleReset}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-100"
+            className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-red-50 text-red-600 text-xs md:text-sm font-bold hover:bg-red-100 transition-all sm:shadow-lg sm:shadow-red-100"
           >
             <RotateCcw className="w-4 h-4" />
-            NEW CASE
+            <span className="hidden sm:inline">NEW CASE</span>
           </button>
 
           {currentStepIndex === STEPS.length - 1 ? (
             <button 
               onClick={handleCompileReport}
               disabled={isGenerating}
-              className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-900 text-white text-xs md:text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  GENERATING...
+                  <span className="hidden sm:inline">GENERATING...</span>
+                  <span className="sm:hidden">...</span>
                 </>
               ) : (
                 <>
                   <FileText className="w-4 h-4" />
-                  COMPILE REPORT
+                  <span className="hidden sm:inline">COMPILE REPORT</span>
+                  <span className="sm:hidden">COMPILE</span>
                 </>
               )}
             </button>
           ) : (
             <button 
               onClick={handleNext}
-              className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-[#8B5E3C] text-white text-sm font-bold hover:bg-[#7D5233] transition-all shadow-lg shadow-[#8B5E3C]/20 group"
+              className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#8B5E3C] text-white text-xs md:text-sm font-bold hover:bg-[#7D5233] transition-all shadow-lg shadow-[#8B5E3C]/20 group"
             >
-              PROCEED
+              <span className="hidden sm:inline">PROCEED</span>
+              <span className="sm:hidden">NEXT</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
           )}
