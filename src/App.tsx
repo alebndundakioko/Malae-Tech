@@ -37,13 +37,15 @@ import {
   Save,
   LogOut,
   LayoutDashboard,
+  AlertCircle,
+  Check,
   Calendar
 } from 'lucide-react';
 
 // Firebase imports
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDocFromServer } from 'firebase/firestore';
 
 // Component imports
 import { Auth } from './components/Auth';
@@ -713,13 +715,26 @@ export default function App() {
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [originalReportStatus, setOriginalReportStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
+  const [storyReportStatus, setStoryReportStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
 
-  const [isGenerating, setIsGenerating] = useState(false);
+  const isGenerating = originalReportStatus === 'generating' || storyReportStatus === 'generating';
   const [isSaving, setIsSaving] = useState(false);
   const [generationStatus, setGenerationStatus] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration. The client is offline.");
+        }
+      }
+    }
+    testConnection();
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setAuthLoading(false);
@@ -732,21 +747,29 @@ export default function App() {
     setView('dashboard');
   };
 
-  const handleSaveReport = async (storyData: any) => {
+  const handleSaveReport = async (storyData: any, type: 'original' | 'story' = 'story') => {
     if (!user) return;
     setIsSaving(true);
     try {
-      await addDoc(collection(db, 'reports'), {
+      const reportPayload: any = {
         userId: user.uid,
         title: formData.chiefComplaint || 'Clinical Case',
+        type,
         patientData: formData,
         reportData: storyData,
         createdAt: serverTimestamp()
-      });
-      alert("Report saved to your profile successfully!");
+      };
+
+      // Extract hpcNarrative for easier querying if it's a story report
+      if (type === 'story' && storyData?.hpcNarrative) {
+        reportPayload.hpcNarrative = storyData.hpcNarrative;
+      }
+
+      await addDoc(collection(db, 'reports'), reportPayload);
+      // Silent save for automatic generations to avoid interrupting flow
+      console.log(`${type} report saved successfully`);
     } catch (error) {
       console.error("Error saving report:", error);
-      alert("Failed to save report. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -768,27 +791,31 @@ export default function App() {
   }
 
   const handleCompileReport = async () => {
+    setOriginalReportStatus('idle');
+    setStoryReportStatus('idle');
     setShowReportModal(true);
   };
 
   const downloadOriginalReport = async () => {
-    setShowReportModal(false);
-    setIsGenerating(true);
+    setOriginalReportStatus('generating');
     setGenerationStatus("Generating clinical data report...");
     try {
+      // Save original report to dashboard
+      if (user) {
+        await handleSaveReport(null, 'original');
+      }
       const blob = await pdf(<MedicalReportPDF formData={formData} />).toBlob();
       triggerDownload(blob, `Clinical_Report_${formData.fullName || 'Patient'}`);
+      setOriginalReportStatus('completed');
+      setTimeout(() => setOriginalReportStatus('idle'), 3000);
     } catch (error: any) {
       console.error("PDF Generation Error:", error);
-      alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsGenerating(false);
+      setOriginalReportStatus('error');
     }
   };
 
   const downloadStoryReport = async () => {
-    setShowReportModal(false);
-    setIsGenerating(true);
+    setStoryReportStatus('generating');
     setGenerationStatus("AI is analyzing clinical data and writing case story...");
     
     const fallbackData = {
@@ -811,7 +838,7 @@ export default function App() {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3.1-pro-preview";
+      const model = "gemini-3-flash-preview";
       
       const prompt = `
         You are a senior surgical consultant. Based on the following patient data, write a high-level, cohesive academic surgical case write-up.
@@ -832,6 +859,12 @@ export default function App() {
         9. Impression: Provide a concise clinical impression (e.g., "46/F known ISS on HAART with non-toxic nodular goitre").
         10. Plan: Provide a 5-10 point clinical management plan.
         11. References: Provide 4-5 academic references in standard medical format.
+        
+        Handling Missing Data & Edge Cases:
+        - If specific clinical details (e.g., vitals, specific system reviews, or surgical history) are missing from the input, DO NOT hallucinate or invent data.
+        - Instead, use professional clinical language to indicate the absence of data, such as "Not documented at the time of presentation," "Further history required to clarify...", or "Clinical records regarding [specific area] were unavailable."
+        - If examination findings are missing, the "Examination Narrative" should state that a formal examination was not recorded, and the "Plan" MUST prioritize "Complete physical and systemic examination" as a primary step.
+        - If diagnostic data is sparse, the "Case Discussion" should focus on the typical diagnostic workup for the suspected condition, and the "Plan" should include the necessary investigations.
         
         Return the response in JSON format with the following structure:
         {
@@ -882,26 +915,28 @@ export default function App() {
       
       // Save report automatically if user is logged in
       if (user) {
-        await handleSaveReport(storyData);
+        await handleSaveReport(storyData, 'story');
       }
 
       setGenerationStatus("Compiling story into high-level PDF...");
       const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={storyData} />).toBlob();
       triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}`);
-      
+      setStoryReportStatus('completed');
+      setTimeout(() => setStoryReportStatus('idle'), 3000);
     } catch (error: any) {
       console.error("Story Generation Error:", error);
-      alert(`The AI service is currently experiencing high demand or the input data was too complex. A fallback report structure will be generated.\n\nDetails: ${error.message || 'Unknown error'}`);
+      setStoryReportStatus('error');
       
       // Generate PDF with fallback data even on top-level catch
       try {
         const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={fallbackData} />).toBlob();
         triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}_FALLBACK`);
+        setStoryReportStatus('completed'); // Fallback is still a success of sorts
+        setTimeout(() => setStoryReportStatus('idle'), 3000);
       } catch (pdfError) {
         console.error("Fallback PDF Error:", pdfError);
+        setStoryReportStatus('error');
       }
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -1046,40 +1081,44 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-72 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen">
-        <div className="p-8 flex flex-col items-center gap-1">
-          <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 mb-2">
-            <div className="w-2 h-2 rounded-full bg-[#8B5E3C] animate-pulse" />
+      <aside className="hidden md:flex w-80 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
+        <div className="p-10 flex flex-col items-center gap-1">
+          <div className="w-12 h-12 rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4 group hover:border-[#8B5E3C] transition-all duration-500">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#8B5E3C] animate-pulse group-hover:scale-125 transition-transform" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-800">Malae</h1>
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">
-            Clinical<br />Intelligence
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900">Malae</h1>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
+            Clinical Intelligence
           </p>
         </div>
 
-        <nav className="flex-1 px-4 py-4 flex flex-col gap-1 overflow-y-auto">
+        <nav className="flex-1 px-6 py-4 flex flex-col gap-1 overflow-y-auto">
           <button
             onClick={() => setView('dashboard')}
             className={`
-              flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative mb-4
-              ${view === 'dashboard' ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
+              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group relative mb-6
+              ${view === 'dashboard' ? 'bg-[#8B5E3C] text-white shadow-xl shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
             <div className={`
-              w-8 h-8 rounded-xl flex items-center justify-center transition-colors
-              ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}
+              w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+              ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#8B5E3C]'}
             `}>
-              <LayoutDashboard className="w-4 h-4" />
+              <LayoutDashboard className="w-4.5 h-4.5" />
             </div>
-            <span className="text-sm font-semibold tracking-tight">Dashboard</span>
+            <span className="text-sm font-bold tracking-tight">Clinical Dashboard</span>
           </button>
 
           {view === 'generator' && (
-            <>
-              <div className="px-4 py-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Generator Steps</span>
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-1"
+            >
+              <div className="px-5 py-3">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Case Synthesis</span>
               </div>
               {STEPS.map((step, index) => {
                 const isActive = currentStepIndex === index;
@@ -1091,21 +1130,29 @@ export default function App() {
                     key={step.id}
                     onClick={() => setCurrentStepIndex(index)}
                     className={`
-                      flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative
+                      w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all group relative
                       ${isActive ? 'bg-[#8B5E3C]/10 text-[#8B5E3C]' : 'text-slate-500 hover:bg-slate-50'}
                     `}
                   >
                     <div className={`
-                      w-8 h-8 rounded-xl flex items-center justify-center transition-colors
-                      ${isActive ? 'bg-[#8B5E3C] text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                      w-8 h-8 rounded-xl flex items-center justify-center transition-all
+                      ${isActive ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
                     `}>
-                      {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                      {isCompleted && !isActive ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                     </div>
-                    <span className="text-sm font-semibold tracking-tight">{step.label}</span>
+                    <span className={`text-xs font-bold tracking-tight transition-colors ${isActive ? 'text-[#8B5E3C]' : 'text-slate-500'}`}>
+                      {step.label}
+                    </span>
+                    {isActive && (
+                      <motion.div 
+                        layoutId="activeStep"
+                        className="absolute left-0 w-1 h-6 bg-[#8B5E3C] rounded-r-full"
+                      />
+                    )}
                   </button>
                 );
               })}
-            </>
+            </motion.div>
           )}
         </nav>
 
@@ -1424,7 +1471,7 @@ export default function App() {
 
       {/* Loading Overlay */}
       <AnimatePresence>
-        {isGenerating && (
+        {isGenerating && !showReportModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1468,30 +1515,80 @@ export default function App() {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={downloadOriginalReport}
-                    className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all group text-left"
+                    disabled={originalReportStatus !== 'idle'}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all group text-left ${
+                      originalReportStatus === 'error' ? 'border-red-200 bg-red-50' : 
+                      originalReportStatus === 'completed' ? 'border-emerald-200 bg-emerald-50' :
+                      'border-slate-100 hover:bg-slate-50'
+                    }`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#8B5E3C] group-hover:text-white transition-all">
-                      <FileText className="w-6 h-6" />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                      originalReportStatus === 'error' ? 'bg-red-500 text-white' :
+                      originalReportStatus === 'completed' ? 'bg-emerald-500 text-white' :
+                      'bg-slate-100 text-slate-400 group-hover:bg-[#8B5E3C] group-hover:text-white'
+                    }`}>
+                      {originalReportStatus === 'generating' ? <Loader2 className="w-6 h-6 animate-spin" /> :
+                       originalReportStatus === 'completed' ? <Check className="w-6 h-6" /> :
+                       originalReportStatus === 'error' ? <AlertCircle className="w-6 h-6" /> :
+                       <FileText className="w-6 h-6" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-slate-700">Original Report</p>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-tight">Structured clinical data capture</p>
+                      <p className={`font-bold ${
+                        originalReportStatus === 'error' ? 'text-red-700' :
+                        originalReportStatus === 'completed' ? 'text-emerald-700' :
+                        'text-slate-700'
+                      }`}>
+                        {originalReportStatus === 'generating' ? 'Generating...' : 
+                         originalReportStatus === 'completed' ? 'Download Complete' :
+                         originalReportStatus === 'error' ? 'Generation Failed' :
+                         'Original Report'}
+                      </p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-tight">
+                        {originalReportStatus === 'error' ? 'Please try again' : 'Structured clinical data capture'}
+                      </p>
                     </div>
-                    <Download className="w-4 h-4 text-slate-300" />
+                    {originalReportStatus === 'idle' && <Download className="w-4 h-4 text-slate-300" />}
                   </button>
 
                   <button 
                     onClick={downloadStoryReport}
-                    className="flex items-center gap-4 p-4 rounded-2xl border border-[#8B5E3C]/20 bg-[#8B5E3C]/5 hover:bg-[#8B5E3C]/10 transition-all group text-left"
+                    disabled={storyReportStatus !== 'idle'}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all group text-left ${
+                      storyReportStatus === 'error' ? 'border-red-200 bg-red-50' : 
+                      storyReportStatus === 'completed' ? 'border-emerald-200 bg-emerald-50' :
+                      'border-[#8B5E3C]/20 bg-[#8B5E3C]/5 hover:bg-[#8B5E3C]/10'
+                    }`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-[#8B5E3C] flex items-center justify-center text-white transition-all">
-                      <BookOpen className="w-6 h-6" />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                      storyReportStatus === 'error' ? 'bg-red-500 text-white' :
+                      storyReportStatus === 'completed' ? 'bg-emerald-500 text-white' :
+                      'bg-[#8B5E3C] text-white'
+                    }`}>
+                      {storyReportStatus === 'generating' ? <Loader2 className="w-6 h-6 animate-spin" /> :
+                       storyReportStatus === 'completed' ? <Check className="w-6 h-6" /> :
+                       storyReportStatus === 'error' ? <AlertCircle className="w-6 h-6" /> :
+                       <BookOpen className="w-6 h-6" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-[#8B5E3C]">Story Write-Up (AI)</p>
-                      <p className="text-[10px] text-[#8B5E3C]/60 uppercase tracking-tight">Cohesive narrative surgical flow</p>
+                      <p className={`font-bold ${
+                        storyReportStatus === 'error' ? 'text-red-700' :
+                        storyReportStatus === 'completed' ? 'text-emerald-700' :
+                        'text-[#8B5E3C]'
+                      }`}>
+                        {storyReportStatus === 'generating' ? 'AI is Writing...' : 
+                         storyReportStatus === 'completed' ? 'Synthesis Complete' :
+                         storyReportStatus === 'error' ? 'Synthesis Failed' :
+                         'Story Write-Up (AI)'}
+                      </p>
+                      <p className={`text-[10px] uppercase tracking-tight ${
+                        storyReportStatus === 'error' ? 'text-red-400' :
+                        storyReportStatus === 'completed' ? 'text-emerald-400' :
+                        'text-[#8B5E3C]/60'
+                      }`}>
+                        {storyReportStatus === 'error' ? 'Service unavailable' : 'Cohesive narrative surgical flow'}
+                      </p>
                     </div>
-                    <Zap className="w-4 h-4 text-[#8B5E3C]" />
+                    {storyReportStatus === 'idle' && <Zap className="w-4 h-4 text-[#8B5E3C]" />}
                   </button>
                 </div>
 

@@ -11,6 +11,7 @@ service cloud.firestore {
     //   - uid: string (required)
     //   - email: string (required, email format)
     //   - displayName: string (optional)
+    //   - hospital: string (optional)
     //   - createdAt: timestamp (required)
     //
     // Collection: reports
@@ -19,6 +20,8 @@ service cloud.firestore {
     //   - id: string (required)
     //   - userId: string (required, matches owner)
     //   - title: string (required)
+    //   - type: string (required, 'original' or 'story')
+    //   - hpcNarrative: string (optional, for 'story' type)
     //   - patientData: map (required)
     //   - reportData: map (required)
     //   - createdAt: timestamp (required)
@@ -44,16 +47,17 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
              data.uid is string &&
              data.email is string &&
-             data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+             data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             (!('hospital' in data) || (data.hospital is string && data.hospital.size() < 200));
     }
 
     function isValidReport(data) {
-      return data.keys().hasAll(['id', 'userId', 'title', 'patientData', 'reportData', 'createdAt']) &&
-             data.id is string &&
+      return data.keys().hasAll(['userId', 'title', 'patientData', 'createdAt']) &&
              data.userId == request.auth.uid &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.patientData is map &&
-             data.reportData is map;
+             data.type in ['original', 'story'] &&
+             (!('hpcNarrative' in data) || (data.hpcNarrative is string && data.hpcNarrative.size() < 10000)) &&
+             data.patientData is map;
     }
 
     // ===============================================================
