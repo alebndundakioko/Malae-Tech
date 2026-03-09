@@ -1277,21 +1277,21 @@ export default function App() {
             />
           </div>
         ) : view === 'viewer' ? (
-          <div className="flex-1 overflow-y-auto p-6 md:p-10">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10">
             <div className="max-w-4xl mx-auto">
               <button 
                 onClick={() => setView('dashboard')}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#8B5E3C] font-bold text-sm mb-6 transition-colors"
+                className="flex items-center gap-2 text-slate-500 hover:text-[#8B5E3C] font-bold text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 BACK TO DASHBOARD
               </button>
               
-              <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-slate-100">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 pb-12 border-b border-slate-50">
+              <div className="bg-white rounded-2xl sm:rounded-[32px] p-6 sm:p-8 md:p-12 shadow-sm border border-slate-100">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 sm:mb-12 pb-8 sm:pb-12 border-b border-slate-50">
                   <div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">{selectedReport.title}</h1>
-                    <p className="text-slate-500 flex items-center gap-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2 leading-tight">{selectedReport.title}</h1>
+                    <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       Generated on {selectedReport.createdAt?.toDate ? selectedReport.createdAt.toDate().toLocaleDateString() : 'Recently'}
                     </p>
@@ -1302,7 +1302,7 @@ export default function App() {
                         const blob = await pdf(<SurgicalCaseWriteUpPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
                         triggerDownload(blob, `Surgical_Case_WriteUp_${selectedReport.patientData.fullName || 'Patient'}`);
                       }}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-xs sm:text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                     >
                       <Download className="w-4 h-4" />
                       DOWNLOAD PDF
@@ -1310,25 +1310,25 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="space-y-12">
+                <div className="space-y-8 sm:space-y-12">
                   <section>
-                    <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
-                      <div className="w-2 h-8 bg-[#8B5E3C] rounded-full" />
+                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                      <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#8B5E3C] rounded-full" />
                       Clinical Narrative
                     </h2>
-                    <p className="text-slate-600 leading-relaxed text-lg">{selectedReport.reportData.hpcNarrative}</p>
+                    <p className="text-slate-600 leading-relaxed text-base sm:text-lg">{selectedReport.reportData.hpcNarrative}</p>
                   </section>
 
-                  <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-xs tracking-widest">Clinical Impression</h3>
-                      <p className="text-slate-700 font-medium">{selectedReport.reportData.impression}</p>
+                  <section className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                    <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
+                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Clinical Impression</h3>
+                      <p className="text-sm sm:text-base text-slate-700 font-medium">{selectedReport.reportData.impression}</p>
                     </div>
-                    <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-xs tracking-widest">Management Plan</h3>
+                    <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
+                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Management Plan</h3>
                       <ul className="space-y-2">
                         {selectedReport.reportData.plan?.map((item: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                          <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-600">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                             {item}
                           </li>
@@ -1338,12 +1338,12 @@ export default function App() {
                   </section>
 
                   <section>
-                    <h2 className="text-xl font-bold text-slate-900 mb-6">Differential Diagnoses</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-6">Differential Diagnoses</h2>
                     <div className="space-y-4">
                       {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
-                        <div key={i} className="p-6 rounded-3xl border border-slate-100 hover:border-[#8B5E3C]/30 transition-colors">
-                          <h4 className="font-bold text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
-                          <p className="text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
+                        <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#8B5E3C]/30 transition-colors">
+                          <h4 className="font-bold text-sm sm:text-base text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
+                          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
                         </div>
                       ))}
                     </div>
@@ -1388,7 +1388,7 @@ export default function App() {
             </header>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-12">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 py-6 sm:py-8 md:py-12">
               <div className="max-w-4xl mx-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -1400,11 +1400,11 @@ export default function App() {
                     className="flex flex-col gap-6 md:gap-10"
                   >
                     <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
-                      <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-slate-800">{currentStep.title}</h2>
-                      <p className="text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                      <h2 className="text-xl sm:text-2xl md:text-4xl font-bold tracking-tight text-slate-800 leading-tight">{currentStep.title}</h2>
+                      <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
                     </div>
 
-                    <div className="bg-white rounded-2xl md:rounded-[32px] p-5 md:p-10 shadow-sm border border-slate-100">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[32px] p-5 sm:p-8 md:p-10 shadow-sm border border-slate-100">
                       {renderStepContent(currentStep.id)}
                     </div>
                   </motion.div>

@@ -38,17 +38,58 @@ export const Auth = ({ onSuccess }: AuthProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (!isLogin && password !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
+  const validateInputs = () => {
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid clinical email address.");
+      return false;
     }
 
+    if (!isLogin) {
+      if (!displayName.trim()) {
+        setError("Please enter your full name.");
+        return false;
+      }
+      if (!hospital.trim()) {
+        setError("Please enter your hospital or institution.");
+        return false;
+      }
+
+      // Password complexity validation
+      const minLength = 8;
+      const hasNumber = /\d/.test(password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      if (password.length < minLength) {
+        setError(`Password must be at least ${minLength} characters long.`);
+        return false;
+      }
+      if (!hasNumber) {
+        setError("Password must include at least one number.");
+        return false;
+      }
+      if (!hasSpecialChar) {
+        setError("Password must include at least one special character (!@#$%^&*).");
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!validateInputs()) return;
+
+    setLoading(true);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
@@ -118,25 +159,25 @@ export const Auth = ({ onSuccess }: AuthProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] p-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] p-4 sm:p-6">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#8B5E3C] text-white mb-4 shadow-lg shadow-[#8B5E3C]/20">
-            <Lock className="w-8 h-8" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#8B5E3C] text-white mb-4 shadow-lg shadow-[#8B5E3C]/20">
+            <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h1>
-          <p className="text-slate-500 mt-2">
+          <p className="text-sm sm:text-base text-slate-500 mt-2 px-4">
             {isLogin ? 'Access your clinical intelligence dashboard' : 'Join Malae to start generating surgical case stories'}
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
+        <div className="bg-white rounded-[2rem] sm:rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-8">
           <form onSubmit={handleAuth} className="space-y-4">
             <AnimatePresence mode="wait">
               {!isLogin && (
@@ -155,7 +196,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                         required
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
                         placeholder="Dr. Samantha"
                       />
                     </div>
@@ -170,7 +211,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                         required
                         value={hospital}
                         onChange={(e) => setHospital(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
                         placeholder="General Hospital"
                       />
                     </div>
@@ -188,7 +229,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
                   placeholder="name@hospital.com"
                 />
               </div>
@@ -203,7 +244,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                  className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
                   placeholder="••••••••"
                 />
                 <button
@@ -214,6 +255,23 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
+                  {[
+                    { label: '8+ Characters', met: password.length >= 8 },
+                    { label: 'One Number', met: /\d/.test(password) },
+                    { label: 'One Symbol', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+                    { label: 'Matches Confirm', met: password === confirmPassword && password.length > 0 }
+                  ].map((req, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <div className={`w-1 h-1 rounded-full ${req.met ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                      <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-tight ${req.met ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {req.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <AnimatePresence mode="wait">
@@ -232,7 +290,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                      className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
                       placeholder="••••••••"
                     />
                     <button
@@ -251,7 +309,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-3 rounded-xl bg-red-50 border border-red-100 flex items-center gap-2 text-red-600 text-sm"
+                className="p-3 rounded-xl bg-red-50 border border-red-100 flex items-center gap-2 text-red-600 text-xs sm:text-sm"
               >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <p>{error}</p>
@@ -261,14 +319,14 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#8B5E3C] hover:bg-[#724C31] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#8B5E3C]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className="w-full bg-[#8B5E3C] hover:bg-[#724C31] text-white font-bold py-3.5 sm:py-4 rounded-xl shadow-lg shadow-[#8B5E3C]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  {isLogin ? 'Sign In' : 'Create Account'}
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <span className="text-sm sm:text-base">{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
@@ -279,7 +337,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-100"></div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
+              <div className="relative flex justify-center text-[10px] uppercase">
                 <span className="bg-white px-2 text-slate-400 font-bold tracking-widest">Or continue with</span>
               </div>
             </div>
@@ -287,7 +345,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3"
+              className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base"
             >
               <Chrome className="w-5 h-5" />
               Google
