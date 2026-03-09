@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
+      },
+      "required": ["uid", "email"]
+    },
+    "Report": {
+      "title": "Clinical Report",
+      "description": "Stores a generated clinical report.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique identifier for the report." },
+        "userId": { "type": "string", "description": "The ID of the user who owns this report." },
+        "title": { "type": "string", "description": "The title of the report." },
+        "patientData": { "type": "object", "description": "The input patient data." },
+        "reportData": { "type": "object", "description": "The generated report content." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the report was generated." }
+      },
+      "required": ["id", "userId", "title", "patientData", "reportData", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents."
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Individual clinical reports."
+    }
+  }
+}

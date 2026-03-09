@@ -16,7 +16,7 @@ import {
 } from '@react-pdf/renderer';
 import { GoogleGenAI } from "@google/genai";
 import { 
-  User, 
+  User as UserIcon, 
   Zap, 
   Clock, 
   Stethoscope, 
@@ -33,8 +33,21 @@ import {
   Menu,
   X,
   BookOpen,
-  Download
+  Download,
+  Save,
+  LogOut,
+  LayoutDashboard,
+  Calendar
 } from 'lucide-react';
+
+// Firebase imports
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+// Component imports
+import { Auth } from './components/Auth';
+import { Dashboard } from './components/Dashboard';
 
 // --- Types ---
 
@@ -61,7 +74,7 @@ const STEPS: Step[] = [
   { 
     id: 'demographics', 
     label: 'Demographics', 
-    icon: User, 
+    icon: UserIcon, 
     title: 'Patient Demographics', 
     subtitle: 'Establishing the clinical identity and background profile.' 
   },
@@ -567,12 +580,12 @@ const MedicalReportPDF = ({ formData }: { formData: any }) => (
 
 const SurgicalCaseWriteUpPDF = ({ formData, storyData }: { formData: any, storyData: any }) => (
   <Document>
-    {/* Cover Page */}
+    {/* Page 1: Cover Page */}
     <Page size="A4" style={pdfStyles.page}>
       <View style={pdfStyles.coverPage}>
-        <Text style={pdfStyles.coverTitle}>{formData.fullName || 'PATIENT NAME'}</Text>
-        <Text style={pdfStyles.coverSubtitle}>SURGICAL CASE WRITE UP</Text>
-        <Text style={pdfStyles.coverTopic}>TOPIC: {formData.chiefComplaint || 'CLINICAL CASE'}</Text>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 60 }}>{formData.fullName?.toUpperCase() || 'PATIENT NAME'}</Text>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 60 }}>SURGICAL CASE WRITE UP</Text>
+        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>TOPIC: {formData.chiefComplaint?.toUpperCase() || 'CLINICAL CASE'}</Text>
       </View>
       <View style={pdfStyles.footer}>
         <Text style={pdfStyles.footerText}>Malae Clinical Intelligence</Text>
@@ -580,50 +593,48 @@ const SurgicalCaseWriteUpPDF = ({ formData, storyData }: { formData: any, storyD
       </View>
     </Page>
 
-    {/* Narrative Content */}
+    {/* Page 2: Demographics & History */}
     <Page size="A4" style={pdfStyles.page}>
-      <View style={pdfStyles.header}>
-        <View>
-          <Text style={pdfStyles.brand}>Malae Clinical Intelligence</Text>
-          <Text style={pdfStyles.reportType}>Surgical Case Write Up</Text>
-        </View>
-        <View style={pdfStyles.meta}>
-          <Text style={pdfStyles.date}>{new Date().toLocaleDateString()}</Text>
-        </View>
-      </View>
-
-      <View style={pdfStyles.grid}>
+      <View style={{ marginBottom: 20 }}>
         {[
-          { label: 'Date of Admission', value: formData.admissionDate },
+          { label: 'Date of admission', value: formData.admissionDate },
           { label: 'Name', value: formData.fullName },
-          { label: 'Age', value: formData.age },
+          { label: 'Age', value: formData.age ? `${formData.age}yrs` : '' },
           { label: 'Sex', value: formData.sex },
           { label: 'Tribe', value: formData.ethnicity },
           { label: 'Address', value: formData.address },
           { label: 'Religion', value: formData.religion },
           { label: 'Occupation', value: formData.occupation },
+          { label: 'Next of Kin', value: formData.nextOfKin },
+          { label: 'Relationship', value: formData.relationship },
         ].map((field, i) => (
-          <View key={i} style={pdfStyles.gridItem}>
-            <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
-            <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
-          </View>
+          <Text key={i} style={{ fontSize: 10, marginBottom: 4 }}>
+            <Text style={{ fontWeight: 'bold' }}>{field.label}; </Text>
+            {field.value || 'N/A'}
+          </Text>
         ))}
       </View>
 
-      <Text style={pdfStyles.sectionTitle}>Presenting Complaint</Text>
-      <Text style={pdfStyles.paragraph}>{formData.chiefComplaint} x {formData.duration}</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Presenting complaint;</Text>
+      <View style={{ flexDirection: 'row', marginBottom: 15 }}>
+        <Text style={{ fontSize: 10, marginRight: 5 }}>✓</Text>
+        <Text style={{ fontSize: 10 }}>{formData.chiefComplaint} x {formData.duration}</Text>
+      </View>
 
-      <Text style={pdfStyles.sectionTitle}>History of Presenting Complaint</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 5 }}>History of presenting complaint</Text>
       <Text style={pdfStyles.paragraph}>{storyData.hpcNarrative}</Text>
 
-      <Text style={pdfStyles.sectionTitle}>Review of Other Systems</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Review of other systems</Text>
       <Text style={pdfStyles.paragraph}>{storyData.rosNarrative}</Text>
 
-      <Text style={pdfStyles.sectionTitle}>Past Medical History</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Past Medical history:</Text>
       <Text style={pdfStyles.paragraph}>{storyData.pmhNarrative}</Text>
 
-      <Text style={pdfStyles.sectionTitle}>Past Surgical History</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Past surgical history:</Text>
       <Text style={pdfStyles.paragraph}>{storyData.pshNarrative}</Text>
+
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Family Social History:</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.fshNarrative}</Text>
 
       <View style={pdfStyles.footer}>
         <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
@@ -631,23 +642,30 @@ const SurgicalCaseWriteUpPDF = ({ formData, storyData }: { formData: any, storyD
       </View>
     </Page>
 
-    {/* Differentials & Examination */}
+    {/* Page 3: Differentials & Examination */}
     <Page size="A4" style={pdfStyles.page}>
-      <Text style={pdfStyles.sectionTitle}>Family Social History</Text>
-      <Text style={pdfStyles.paragraph}>{storyData.fshNarrative}</Text>
-
-      <Text style={pdfStyles.sectionTitle}>Differential Diagnoses</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>Differential diagnoses</Text>
       {storyData.differentials?.map((diff: any, i: number) => (
-        <View key={i} style={pdfStyles.listItem}>
-          <Text style={pdfStyles.bullet}>{i + 1}.</Text>
-          <Text style={pdfStyles.listContent}>
-            <Text style={{ fontWeight: 'bold' }}>{diff.diagnosis}:</Text> {diff.reasoning}
+        <View key={i} style={{ marginBottom: 10 }}>
+          <Text style={{ fontSize: 10, lineHeight: 1.4 }}>
+            <Text style={{ fontWeight: 'bold' }}>{i + 1}. {diff.diagnosis}</Text> {diff.reasoning}
           </Text>
         </View>
       ))}
 
-      <Text style={pdfStyles.sectionTitle}>On Examination</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>On Examination</Text>
       <Text style={pdfStyles.paragraph}>{storyData.examinationNarrative}</Text>
+
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Impression;</Text>
+      <Text style={pdfStyles.paragraph}>{storyData.impression}</Text>
+
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Plan</Text>
+      {storyData.plan?.map((item: string, i: number) => (
+        <View key={i} style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 10 }}>
+          <Text style={{ fontSize: 10, width: 15 }}>{i + 1}.</Text>
+          <Text style={{ fontSize: 10, flex: 1 }}>{item}</Text>
+        </View>
+      ))}
 
       <View style={pdfStyles.footer}>
         <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
@@ -655,16 +673,22 @@ const SurgicalCaseWriteUpPDF = ({ formData, storyData }: { formData: any, storyD
       </View>
     </Page>
 
-    {/* Case Discussion */}
+    {/* Page 4: Case Discussion */}
     <Page size="A4" style={pdfStyles.page}>
-      <Text style={pdfStyles.sectionTitle}>Case Discussion</Text>
-      <Text style={pdfStyles.paragraph}>{storyData.caseDiscussion}</Text>
+      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' }}>CASE DISCUSSION</Text>
+      
+      {storyData.caseDiscussionSections?.map((section: any, i: number) => (
+        <View key={i} style={{ marginBottom: 15 }}>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 5 }}>{section.title}</Text>
+          <Text style={pdfStyles.paragraph}>{section.content}</Text>
+        </View>
+      )) || <Text style={pdfStyles.paragraph}>{storyData.caseDiscussion}</Text>}
 
-      <Text style={pdfStyles.sectionTitle}>References</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>References</Text>
       {storyData.references?.map((ref: string, i: number) => (
-        <View key={i} style={pdfStyles.listItem}>
-          <Text style={pdfStyles.bullet}>{i + 1}.</Text>
-          <Text style={pdfStyles.listContent}>{ref}</Text>
+        <View key={i} style={{ flexDirection: 'row', marginBottom: 5 }}>
+          <Text style={{ fontSize: 9, width: 15 }}>{i + 1}.</Text>
+          <Text style={{ fontSize: 9, flex: 1 }}>{ref}</Text>
         </View>
       ))}
 
@@ -679,6 +703,11 @@ const SurgicalCaseWriteUpPDF = ({ formData, storyData }: { formData: any, storyD
 // --- Main App ---
 
 export default function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [view, setView] = useState<'dashboard' | 'generator' | 'viewer'>('dashboard');
+  const [selectedReport, setSelectedReport] = useState<any>(null);
+
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<any>({});
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
@@ -686,11 +715,57 @@ export default function App() {
   const [showReportModal, setShowReportModal] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [generationStatus, setGenerationStatus] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    setView('dashboard');
+  };
+
+  const handleSaveReport = async (storyData: any) => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, 'reports'), {
+        userId: user.uid,
+        title: formData.chiefComplaint || 'Clinical Case',
+        patientData: formData,
+        reportData: storyData,
+        createdAt: serverTimestamp()
+      });
+      alert("Report saved to your profile successfully!");
+    } catch (error) {
+      console.error("Error saving report:", error);
+      alert("Failed to save report. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const currentStep = STEPS[currentStepIndex];
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB]">
+        <Loader2 className="w-10 h-10 animate-spin text-[#8B5E3C]" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onSuccess={() => setView('dashboard')} />;
+  }
 
   const handleCompileReport = async () => {
     setShowReportModal(true);
@@ -715,48 +790,116 @@ export default function App() {
     setShowReportModal(false);
     setIsGenerating(true);
     setGenerationStatus("AI is analyzing clinical data and writing case story...");
+    
+    const fallbackData = {
+      hpcNarrative: "The clinical narrative could not be generated at this time. Please review the raw data in the original report.",
+      rosNarrative: "Review of systems analysis unavailable.",
+      pmhNarrative: "Medical history summary unavailable.",
+      pshNarrative: "Surgical history summary unavailable.",
+      fshNarrative: "Social history summary unavailable.",
+      examinationNarrative: "Physical examination write-up unavailable.",
+      impression: "Clinical impression pending further analysis.",
+      plan: ["Review clinical data manually", "Re-attempt report generation", "Consult senior staff"],
+      differentials: [
+        { diagnosis: "Clinical Correlation Required", reasoning: "The AI was unable to synthesize differential diagnoses from the current dataset." }
+      ],
+      caseDiscussionSections: [
+        { title: "System Notice", content: "The academic case discussion is currently unavailable due to a processing error. This may occur if the clinical data provided is insufficient for deep synthesis." }
+      ],
+      references: ["Malae Clinical Intelligence System Documentation"]
+    };
+
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const model = "gemini-3.1-pro-preview";
       
       const prompt = `
-        You are a senior surgical consultant. Based on the following patient data, write a high-level, cohesive surgical case write-up story.
-        Use professional medical vocabulary and a formal academic tone.
+        You are a senior surgical consultant. Based on the following patient data, write a high-level, cohesive academic surgical case write-up.
+        Strictly adhere to professional medical writing style, clinical nomenclature, and a formal academic tone.
         
         Patient Data:
         ${JSON.stringify(formData, null, 2)}
         
+        Instructions:
+        1. HPC Narrative: Write a detailed chronological story of the presenting complaint. Use phrases like "presented with history of...", "gradually progressive", "associated with...", "however no history of...".
+        2. ROS Narrative: Provide a cohesive summary of the review of systems, mentioning both positive and negative findings in a professional manner.
+        3. PMH Narrative: Summarize medical history, chronic conditions (e.g., "known ISS on HAART"), and medications.
+        4. PSH Narrative: Summarize surgical history and trauma.
+        5. FSH Narrative: Summarize family and social history, including lifestyle factors.
+        6. Examination Narrative: Provide a professional write-up of physical examination findings, including General Examination, Vitals, Local Examination (e.g., "Anterior neck swelling, asymmetrical..."), and Systemic Examination (Cardiovascular, Respiratory, CNS, Abdominal).
+        7. Differentials: Provide a list of 5-10 differential diagnoses. For each, include the diagnosis name and a detailed medical reasoning "in view of..." and "unlikely because...".
+        8. Case Discussion: Provide a deep academic discussion with sections: "Definition and Pathophysiology", "Pathophysiological Mechanisms", "Clinical Features and Presentation", "Investigations and Diagnostic Workup", "Management and Treatment Approach".
+        9. Impression: Provide a concise clinical impression (e.g., "46/F known ISS on HAART with non-toxic nodular goitre").
+        10. Plan: Provide a 5-10 point clinical management plan.
+        11. References: Provide 4-5 academic references in standard medical format.
+        
         Return the response in JSON format with the following structure:
         {
-          "hpcNarrative": "A detailed chronological story of the presenting complaint...",
-          "rosNarrative": "A cohesive summary of the review of systems...",
-          "pmhNarrative": "A summary of medical history and chronic conditions...",
-          "pshNarrative": "A summary of surgical history...",
-          "fshNarrative": "A summary of family and social history...",
-          "examinationNarrative": "A professional write-up of physical examination findings (General, Local, Systemic)...",
+          "hpcNarrative": "...",
+          "rosNarrative": "...",
+          "pmhNarrative": "...",
+          "pshNarrative": "...",
+          "fshNarrative": "...",
+          "examinationNarrative": "...",
           "differentials": [
-            { "diagnosis": "Diagnosis Name", "reasoning": "Detailed medical reasoning why this is a differential..." }
+            { "diagnosis": "...", "reasoning": "..." }
           ],
-          "caseDiscussion": "A deep academic discussion about the likely primary diagnosis, its pathophysiology, typical clinical features, and management principles.",
-          "references": ["Reference 1", "Reference 2"]
+          "impression": "...",
+          "plan": ["..."],
+          "caseDiscussionSections": [
+            { "title": "...", "content": "..." }
+          ],
+          "references": ["..."]
         }
       `;
 
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
-        config: { responseMimeType: "application/json" }
+        config: { 
+          responseMimeType: "application/json",
+          temperature: 0.7,
+        }
       });
 
-      const storyData = JSON.parse(response.text || "{}");
+      let storyData;
+      try {
+        const text = response.text;
+        if (!text) throw new Error("Empty response from AI");
+        storyData = JSON.parse(text);
+        
+        // Basic validation of required fields
+        const requiredFields = ['hpcNarrative', 'rosNarrative', 'impression', 'plan'];
+        const missingFields = requiredFields.filter(f => !storyData[f]);
+        if (missingFields.length > 0) {
+          console.warn("AI response missing fields:", missingFields);
+          storyData = { ...fallbackData, ...storyData };
+        }
+      } catch (e) {
+        console.error("AI Output Parsing Error:", e);
+        storyData = fallbackData;
+      }
       
+      // Save report automatically if user is logged in
+      if (user) {
+        await handleSaveReport(storyData);
+      }
+
       setGenerationStatus("Compiling story into high-level PDF...");
       const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={storyData} />).toBlob();
       triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}`);
       
     } catch (error: any) {
       console.error("Story Generation Error:", error);
-      alert(`Error generating Story Report: ${error.message || 'Unknown error'}`);
+      alert(`The AI service is currently experiencing high demand or the input data was too complex. A fallback report structure will be generated.\n\nDetails: ${error.message || 'Unknown error'}`);
+      
+      // Generate PDF with fallback data even on top-level catch
+      try {
+        const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={fallbackData} />).toBlob();
+        triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}_FALLBACK`);
+      } catch (pdfError) {
+        console.error("Fallback PDF Error:", pdfError);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -917,50 +1060,72 @@ export default function App() {
         </div>
 
         <nav className="flex-1 px-4 py-4 flex flex-col gap-1 overflow-y-auto">
-          {STEPS.map((step, index) => {
-            const isActive = currentStepIndex === index;
-            const isCompleted = completedSteps.has(step.id);
-            const Icon = step.icon;
+          <button
+            onClick={() => setView('dashboard')}
+            className={`
+              flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative mb-4
+              ${view === 'dashboard' ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
+            `}
+          >
+            <div className={`
+              w-8 h-8 rounded-xl flex items-center justify-center transition-colors
+              ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}
+            `}>
+              <LayoutDashboard className="w-4 h-4" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight">Dashboard</span>
+          </button>
 
-            return (
-              <button
-                key={step.id}
-                onClick={() => setCurrentStepIndex(index)}
-                className={`
-                  flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative
-                  ${isActive ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
-                `}
-              >
-                <div className={`
-                  w-8 h-8 rounded-xl flex items-center justify-center transition-colors
-                  ${isActive ? 'bg-white/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
-                `}>
-                  {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-                </div>
-                <span className="text-sm font-semibold tracking-tight">{step.label}</span>
-                {isActive && (
-                  <motion.div 
-                    layoutId="active-pill"
-                    className="absolute right-4 w-1.5 h-1.5 rounded-full bg-white"
-                  />
-                )}
-              </button>
-            );
-          })}
+          {view === 'generator' && (
+            <>
+              <div className="px-4 py-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Generator Steps</span>
+              </div>
+              {STEPS.map((step, index) => {
+                const isActive = currentStepIndex === index;
+                const isCompleted = completedSteps.has(step.id);
+                const Icon = step.icon;
+
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => setCurrentStepIndex(index)}
+                    className={`
+                      flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative
+                      ${isActive ? 'bg-[#8B5E3C]/10 text-[#8B5E3C]' : 'text-slate-500 hover:bg-slate-50'}
+                    `}
+                  >
+                    <div className={`
+                      w-8 h-8 rounded-xl flex items-center justify-center transition-colors
+                      ${isActive ? 'bg-[#8B5E3C] text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                    `}>
+                      {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                    </div>
+                    <span className="text-sm font-semibold tracking-tight">{step.label}</span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
-        <div className="p-6 border-t border-slate-50">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Case Mastery</span>
-            <span className="text-xs font-bold text-[#8B5E3C]">{Math.round(progress)}%</span>
+        <div className="p-6 border-t border-slate-50 space-y-4">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+            <div className="w-10 h-10 rounded-full bg-[#8B5E3C] flex items-center justify-center text-white font-bold">
+              {user.displayName?.[0] || user.email?.[0].toUpperCase()}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-slate-800 truncate">{user.displayName || 'Physician'}</span>
+              <span className="text-[10px] text-slate-400 truncate">{user.email}</span>
+            </div>
           </div>
-          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              className="h-full bg-[#8B5E3C] rounded-full"
-            />
-          </div>
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all font-bold text-xs"
+          >
+            <LogOut className="w-4 h-4" />
+            SIGN OUT
+          </button>
         </div>
       </aside>
 
@@ -994,7 +1159,18 @@ export default function App() {
                 </button>
               </div>
               <nav className="flex-1 px-4 py-6 flex flex-col gap-1 overflow-y-auto">
-                {STEPS.map((step, index) => {
+                <button
+                  onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
+                  className={`
+                    flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all mb-4
+                    ${view === 'dashboard' ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
+                  `}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="text-sm font-semibold tracking-tight">Dashboard</span>
+                </button>
+
+                {view === 'generator' && STEPS.map((step, index) => {
                   const isActive = currentStepIndex === index;
                   const isCompleted = completedSteps.has(step.id);
                   const Icon = step.icon;
@@ -1008,12 +1184,12 @@ export default function App() {
                       }}
                       className={`
                         flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all
-                        ${isActive ? 'bg-[#8B5E3C] text-white shadow-lg shadow-[#8B5E3C]/20' : 'text-slate-500 hover:bg-slate-50'}
+                        ${isActive ? 'bg-[#8B5E3C]/10 text-[#8B5E3C]' : 'text-slate-500 hover:bg-slate-50'}
                       `}
                     >
                       <div className={`
                         w-8 h-8 rounded-xl flex items-center justify-center
-                        ${isActive ? 'bg-white/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                        ${isActive ? 'bg-[#8B5E3C] text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
                       `}>
                         {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                       </div>
@@ -1023,13 +1199,13 @@ export default function App() {
                 })}
               </nav>
               <div className="p-6 border-t border-slate-50 bg-slate-50/50">
-                <div className="flex justify-between items-end mb-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Case Mastery</span>
-                  <span className="text-xs font-bold text-[#8B5E3C]">{Math.round(progress)}%</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div style={{ width: `${progress}%` }} className="h-full bg-[#8B5E3C] rounded-full" />
-                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 transition-all font-bold text-xs"
+                >
+                  <LogOut className="w-4 h-4" />
+                  SIGN OUT
+                </button>
               </div>
             </motion.aside>
           </>
@@ -1038,110 +1214,212 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Header */}
-        <header className="h-16 md:h-20 bg-white border-b border-slate-100 px-4 md:px-10 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl md:hidden"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="flex flex-col">
-              <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module {currentStepIndex + 1}/{STEPS.length}</span>
-              <span className="text-xs md:text-sm font-bold text-slate-800 truncate max-w-[150px] md:max-w-none">{currentStep.label}</span>
+        {view === 'dashboard' ? (
+          <div className="flex-1 overflow-y-auto">
+            <Dashboard 
+              onNewReport={() => {
+                setFormData({});
+                setCurrentStepIndex(0);
+                setCompletedSteps(new Set());
+                setView('generator');
+              }}
+              onViewReport={(report) => {
+                setSelectedReport(report);
+                setView('viewer');
+              }}
+            />
+          </div>
+        ) : view === 'viewer' ? (
+          <div className="flex-1 overflow-y-auto p-6 md:p-10">
+            <div className="max-w-4xl mx-auto">
+              <button 
+                onClick={() => setView('dashboard')}
+                className="flex items-center gap-2 text-slate-500 hover:text-[#8B5E3C] font-bold text-sm mb-6 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                BACK TO DASHBOARD
+              </button>
+              
+              <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-slate-100">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 pb-12 border-b border-slate-50">
+                  <div>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">{selectedReport.title}</h1>
+                    <p className="text-slate-500 flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Generated on {selectedReport.createdAt?.toDate ? selectedReport.createdAt.toDate().toLocaleDateString() : 'Recently'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={async () => {
+                        const blob = await pdf(<SurgicalCaseWriteUpPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
+                        triggerDownload(blob, `Surgical_Case_WriteUp_${selectedReport.patientData.fullName || 'Patient'}`);
+                      }}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                    >
+                      <Download className="w-4 h-4" />
+                      DOWNLOAD PDF
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-12">
+                  <section>
+                    <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                      <div className="w-2 h-8 bg-[#8B5E3C] rounded-full" />
+                      Clinical Narrative
+                    </h2>
+                    <p className="text-slate-600 leading-relaxed text-lg">{selectedReport.reportData.hpcNarrative}</p>
+                  </section>
+
+                  <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
+                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-xs tracking-widest">Clinical Impression</h3>
+                      <p className="text-slate-700 font-medium">{selectedReport.reportData.impression}</p>
+                    </div>
+                    <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
+                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-xs tracking-widest">Management Plan</h3>
+                      <ul className="space-y-2">
+                        {selectedReport.reportData.plan?.map((item: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h2 className="text-xl font-bold text-slate-900 mb-6">Differential Diagnoses</h2>
+                    <div className="space-y-4">
+                      {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
+                        <div key={i} className="p-6 rounded-3xl border border-slate-100 hover:border-[#8B5E3C]/30 transition-colors">
+                          <h4 className="font-bold text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
+                          <p className="text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleReset}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-[#8B5E3C] text-white text-[10px] md:text-xs font-bold hover:bg-[#7D5233] transition-colors shadow-sm"
-            >
-              <RotateCcw className="w-3 md:w-3.5 h-3 md:h-3.5" />
-              <span className="hidden sm:inline">RESET SESSION</span>
-              <span className="sm:hidden">RESET</span>
-            </button>
-          </div>
-        </header>
+        ) : (
+          <>
+            {/* Header */}
+            <header className="h-16 md:h-20 bg-white border-b border-slate-100 px-4 md:px-10 flex items-center justify-between sticky top-0 z-30">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl md:hidden"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+                <div className="flex flex-col">
+                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module {currentStepIndex + 1}/{STEPS.length}</span>
+                  <span className="text-xs md:text-sm font-bold text-slate-800 truncate max-w-[150px] md:max-w-none">{currentStep.label}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setView('dashboard')}
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-slate-500 text-[10px] md:text-xs font-bold hover:bg-slate-50 transition-colors"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">DASHBOARD</span>
+                </button>
+                <button 
+                  onClick={handleReset}
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-[#8B5E3C] text-white text-[10px] md:text-xs font-bold hover:bg-[#7D5233] transition-colors shadow-sm"
+                >
+                  <RotateCcw className="w-3 md:w-3.5 h-3 md:h-3.5" />
+                  <span className="hidden sm:inline">RESET SESSION</span>
+                  <span className="sm:hidden">RESET</span>
+                </button>
+              </div>
+            </header>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-12">
-          <div className="max-w-4xl mx-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="flex flex-col gap-6 md:gap-10"
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto px-4 md:px-10 py-6 md:py-12">
+              <div className="max-w-4xl mx-auto">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col gap-6 md:gap-10"
+                  >
+                    <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
+                      <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-slate-800">{currentStep.title}</h2>
+                      <p className="text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl md:rounded-[32px] p-5 md:p-10 shadow-sm border border-slate-100">
+                      {renderStepContent(currentStep.id)}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Footer Navigation */}
+            <footer className="h-20 md:h-24 bg-white border-t border-slate-100 px-4 md:px-10 flex items-center justify-between sticky bottom-0 z-30">
+              <button 
+                onClick={handlePrev}
+                disabled={currentStepIndex === 0}
+                className={`
+                  flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all
+                  ${currentStepIndex === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50'}
+                `}
               >
-                <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
-                  <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-slate-800">{currentStep.title}</h2>
-                  <p className="text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
-                </div>
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">PREVIOUS</span>
+              </button>
 
-                <div className="bg-white rounded-2xl md:rounded-[32px] p-5 md:p-10 shadow-sm border border-slate-100">
-                  {renderStepContent(currentStep.id)}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
+              <button 
+                onClick={handleReset}
+                className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-red-50 text-red-600 text-xs md:text-sm font-bold hover:bg-red-100 transition-all sm:shadow-lg sm:shadow-red-100"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span className="hidden sm:inline">NEW CASE</span>
+              </button>
 
-        {/* Footer Navigation */}
-        <footer className="h-20 md:h-24 bg-white border-t border-slate-100 px-4 md:px-10 flex items-center justify-between sticky bottom-0 z-30">
-          <button 
-            onClick={handlePrev}
-            disabled={currentStepIndex === 0}
-            className={`
-              flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all
-              ${currentStepIndex === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50'}
-            `}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">PREVIOUS</span>
-          </button>
-
-          <button 
-            onClick={handleReset}
-            className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-red-50 text-red-600 text-xs md:text-sm font-bold hover:bg-red-100 transition-all sm:shadow-lg sm:shadow-red-100"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span className="hidden sm:inline">NEW CASE</span>
-          </button>
-
-          {currentStepIndex === STEPS.length - 1 ? (
-            <button 
-              onClick={handleCompileReport}
-              disabled={isGenerating}
-              className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-900 text-white text-xs md:text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="hidden sm:inline">GENERATING...</span>
-                  <span className="sm:hidden">...</span>
-                </>
+              {currentStepIndex === STEPS.length - 1 ? (
+                <button 
+                  onClick={handleCompileReport}
+                  disabled={isGenerating}
+                  className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-900 text-white text-xs md:text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">GENERATING...</span>
+                      <span className="sm:hidden">...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-4 h-4" />
+                      <span className="hidden sm:inline">COMPILE REPORT</span>
+                      <span className="sm:hidden">COMPILE</span>
+                    </>
+                  )}
+                </button>
               ) : (
-                <>
-                  <FileText className="w-4 h-4" />
-                  <span className="hidden sm:inline">COMPILE REPORT</span>
-                  <span className="sm:hidden">COMPILE</span>
-                </>
+                <button 
+                  onClick={handleNext}
+                  className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#8B5E3C] text-white text-xs md:text-sm font-bold hover:bg-[#7D5233] transition-all shadow-lg shadow-[#8B5E3C]/20 group"
+                >
+                  <span className="hidden sm:inline">PROCEED</span>
+                  <span className="sm:hidden">NEXT</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </button>
               )}
-            </button>
-          ) : (
-            <button 
-              onClick={handleNext}
-              className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#8B5E3C] text-white text-xs md:text-sm font-bold hover:bg-[#7D5233] transition-all shadow-lg shadow-[#8B5E3C]/20 group"
-            >
-              <span className="hidden sm:inline">PROCEED</span>
-              <span className="sm:hidden">NEXT</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          )}
-        </footer>
+            </footer>
+          </>
+        )}
       </main>
 
       {/* Loading Overlay */}
