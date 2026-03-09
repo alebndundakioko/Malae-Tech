@@ -39,7 +39,8 @@ import {
   LayoutDashboard,
   AlertCircle,
   Check,
-  Calendar
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 
 // Firebase imports
@@ -715,6 +716,12 @@ export default function App() {
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ show: false, title: '', message: '', onConfirm: () => {} });
   const [originalReportStatus, setOriginalReportStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
   const [storyReportStatus, setStoryReportStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
 
@@ -743,8 +750,20 @@ export default function App() {
   }, []);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    setView('dashboard');
+    setShowConfirmModal({
+      show: true,
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out of your clinical session?',
+      onConfirm: async () => {
+        try {
+          await signOut(auth);
+          setView('dashboard');
+        } catch (error) {
+          console.error("Logout Error:", error);
+        }
+        setShowConfirmModal(prev => ({ ...prev, show: false }));
+      }
+    });
   };
 
   const handleSaveReport = async (storyData: any, type: 'original' | 'story' = 'story') => {
@@ -970,11 +989,17 @@ export default function App() {
   };
 
   const handleReset = () => {
-    if (confirm("Are you sure you want to reset the session? All data will be lost.")) {
-      setFormData({});
-      setCurrentStepIndex(0);
-      setCompletedSteps(new Set());
-    }
+    setShowConfirmModal({
+      show: true,
+      title: 'Reset Session',
+      message: 'Are you sure you want to reset the session? All current patient data will be lost.',
+      onConfirm: () => {
+        setFormData({});
+        setCurrentStepIndex(0);
+        setCompletedSteps(new Set());
+        setShowConfirmModal(prev => ({ ...prev, show: false }));
+      }
+    });
   };
 
   const updateField = (field: string, value: any) => {
@@ -1274,6 +1299,17 @@ export default function App() {
                 setSelectedReport(report);
                 setView('viewer');
               }}
+              onConfirmDelete={(onConfirm) => {
+                setShowConfirmModal({
+                  show: true,
+                  title: 'Delete Record',
+                  message: 'Are you sure you want to permanently delete this clinical record?',
+                  onConfirm: () => {
+                    onConfirm();
+                    setShowConfirmModal(prev => ({ ...prev, show: false }));
+                  }
+                });
+              }}
             />
           </div>
         ) : view === 'viewer' ? (
@@ -1291,16 +1327,30 @@ export default function App() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 sm:mb-12 pb-8 sm:pb-12 border-b border-slate-50">
                   <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2 leading-tight">{selectedReport.title}</h1>
-                    <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Generated on {selectedReport.createdAt?.toDate ? selectedReport.createdAt.toDate().toLocaleDateString() : 'Recently'}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {selectedReport.createdAt?.toDate ? selectedReport.createdAt.toDate().toLocaleDateString() : 'Recently'}
+                      </p>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
+                        selectedReport.type === 'story' 
+                          ? 'bg-[#8B5E3C]/5 text-[#8B5E3C] border-[#8B5E3C]/20' 
+                          : 'bg-slate-50 text-slate-500 border-slate-200'
+                      }`}>
+                        {selectedReport.type === 'story' ? 'AI Synthesis' : 'Clinical Data'}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={async () => {
-                        const blob = await pdf(<SurgicalCaseWriteUpPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
-                        triggerDownload(blob, `Surgical_Case_WriteUp_${selectedReport.patientData.fullName || 'Patient'}`);
+                        if (selectedReport.type === 'story') {
+                          const blob = await pdf(<SurgicalCaseWriteUpPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
+                          triggerDownload(blob, `Surgical_Case_WriteUp_${selectedReport.patientData.fullName || 'Patient'}`);
+                        } else {
+                          const blob = await pdf(<MedicalReportPDF formData={selectedReport.patientData} />).toBlob();
+                          triggerDownload(blob, `Clinical_Report_${selectedReport.patientData.fullName || 'Patient'}`);
+                        }
                       }}
                       className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-xs sm:text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                     >
@@ -1311,43 +1361,91 @@ export default function App() {
                 </div>
 
                 <div className="space-y-8 sm:space-y-12">
-                  <section>
-                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
-                      <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#8B5E3C] rounded-full" />
-                      Clinical Narrative
-                    </h2>
-                    <p className="text-slate-600 leading-relaxed text-base sm:text-lg">{selectedReport.reportData.hpcNarrative}</p>
-                  </section>
+                  {selectedReport.type === 'story' ? (
+                    <>
+                      <section>
+                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                          <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#8B5E3C] rounded-full" />
+                          Clinical Narrative
+                        </h2>
+                        <p className="text-slate-600 leading-relaxed text-base sm:text-lg">{selectedReport.reportData.hpcNarrative}</p>
+                      </section>
 
-                  <section className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                    <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
-                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Clinical Impression</h3>
-                      <p className="text-sm sm:text-base text-slate-700 font-medium">{selectedReport.reportData.impression}</p>
-                    </div>
-                    <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
-                      <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Management Plan</h3>
-                      <ul className="space-y-2">
-                        {selectedReport.reportData.plan?.map((item: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-600">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-6">Differential Diagnoses</h2>
-                    <div className="space-y-4">
-                      {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
-                        <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#8B5E3C]/30 transition-colors">
-                          <h4 className="font-bold text-sm sm:text-base text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
-                          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
+                      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                        <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
+                          <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Clinical Impression</h3>
+                          <p className="text-sm sm:text-base text-slate-700 font-medium">{selectedReport.reportData.impression}</p>
                         </div>
-                      ))}
+                        <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
+                          <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Management Plan</h3>
+                          <ul className="space-y-2">
+                            {selectedReport.reportData.plan?.map((item: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-600">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </section>
+
+                      <section>
+                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-6">Differential Diagnoses</h2>
+                        <div className="space-y-4">
+                          {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
+                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#8B5E3C]/30 transition-colors">
+                              <h4 className="font-bold text-sm sm:text-base text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
+                              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    </>
+                  ) : (
+                    <div className="space-y-8">
+                      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Patient Name</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedReport.patientData.fullName || 'Not recorded'}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Chief Complaint</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedReport.patientData.chiefComplaint || 'Not recorded'}</p>
+                        </div>
+                      </section>
+                      
+                      <section>
+                        <h2 className="text-lg font-bold text-slate-900 mb-4">Clinical History</h2>
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-xl border border-slate-100">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">History of Presenting Illness</h4>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedReport.patientData.hpi || 'No data recorded'}</p>
+                          </div>
+                          <div className="p-4 rounded-xl border border-slate-100">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Past Medical History</h4>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedReport.patientData.pmh || 'No data recorded'}</p>
+                          </div>
+                        </div>
+                      </section>
+
+                      <div className="p-6 rounded-2xl bg-[#8B5E3C]/5 border border-[#8B5E3C]/10 text-center">
+                        <Sparkles className="w-8 h-8 text-[#8B5E3C] mx-auto mb-3" />
+                        <h4 className="font-bold text-slate-900 mb-2">Synthesize this case?</h4>
+                        <p className="text-xs text-slate-500 mb-4">You can generate an AI-powered academic story from this clinical data.</p>
+                        <button 
+                          onClick={() => {
+                            setFormData(selectedReport.patientData);
+                            setCurrentStepIndex(0);
+                            setCompletedSteps(new Set([0, 1, 2, 3, 4])); // Mark all as done
+                            setView('generator');
+                          }}
+                          className="px-6 py-2 rounded-lg bg-[#8B5E3C] text-white text-xs font-bold hover:bg-[#724C31] transition-all"
+                        >
+                          Generate Story
+                        </button>
+                      </div>
                     </div>
-                  </section>
+                  )}
                 </div>
               </div>
             </div>
@@ -1491,6 +1589,46 @@ export default function App() {
 
       {/* Report Selection Modal */}
       <AnimatePresence>
+        {showConfirmModal.show && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowConfirmModal(prev => ({ ...prev, show: false }))}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl border border-slate-100"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-6 mx-auto">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 text-center mb-2">{showConfirmModal.title}</h3>
+              <p className="text-slate-500 text-center text-sm mb-8">{showConfirmModal.message}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmModal(prev => ({ ...prev, show: false }))}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={() => {
+                    showConfirmModal.onConfirm();
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold text-xs hover:bg-red-600 transition-all shadow-lg shadow-red-200"
+                >
+                  CONFIRM
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showReportModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div 

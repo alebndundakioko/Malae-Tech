@@ -25,9 +25,10 @@ import {
 interface DashboardProps {
   onNewReport: () => void;
   onViewReport: (report: any) => void;
+  onConfirmDelete: (onConfirm: () => void) => void;
 }
 
-export const Dashboard = ({ onNewReport, onViewReport }: DashboardProps) => {
+export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: DashboardProps) => {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,14 +65,15 @@ export const Dashboard = ({ onNewReport, onViewReport }: DashboardProps) => {
 
   const handleDelete = async (e: React.MouseEvent, reportId: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this report?")) return;
-
-    try {
-      await deleteDoc(doc(db, 'reports', reportId));
-      setReports(reports.filter(r => r.id !== reportId));
-    } catch (error) {
-      console.error("Error deleting report:", error);
-    }
+    
+    onConfirmDelete(async () => {
+      try {
+        await deleteDoc(doc(db, 'reports', reportId));
+        setReports(reports.filter(r => r.id !== reportId));
+      } catch (error) {
+        console.error("Error deleting report:", error);
+      }
+    });
   };
 
   const filteredReports = reports.filter(report => {
