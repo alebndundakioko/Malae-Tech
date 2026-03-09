@@ -345,10 +345,16 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base"
+              className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base disabled:opacity-70"
             >
-              <Chrome className="w-5 h-5" />
-              Google
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Chrome className="w-5 h-5" />
+                  Google
+                </>
+              )}
             </button>
           </div>
         </div>
