@@ -102,12 +102,12 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-12">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[#D946EF] font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em]">
-            <Heart className="w-4 h-4 fill-[#D946EF]" />
+          <div className="flex items-center gap-2 text-[#8B5CF6] font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em]">
+            <Heart className="w-4 h-4 fill-[#8B5CF6]" />
             Welcome back
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            {getGreeting()}, <span className="text-[#D946EF]">{auth.currentUser?.displayName?.split(' ')[0] || 'Doctor'}</span>
+            {getGreeting()}, <span className="text-[#8B5CF6]">{auth.currentUser?.displayName?.split(' ')[0] || 'Doctor'}</span>
           </h1>
           <p className="text-sm sm:text-base text-slate-500 max-w-md">
             Here's a look at your clinical archive. Ready to document a new case?
@@ -117,7 +117,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
         <div className="flex items-center gap-3">
           <button
             onClick={onNewReport}
-            className="w-full sm:w-auto group relative bg-[#D946EF] text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-xl shadow-[#D946EF]/20 hover:shadow-2xl hover:shadow-[#D946EF]/30 transition-all flex items-center justify-center gap-3 overflow-hidden"
+            className="w-full sm:w-auto group relative bg-[#8B5CF6] text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-xl shadow-[#8B5CF6]/20 hover:shadow-2xl hover:shadow-[#8B5CF6]/30 transition-all flex items-center justify-center gap-3 overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             <Plus className="w-5 h-5 relative z-10" />
@@ -185,7 +185,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                   onClick={() => setFilterType(type)}
                   className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all ${
                     filterType === type 
-                      ? 'bg-white text-[#D946EF] shadow-sm' 
+                      ? 'bg-white text-[#8B5CF6] shadow-sm' 
                       : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
@@ -203,7 +203,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                 placeholder="Find a patient or complaint..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-[#D946EF]/5 focus:border-[#D946EF] transition-all placeholder:text-slate-400"
+                className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/5 focus:border-[#8B5CF6] transition-all placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -236,7 +236,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                       <div className={`
                         w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300
                         ${report.type === 'story' 
-                          ? 'bg-[#D946EF]/10 text-[#D946EF] group-hover:bg-[#D946EF] group-hover:text-white' 
+                          ? 'bg-[#8B5CF6]/10 text-[#8B5CF6] group-hover:bg-[#8B5CF6] group-hover:text-white' 
                           : 'bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white'}
                       `}>
                         {report.type === 'story' ? <Sparkles className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
@@ -244,12 +244,12 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                       
                       <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#D946EF] transition-colors truncate">
+                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#8B5CF6] transition-colors truncate">
                             {report.title}
                           </h3>
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
                             report.type === 'story' 
-                              ? 'bg-[#D946EF]/5 text-[#D946EF] border-[#D946EF]/20' 
+                              ? 'bg-[#8B5CF6]/5 text-[#8B5CF6] border-[#8B5CF6]/20' 
                               : 'bg-slate-50 text-slate-500 border-slate-200'
                           }`}>
                             {report.type === 'story' ? 'Case Story' : 'Case Details'}
@@ -285,7 +285,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                           <Trash2 className="w-4.5 h-4.5" />
                         </button>
                       </div>
-                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-[#D946EF] group-hover:text-[#D946EF] transition-all">
+                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-[#8B5CF6] group-hover:text-[#8B5CF6] transition-all">
                         <ArrowUpRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       </div>
                     </div>
@@ -302,7 +302,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
               <p className="text-slate-500 mb-10 max-w-xs mx-auto">Ready to document your first case? We'll help you organize the details into a professional narrative.</p>
               <button
                 onClick={onNewReport}
-                className="inline-flex items-center gap-2 text-[#D946EF] font-black uppercase tracking-widest text-xs hover:gap-4 transition-all"
+                className="inline-flex items-center gap-2 text-[#8B5CF6] font-black uppercase tracking-widest text-xs hover:gap-4 transition-all"
               >
                 Start Your First Case
                 <ChevronRight className="w-4 h-4" />

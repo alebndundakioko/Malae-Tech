@@ -31,7 +31,7 @@ export const Loader = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
             key={i}
             animate={{ 
               y: [0, -8, 0],
-              backgroundColor: ['#8B5CF6', '#D946EF', '#8B5CF6']
+              backgroundColor: ['#7C3AED', '#A78BFA', '#7C3AED']
             }}
             transition={{ 
               duration: 1, 
