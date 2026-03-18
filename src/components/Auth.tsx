@@ -171,7 +171,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white font-sans selection:bg-[#8B5CF6]/30 selection:text-[#7C3AED]">
+    <div className="min-h-screen flex bg-white font-sans selection:bg-[#7A816C]/30 selection:text-[#666D59]">
       {/* Left Section: Immersive Branding & Imagery */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#151619]">
         {/* Background Image with Overlay */}
@@ -193,7 +193,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <div className="flex items-center gap-3 mb-12">
-              <div className="w-12 h-12 rounded-xl bg-[#8B5CF6] flex items-center justify-center shadow-lg shadow-[#8B5CF6]/40">
+              <div className="w-12 h-12 rounded-xl bg-[#7A816C] flex items-center justify-center shadow-lg shadow-[#7A816C]/40">
                 <Lock className="w-6 h-6 text-white" />
               </div>
               <span className="text-2xl font-bold text-white tracking-tight">Malae</span>
@@ -201,7 +201,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
 
             <div className="space-y-6 max-w-md">
               <h2 className="text-5xl font-bold text-white leading-[1.1] tracking-tight">
-                Crafting the <span className="text-[#C4B5FD]">narrative</span> of modern medicine.
+                Crafting the <span className="text-[#9BA18D]">narrative</span> of modern medicine.
               </h2>
               <p className="text-lg text-slate-400 leading-relaxed">
                 Empowering surgeons to transform clinical data into compelling case stories with the power of AI.
@@ -222,7 +222,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               { label: 'Global Reach', desc: 'Share your expertise' }
             ].map((feature, i) => (
               <div key={i} className="space-y-1">
-                <div className="text-[#8B5CF6] font-bold text-sm uppercase tracking-widest">{feature.label}</div>
+                <div className="text-[#7A816C] font-bold text-sm uppercase tracking-widest">{feature.label}</div>
                 <div className="text-slate-500 text-xs">{feature.desc}</div>
               </div>
             ))}
@@ -230,12 +230,12 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         </div>
 
         {/* Decorative Elements */}
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#8B5CF6]/10 rounded-full blur-[120px]" />
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#C4B5FD]/10 rounded-full blur-[120px]" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#7A816C]/10 rounded-full blur-[120px]" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#9BA18D]/10 rounded-full blur-[120px]" />
       </div>
 
       {/* Right Section: Interactive Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-20 bg-[#F5F3FF]/30">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-20 bg-[#F2F3F0]/30">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -244,7 +244,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#8B5CF6] flex items-center justify-center shadow-lg shadow-[#8B5CF6]/20">
+              <div className="w-10 h-10 rounded-xl bg-[#7A816C] flex items-center justify-center shadow-lg shadow-[#7A816C]/20">
                 <Lock className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900 tracking-tight">Malae</span>
@@ -266,7 +266,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full bg-white border border-slate-200 hover:border-[#8B5CF6]/50 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base shadow-sm hover:shadow-md disabled:opacity-70 group"
+              className="w-full bg-white border border-slate-200 hover:border-[#7A816C]/50 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base shadow-sm hover:shadow-md disabled:opacity-70 group"
             >
               {loading ? (
                 <Loader />
@@ -283,7 +283,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                 <div className="w-full border-t border-slate-100"></div>
               </div>
               <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-[#F5F3FF]/30 px-4 text-slate-400 font-bold tracking-[0.2em]">Or use email</span>
+                <span className="bg-[#F2F3F0]/30 px-4 text-slate-400 font-bold tracking-[0.2em]">Or use email</span>
               </div>
             </div>
 
@@ -299,13 +299,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
                       <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#7A816C] transition-colors" />
                         <input
                           type="text"
                           required
                           value={displayName}
                           onChange={(e) => setDisplayName(e.target.value)}
-                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#7A816C]/10 focus:border-[#7A816C] transition-all placeholder:text-slate-300"
                           placeholder="Dr. Samantha A."
                         />
                       </div>
@@ -314,13 +314,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hospital / Institution</label>
                       <div className="relative group">
-                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#7A816C] transition-colors" />
                         <input
                           type="text"
                           required
                           value={hospital}
                           onChange={(e) => setHospital(e.target.value)}
-                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#7A816C]/10 focus:border-[#7A816C] transition-all placeholder:text-slate-300"
                           placeholder="General Hospital"
                         />
                       </div>
@@ -332,13 +332,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#7A816C] transition-colors" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#7A816C]/10 focus:border-[#7A816C] transition-all placeholder:text-slate-300"
                     placeholder="name@hospital.com"
                   />
                 </div>
@@ -348,19 +348,19 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                 <div className="flex justify-between items-center ml-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
                   {isLogin && (
-                    <button type="button" className="text-[11px] font-bold text-[#8B5CF6] hover:underline uppercase tracking-wider">
+                    <button type="button" className="text-[11px] font-bold text-[#7A816C] hover:underline uppercase tracking-wider">
                       Forgot?
                     </button>
                   )}
                 </div>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#7A816C] transition-colors" />
                   <input
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                    className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#7A816C]/10 focus:border-[#7A816C] transition-all placeholder:text-slate-300"
                     placeholder="••••••••"
                   />
                   <button
@@ -400,13 +400,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   >
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirm Password</label>
                     <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#7A816C] transition-colors" />
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         required
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                        className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#7A816C]/10 focus:border-[#7A816C] transition-all placeholder:text-slate-300"
                         placeholder="••••••••"
                       />
                       <button
@@ -435,7 +435,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#8B5CF6]/25 hover:shadow-[#8B5CF6]/40 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 active:scale-[0.98]"
+                className="w-full bg-[#7A816C] hover:bg-[#666D59] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#7A816C]/25 hover:shadow-[#7A816C]/40 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 active:scale-[0.98]"
               >
                 {loading ? (
                   <Loader />
@@ -452,7 +452,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               {isLogin ? "New to Malae?" : "Already have an account?"}{' '}
               <button 
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-[#8B5CF6] font-bold hover:underline ml-1"
+                className="text-[#7A816C] font-bold hover:underline ml-1"
               >
                 {isLogin ? 'Create an account' : 'Log in here'}
               </button>

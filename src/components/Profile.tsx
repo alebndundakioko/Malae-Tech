@@ -90,14 +90,14 @@ export const Profile = ({ onBack }: ProfileProps) => {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <button 
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-500 hover:text-[#8B5CF6] transition-colors mb-8 group"
+        className="flex items-center gap-2 text-slate-500 hover:text-[#7A816C] transition-colors mb-8 group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         <span className="text-sm font-bold uppercase tracking-wider">Back to My Cases</span>
       </button>
 
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-        <div className="bg-[#8B5CF6] p-8 text-white">
+        <div className="bg-[#7A816C] p-8 text-white">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <User className="w-8 h-8" />
@@ -133,7 +133,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7A816C]/20 focus:border-[#7A816C] transition-all"
                 placeholder="Dr. Samantha"
               />
             </div>
@@ -148,7 +148,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 required
                 value={hospital}
                 onChange={(e) => setHospital(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7A816C]/20 focus:border-[#7A816C] transition-all"
                 placeholder="General Hospital"
               />
             </div>
@@ -171,7 +171,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full bg-[#7A816C] hover:bg-[#666D59] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#7A816C]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
           >
             {saving ? (
               <Loader />

@@ -3,10 +3,10 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #7C3AED; /* Violet 600 */
-  --color-secondary: #C4B5FD; /* Violet 300 */
-  --color-accent: #8B5CF6; /* Violet 500 */
-  --color-surface: #F5F3FF; /* Violet 50 */
+  --color-primary: #666D59; /* Muted Olive Dark */
+  --color-secondary: #9BA18D; /* Muted Olive Light */
+  --color-accent: #7A816C; /* Muted Olive Primary */
+  --color-surface: #F2F3F0; /* Muted Olive Surface */
 }
 
 @layer base {

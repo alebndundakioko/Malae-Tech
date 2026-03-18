@@ -133,7 +133,7 @@ const STEPS: Step[] = [
 
 // --- Components ---
 
-const InputField = ({ label, placeholder, type = "text", value, onChange, required, onVoiceInput }: any) => (
+const InputField = ({ label, placeholder, type = "text", value, onChange, required, onVoiceInput, isRecording }: any) => (
   <div className="flex flex-col gap-1.5 w-full">
     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
       {label} {required && <span className="text-red-500">*</span>}
@@ -144,22 +144,22 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+        className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#7A816C]/20 focus:border-[#7A816C] transition-all"
       />
       {onVoiceInput && (
         <button 
           type="button"
           onClick={onVoiceInput}
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-[#8B5CF6] transition-colors"
+          className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-[#7A816C]'}`}
         >
-          <Mic className="w-4 h-4" />
+          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </button>
       )}
     </div>
   </div>
 );
 
-const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceInput }: any) => (
+const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceInput, isRecording }: any) => (
   <div className="flex flex-col gap-1.5 w-full">
     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
       {label} {required && <span className="text-red-500">*</span>}
@@ -170,15 +170,15 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
-        className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all resize-none"
+        className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#7A816C]/20 focus:border-[#7A816C] transition-all resize-none"
       />
       {onVoiceInput && (
         <button 
           type="button"
           onClick={onVoiceInput}
-          className="absolute right-3 bottom-3 p-1.5 text-slate-400 hover:text-[#8B5CF6] transition-colors"
+          className={`absolute right-3 bottom-3 p-1.5 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-[#7A816C]'}`}
         >
-          <Mic className="w-4 h-4" />
+          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </button>
       )}
     </div>
@@ -193,7 +193,7 @@ const SelectField = ({ label, options, value, onChange, required }: any) => (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+      className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7A816C]/20 focus:border-[#7A816C] transition-all"
     >
       <option value="">Select an option</option>
       {options.map((opt: string) => (
@@ -219,7 +219,7 @@ const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => (
         }}
         disabled={isProcessing}
       />
-      <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#8B5CF6] transition-colors">
+      <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#7A816C] transition-colors">
         {isProcessing ? <Loader size="sm" /> : <Upload className="w-6 h-6" />}
       </div>
       <div className="text-center">
@@ -339,7 +339,7 @@ const pdfStyles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#7A816C',
     marginRight: 6,
   },
   systemTitle: {
@@ -755,6 +755,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingField, setRecordingField] = useState<string | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -811,6 +812,15 @@ export default function App() {
   }, [formData]);
 
   const startVoiceInput = async (field: string) => {
+    if (isRecording && recordingField === field) {
+      stopVoiceInput();
+      return;
+    }
+    
+    if (isRecording) {
+      stopVoiceInput();
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -824,10 +834,12 @@ export default function App() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await transcribeAudio(audioBlob, field);
+        setRecordingField(null);
       };
 
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingField(field);
       
       // Stop after 10 seconds automatically or on user click
       setTimeout(() => {
@@ -846,6 +858,7 @@ export default function App() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setRecordingField(null);
     }
   };
 
@@ -977,7 +990,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F3FF]">
+      <div className="min-h-screen flex items-center justify-center bg-[#F2F3F0]">
         <Loader />
       </div>
     );
@@ -1191,45 +1204,45 @@ export default function App() {
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputField label="Date of Admission" type="date" value={formData.admissionDate} onChange={(v: any) => updateField('admissionDate', v)} required />
-            <InputField label="Patient Full Name" placeholder="John Doe" value={formData.fullName} onChange={(v: any) => updateField('fullName', v)} required onVoiceInput={() => startVoiceInput('fullName')} />
-            <InputField label="Age (years)" placeholder="45" value={formData.age} onChange={(v: any) => updateField('age', v)} required onVoiceInput={() => startVoiceInput('age')} />
-            <InputField label="Sex" placeholder="Male/Female" value={formData.sex} onChange={(v: any) => updateField('sex', v)} required onVoiceInput={() => startVoiceInput('sex')} />
-            <InputField label="Tribe/Ethnicity" placeholder="Kikuyu" value={formData.ethnicity} onChange={(v: any) => updateField('ethnicity', v)} onVoiceInput={() => startVoiceInput('ethnicity')} />
-            <InputField label="Address/Location" placeholder="Nairobi" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} />
-            <InputField label="Religion" placeholder="Christian" value={formData.religion} onChange={(v: any) => updateField('religion', v)} onVoiceInput={() => startVoiceInput('religion')} />
-            <InputField label="Occupation" placeholder="Teacher" value={formData.occupation} onChange={(v: any) => updateField('occupation', v)} onVoiceInput={() => startVoiceInput('occupation')} />
-            <InputField label="Next of Kin (Initials)" placeholder="J.D" value={formData.nextOfKin} onChange={(v: any) => updateField('nextOfKin', v)} onVoiceInput={() => startVoiceInput('nextOfKin')} />
-            <InputField label="Relationship" placeholder="Spouse" value={formData.relationship} onChange={(v: any) => updateField('relationship', v)} onVoiceInput={() => startVoiceInput('relationship')} />
+            <InputField label="Patient Initials" placeholder="J.D" value={formData.fullName} onChange={(v: any) => updateField('fullName', v)} required onVoiceInput={() => startVoiceInput('fullName')} isRecording={recordingField === 'fullName'} />
+            <InputField label="Age (years)" placeholder="45" value={formData.age} onChange={(v: any) => updateField('age', v)} required onVoiceInput={() => startVoiceInput('age')} isRecording={recordingField === 'age'} />
+            <InputField label="Sex" placeholder="Male/Female" value={formData.sex} onChange={(v: any) => updateField('sex', v)} required onVoiceInput={() => startVoiceInput('sex')} isRecording={recordingField === 'sex'} />
+            <InputField label="Tribe/Ethnicity" placeholder="Kikuyu" value={formData.ethnicity} onChange={(v: any) => updateField('ethnicity', v)} onVoiceInput={() => startVoiceInput('ethnicity')} isRecording={recordingField === 'ethnicity'} />
+            <InputField label="Address/Location" placeholder="Nairobi" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} isRecording={recordingField === 'address'} />
+            <InputField label="Religion" placeholder="Christian" value={formData.religion} onChange={(v: any) => updateField('religion', v)} onVoiceInput={() => startVoiceInput('religion')} isRecording={recordingField === 'religion'} />
+            <InputField label="Occupation" placeholder="Teacher" value={formData.occupation} onChange={(v: any) => updateField('occupation', v)} onVoiceInput={() => startVoiceInput('occupation')} isRecording={recordingField === 'occupation'} />
+            <InputField label="Next of Kin (Initials)" placeholder="J.D" value={formData.nextOfKin} onChange={(v: any) => updateField('nextOfKin', v)} onVoiceInput={() => startVoiceInput('nextOfKin')} isRecording={recordingField === 'nextOfKin'} />
+            <InputField label="Relationship" placeholder="Spouse" value={formData.relationship} onChange={(v: any) => updateField('relationship', v)} onVoiceInput={() => startVoiceInput('relationship')} isRecording={recordingField === 'relationship'} />
           </div>
         );
       case 'presenting_complaint':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Chief Complaint" placeholder="e.g., Neck swelling, Epigastric pain" value={formData.chiefComplaint} onChange={(v: any) => updateField('chiefComplaint', v)} required onVoiceInput={() => startVoiceInput('chiefComplaint')} />
-            <InputField label="Duration" placeholder="e.g., 1 year, 2 months" value={formData.duration} onChange={(v: any) => updateField('duration', v)} required onVoiceInput={() => startVoiceInput('duration')} />
+            <TextAreaField label="Chief Complaint" placeholder="e.g., Neck swelling, Epigastric pain" value={formData.chiefComplaint} onChange={(v: any) => updateField('chiefComplaint', v)} required onVoiceInput={() => startVoiceInput('chiefComplaint')} isRecording={recordingField === 'chiefComplaint'} />
+            <InputField label="Duration" placeholder="e.g., 1 year, 2 months" value={formData.duration} onChange={(v: any) => updateField('duration', v)} required onVoiceInput={() => startVoiceInput('duration')} isRecording={recordingField === 'duration'} />
           </div>
         );
       case 'hpc_details':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField label="Onset" placeholder="sudden/gradual/insidious" value={formData.onset} onChange={(v: any) => updateField('onset', v)} onVoiceInput={() => startVoiceInput('onset')} />
-            <InputField label="Progression" placeholder="progressive/static/improving" value={formData.progression} onChange={(v: any) => updateField('progression', v)} onVoiceInput={() => startVoiceInput('progression')} />
-            <InputField label="Character" placeholder="sharp, dull, burning, aching" value={formData.character} onChange={(v: any) => updateField('character', v)} onVoiceInput={() => startVoiceInput('character')} />
-            <InputField label="Severity" placeholder="mild/moderate/severe or 1-10" value={formData.severity} onChange={(v: any) => updateField('severity', v)} onVoiceInput={() => startVoiceInput('severity')} />
-            <InputField label="Location" placeholder="exact anatomical location" value={formData.location} onChange={(v: any) => updateField('location', v)} onVoiceInput={() => startVoiceInput('location')} />
-            <InputField label="Radiation" placeholder="where symptoms radiate" value={formData.radiation} onChange={(v: any) => updateField('radiation', v)} onVoiceInput={() => startVoiceInput('radiation')} />
+            <InputField label="Onset" placeholder="sudden/gradual/insidious" value={formData.onset} onChange={(v: any) => updateField('onset', v)} onVoiceInput={() => startVoiceInput('onset')} isRecording={recordingField === 'onset'} />
+            <InputField label="Progression" placeholder="progressive/static/improving" value={formData.progression} onChange={(v: any) => updateField('progression', v)} onVoiceInput={() => startVoiceInput('progression')} isRecording={recordingField === 'progression'} />
+            <InputField label="Character" placeholder="sharp, dull, burning, aching" value={formData.character} onChange={(v: any) => updateField('character', v)} onVoiceInput={() => startVoiceInput('character')} isRecording={recordingField === 'character'} />
+            <InputField label="Severity" placeholder="mild/moderate/severe or 1-10" value={formData.severity} onChange={(v: any) => updateField('severity', v)} onVoiceInput={() => startVoiceInput('severity')} isRecording={recordingField === 'severity'} />
+            <InputField label="Location" placeholder="exact anatomical location" value={formData.location} onChange={(v: any) => updateField('location', v)} onVoiceInput={() => startVoiceInput('location')} isRecording={recordingField === 'location'} />
+            <InputField label="Radiation" placeholder="where symptoms radiate" value={formData.radiation} onChange={(v: any) => updateField('radiation', v)} onVoiceInput={() => startVoiceInput('radiation')} isRecording={recordingField === 'radiation'} />
             <div className="md:col-span-2">
-              <TextAreaField label="Associated Symptoms (Present)" placeholder="fever, weight loss, night sweats, cough, etc." value={formData.associatedSymptoms} onChange={(v: any) => updateField('associatedSymptoms', v)} onVoiceInput={() => startVoiceInput('associatedSymptoms')} />
+              <TextAreaField label="Associated Symptoms (Present)" placeholder="fever, weight loss, night sweats, cough, etc." value={formData.associatedSymptoms} onChange={(v: any) => updateField('associatedSymptoms', v)} onVoiceInput={() => startVoiceInput('associatedSymptoms')} isRecording={recordingField === 'associatedSymptoms'} />
             </div>
             <div className="md:col-span-2">
-              <TextAreaField label="Important Negative Findings" placeholder="symptoms NOT present that help rule out differentials" value={formData.negativeFindings} onChange={(v: any) => updateField('negativeFindings', v)} onVoiceInput={() => startVoiceInput('negativeFindings')} />
+              <TextAreaField label="Important Negative Findings" placeholder="symptoms NOT present that help rule out differentials" value={formData.negativeFindings} onChange={(v: any) => updateField('negativeFindings', v)} onVoiceInput={() => startVoiceInput('negativeFindings')} isRecording={recordingField === 'negativeFindings'} />
             </div>
-            <InputField label="Aggravating Factors" placeholder="lying flat, spicy foods, movement" value={formData.aggravating} onChange={(v: any) => updateField('aggravating', v)} onVoiceInput={() => startVoiceInput('aggravating')} />
-            <InputField label="Relieving Factors" placeholder="rest, medication, position" value={formData.relieving} onChange={(v: any) => updateField('relieving', v)} onVoiceInput={() => startVoiceInput('relieving')} />
-            <InputField label="Previous Treatment" placeholder="medications tried" value={formData.prevTreatment} onChange={(v: any) => updateField('prevTreatment', v)} onVoiceInput={() => startVoiceInput('prevTreatment')} />
-            <InputField label="Response to Treatment" placeholder="improvement/no change/worsening" value={formData.respTreatment} onChange={(v: any) => updateField('respTreatment', v)} onVoiceInput={() => startVoiceInput('respTreatment')} />
+            <InputField label="Aggravating Factors" placeholder="lying flat, spicy foods, movement" value={formData.aggravating} onChange={(v: any) => updateField('aggravating', v)} onVoiceInput={() => startVoiceInput('aggravating')} isRecording={recordingField === 'aggravating'} />
+            <InputField label="Relieving Factors" placeholder="rest, medication, position" value={formData.relieving} onChange={(v: any) => updateField('relieving', v)} onVoiceInput={() => startVoiceInput('relieving')} isRecording={recordingField === 'relieving'} />
+            <InputField label="Previous Treatment" placeholder="medications tried" value={formData.prevTreatment} onChange={(v: any) => updateField('prevTreatment', v)} onVoiceInput={() => startVoiceInput('prevTreatment')} isRecording={recordingField === 'prevTreatment'} />
+            <InputField label="Response to Treatment" placeholder="improvement/no change/worsening" value={formData.respTreatment} onChange={(v: any) => updateField('respTreatment', v)} onVoiceInput={() => startVoiceInput('respTreatment')} isRecording={recordingField === 'respTreatment'} />
             <div className="md:col-span-2">
-              <TextAreaField label="Impact on Daily Activities" placeholder="how symptoms affect daily life" value={formData.impact} onChange={(v: any) => updateField('impact', v)} onVoiceInput={() => startVoiceInput('impact')} />
+              <TextAreaField label="Impact on Daily Activities" placeholder="how symptoms affect daily life" value={formData.impact} onChange={(v: any) => updateField('impact', v)} onVoiceInput={() => startVoiceInput('impact')} isRecording={recordingField === 'impact'} />
             </div>
           </div>
         );
@@ -1239,12 +1252,12 @@ export default function App() {
             {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL'].map(system => (
               <div key={system} className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#7A816C]" />
                   <span className="text-[10px] font-bold text-slate-700 tracking-widest">{system}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputField label="Symptoms Present" value={formData[`${system}_present`]} onChange={(v: any) => updateField(`${system}_present`, v)} onVoiceInput={() => startVoiceInput(`${system}_present`)} />
-                  <InputField label="Symptoms Denied" value={formData[`${system}_denied`]} onChange={(v: any) => updateField(`${system}_denied`, v)} onVoiceInput={() => startVoiceInput(`${system}_denied`)} />
+                  <InputField label="Symptoms Present" value={formData[`${system}_present`]} onChange={(v: any) => updateField(`${system}_present`, v)} onVoiceInput={() => startVoiceInput(`${system}_present`)} isRecording={recordingField === `${system}_present`} />
+                  <InputField label="Symptoms Denied" value={formData[`${system}_denied`]} onChange={(v: any) => updateField(`${system}_denied`, v)} onVoiceInput={() => startVoiceInput(`${system}_denied`)} isRecording={recordingField === `${system}_denied`} />
                 </div>
               </div>
             ))}
@@ -1253,9 +1266,9 @@ export default function App() {
       case 'past_medical_hx':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Chronic Medical Conditions" value={formData.chronicConditions} onChange={(v: any) => updateField('chronicConditions', v)} onVoiceInput={() => startVoiceInput('chronicConditions')} />
-            <TextAreaField label="Current Pharmacotherapy" value={formData.medications} onChange={(v: any) => updateField('medications', v)} onVoiceInput={() => startVoiceInput('medications')} />
-            <TextAreaField label="Allergies & Hypersensitivities" value={formData.allergies} onChange={(v: any) => updateField('allergies', v)} onVoiceInput={() => startVoiceInput('allergies')} />
+            <TextAreaField label="Chronic Medical Conditions" value={formData.chronicConditions} onChange={(v: any) => updateField('chronicConditions', v)} onVoiceInput={() => startVoiceInput('chronicConditions')} isRecording={recordingField === 'chronicConditions'} />
+            <TextAreaField label="Current Pharmacotherapy" value={formData.medications} onChange={(v: any) => updateField('medications', v)} onVoiceInput={() => startVoiceInput('medications')} isRecording={recordingField === 'medications'} />
+            <TextAreaField label="Allergies & Hypersensitivities" value={formData.allergies} onChange={(v: any) => updateField('allergies', v)} onVoiceInput={() => startVoiceInput('allergies')} isRecording={recordingField === 'allergies'} />
             <FileUpload 
               label="Supporting Records" 
               subtitle="UPLOAD LAB RESULTS OR CLINICAL NOTES" 
@@ -1267,20 +1280,20 @@ export default function App() {
       case 'past_surgical_hx':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Previous Surgeries" placeholder="Appendectomy 2015, etc." value={formData.surgeries} onChange={(v: any) => updateField('surgeries', v)} onVoiceInput={() => startVoiceInput('surgeries')} />
-            <InputField label="Major Trauma/Fractures" placeholder="Describe any major injuries" value={formData.trauma} onChange={(v: any) => updateField('trauma', v)} onVoiceInput={() => startVoiceInput('trauma')} />
-            <InputField label="Blood Transfusion History" placeholder="Yes/No, if yes when and why" value={formData.transfusions} onChange={(v: any) => updateField('transfusions', v)} onVoiceInput={() => startVoiceInput('transfusions')} />
+            <TextAreaField label="Previous Surgeries" placeholder="Appendectomy 2015, etc." value={formData.surgeries} onChange={(v: any) => updateField('surgeries', v)} onVoiceInput={() => startVoiceInput('surgeries')} isRecording={recordingField === 'surgeries'} />
+            <InputField label="Major Trauma/Fractures" placeholder="Describe any major injuries" value={formData.trauma} onChange={(v: any) => updateField('trauma', v)} onVoiceInput={() => startVoiceInput('trauma')} isRecording={recordingField === 'trauma'} />
+            <InputField label="Blood Transfusion History" placeholder="Yes/No, if yes when and why" value={formData.transfusions} onChange={(v: any) => updateField('transfusions', v)} onVoiceInput={() => startVoiceInput('transfusions')} isRecording={recordingField === 'transfusions'} />
           </div>
         );
       case 'family_social_hx':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Familial Health Patterns" value={formData.familyHistory} onChange={(v: any) => updateField('familyHistory', v)} onVoiceInput={() => startVoiceInput('familyHistory')} />
+            <TextAreaField label="Familial Health Patterns" value={formData.familyHistory} onChange={(v: any) => updateField('familyHistory', v)} onVoiceInput={() => startVoiceInput('familyHistory')} isRecording={recordingField === 'familyHistory'} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SelectField label="Alcohol Consumption" options={['None', 'Social', 'Heavy']} value={formData.alcohol} onChange={(v: any) => updateField('alcohol', v)} />
               <SelectField label="Tobacco Consumption" options={['None', 'Occasional', 'Regular']} value={formData.tobacco} onChange={(v: any) => updateField('tobacco', v)} />
-              <InputField label="Current Marital Status" value={formData.maritalStatus} onChange={(v: any) => updateField('maritalStatus', v)} onVoiceInput={() => startVoiceInput('maritalStatus')} />
-              <InputField label="Household Dependents" value={formData.dependents} onChange={(v: any) => updateField('dependents', v)} onVoiceInput={() => startVoiceInput('dependents')} />
+              <InputField label="Current Marital Status" value={formData.maritalStatus} onChange={(v: any) => updateField('maritalStatus', v)} onVoiceInput={() => startVoiceInput('maritalStatus')} isRecording={recordingField === 'maritalStatus'} />
+              <InputField label="Household Dependents" value={formData.dependents} onChange={(v: any) => updateField('dependents', v)} onVoiceInput={() => startVoiceInput('dependents')} isRecording={recordingField === 'dependents'} />
             </div>
           </div>
         );
@@ -1294,8 +1307,8 @@ export default function App() {
       {/* Sidebar - Desktop */}
       <aside className="hidden md:flex w-80 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
         <div className="p-10 flex flex-col items-center gap-1">
-          <div className="w-12 h-12 rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4 group hover:border-[#8B5CF6] transition-all duration-500">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6] animate-pulse group-hover:scale-125 transition-transform" />
+          <div className="w-12 h-12 rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4 group hover:border-[#7A816C] transition-all duration-500">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#7A816C] animate-pulse group-hover:scale-125 transition-transform" />
           </div>
           <h1 className="text-2xl font-black tracking-tighter text-slate-900">Malae</h1>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
@@ -1308,12 +1321,12 @@ export default function App() {
             onClick={() => setView('dashboard')}
             className={`
               flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group relative mb-2
-              ${view === 'dashboard' ? 'bg-[#8B5CF6] text-white shadow-xl shadow-[#8B5CF6]/20' : 'text-slate-500 hover:bg-slate-50'}
+              ${view === 'dashboard' ? 'bg-[#7A816C] text-white shadow-xl shadow-[#7A816C]/20' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
             <div className={`
               w-9 h-9 rounded-xl flex items-center justify-center transition-colors
-              ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#8B5CF6]'}
+              ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#7A816C]'}
             `}>
               <LayoutDashboard className="w-4.5 h-4.5" />
             </div>
@@ -1324,12 +1337,12 @@ export default function App() {
             onClick={() => setView('profile')}
             className={`
               flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group relative mb-6
-              ${view === 'profile' ? 'bg-[#8B5CF6] text-white shadow-xl shadow-[#8B5CF6]/20' : 'text-slate-500 hover:bg-slate-50'}
+              ${view === 'profile' ? 'bg-[#7A816C] text-white shadow-xl shadow-[#7A816C]/20' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
             <div className={`
               w-9 h-9 rounded-xl flex items-center justify-center transition-colors
-              ${view === 'profile' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#8B5CF6]'}
+              ${view === 'profile' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#7A816C]'}
             `}>
               <UserIcon className="w-4.5 h-4.5" />
             </div>
@@ -1356,22 +1369,22 @@ export default function App() {
                     onClick={() => setCurrentStepIndex(index)}
                     className={`
                       w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all group relative
-                      ${isActive ? 'bg-[#8B5CF6]/10 text-[#8B5CF6]' : 'text-slate-500 hover:bg-slate-50'}
+                      ${isActive ? 'bg-[#7A816C]/10 text-[#7A816C]' : 'text-slate-500 hover:bg-slate-50'}
                     `}
                   >
                     <div className={`
                       w-8 h-8 rounded-xl flex items-center justify-center transition-all
-                      ${isActive ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                      ${isActive ? 'bg-[#7A816C] text-white shadow-lg shadow-[#7A816C]/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
                     `}>
                       {isCompleted && !isActive ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                     </div>
-                    <span className={`text-xs font-bold tracking-tight transition-colors ${isActive ? 'text-[#8B5CF6]' : 'text-slate-500'}`}>
+                    <span className={`text-xs font-bold tracking-tight transition-colors ${isActive ? 'text-[#7A816C]' : 'text-slate-500'}`}>
                       {step.label}
                     </span>
                     {isActive && (
                       <motion.div 
                         layoutId="activeStep"
-                        className="absolute left-0 w-1 h-6 bg-[#8B5CF6] rounded-r-full"
+                        className="absolute left-0 w-1 h-6 bg-[#7A816C] rounded-r-full"
                       />
                     )}
                   </button>
@@ -1383,7 +1396,7 @@ export default function App() {
 
         <div className="p-6 border-t border-slate-50 space-y-4">
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
-            <div className="w-10 h-10 rounded-full bg-[#8B5CF6] flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full bg-[#7A816C] flex items-center justify-center text-white font-bold">
               {user.displayName?.[0] || user.email?.[0].toUpperCase()}
             </div>
             <div className="flex flex-col min-w-0">
@@ -1417,16 +1430,16 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 bg-white z-50 flex flex-col shadow-2xl md:hidden"
+              className="fixed inset-y-0 left-0 w-72 bg-[#7A816C] z-50 flex flex-col shadow-2xl md:hidden"
             >
-              <div className="p-6 flex items-center justify-between border-b border-slate-50">
+              <div className="p-6 flex items-center justify-between border-b border-white/10">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#8B5CF6] flex items-center justify-center text-white">
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#7A816C]">
                     <Stethoscope className="w-4 h-4" />
                   </div>
-                  <span className="font-bold text-slate-800">Malae</span>
+                  <span className="font-bold text-white">Malae</span>
                 </div>
-                <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-white/60 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -1435,7 +1448,7 @@ export default function App() {
                   onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
                   className={`
                     flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all mb-2
-                    ${view === 'dashboard' ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : 'text-slate-500 hover:bg-slate-50'}
+                    ${view === 'dashboard' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10'}
                   `}
                 >
                   <LayoutDashboard className="w-5 h-5" />
@@ -1446,7 +1459,7 @@ export default function App() {
                   onClick={() => { setView('profile'); setIsSidebarOpen(false); }}
                   className={`
                     flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all mb-4
-                    ${view === 'profile' ? 'bg-[#8B5CF6] text-white shadow-lg shadow-[#8B5CF6]/20' : 'text-slate-500 hover:bg-slate-50'}
+                    ${view === 'profile' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10'}
                   `}
                 >
                   <UserIcon className="w-5 h-5" />
@@ -1467,12 +1480,12 @@ export default function App() {
                       }}
                       className={`
                         flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all
-                        ${isActive ? 'bg-[#8B5CF6]/10 text-[#8B5CF6]' : 'text-slate-500 hover:bg-slate-50'}
+                        ${isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10'}
                       `}
                     >
                       <div className={`
                         w-8 h-8 rounded-xl flex items-center justify-center
-                        ${isActive ? 'bg-[#8B5CF6] text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                        ${isActive ? 'bg-white text-[#7A816C]' : isCompleted ? 'bg-white/20 text-white' : 'bg-white/10 text-white/40'}
                       `}>
                         {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                       </div>
@@ -1481,10 +1494,10 @@ export default function App() {
                   );
                 })}
               </nav>
-              <div className="p-6 border-t border-slate-50 bg-slate-50/50">
+              <div className="p-6 border-t border-white/10 bg-black/10">
                 <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 transition-all font-bold text-xs"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-white bg-white/10 hover:bg-white/20 transition-all font-bold text-xs"
                 >
                   <LogOut className="w-4 h-4" />
                   SIGN OUT
@@ -1532,7 +1545,7 @@ export default function App() {
             <div className="max-w-4xl mx-auto">
               <button 
                 onClick={() => setView('dashboard')}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#8B5CF6] font-bold text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors"
+                className="flex items-center gap-2 text-slate-500 hover:text-[#7A816C] font-bold text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 BACK TO MY CASES
@@ -1549,7 +1562,7 @@ export default function App() {
                       </p>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
                         selectedReport.type === 'story' 
-                          ? 'bg-[#8B5CF6]/5 text-[#8B5CF6] border-[#8B5CF6]/20' 
+                          ? 'bg-[#7A816C]/5 text-[#7A816C] border-[#7A816C]/20' 
                           : 'bg-slate-50 text-slate-500 border-slate-200'
                       }`}>
                         {selectedReport.type === 'story' ? 'Case Story' : 'Case Details'}
@@ -1580,7 +1593,7 @@ export default function App() {
                     <>
                       <section>
                         <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
-                          <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#8B5CF6] rounded-full" />
+                          <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#7A816C] rounded-full" />
                           Case Summary
                         </h2>
                         <p className="text-slate-600 leading-relaxed text-base sm:text-lg">{selectedReport.reportData.hpcNarrative}</p>
@@ -1608,7 +1621,7 @@ export default function App() {
                         <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-6">Possible Diagnoses</h2>
                         <div className="space-y-4">
                           {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
-                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#8B5CF6]/30 transition-colors">
+                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#7A816C]/30 transition-colors">
                               <h4 className="font-bold text-sm sm:text-base text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
                               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
                             </div>
@@ -1643,8 +1656,8 @@ export default function App() {
                         </div>
                       </section>
 
-                      <div className="p-6 rounded-2xl bg-[#8B5CF6]/5 border border-[#8B5CF6]/10 text-center">
-                        <Sparkles className="w-8 h-8 text-[#8B5CF6] mx-auto mb-3" />
+                      <div className="p-6 rounded-2xl bg-[#7A816C]/5 border border-[#7A816C]/10 text-center">
+                        <Sparkles className="w-8 h-8 text-[#7A816C] mx-auto mb-3" />
                         <h4 className="font-bold text-slate-900 mb-2">Write a case story?</h4>
                         <p className="text-xs text-slate-500 mb-4">Create a professional narrative summary from these details.</p>
                           <button 
@@ -1654,7 +1667,7 @@ export default function App() {
                               setCompletedSteps(new Set([0, 1, 2, 3, 4, 5, 6])); // Mark all as done
                               setView('generator');
                             }}
-                            className="px-6 py-2 rounded-lg bg-[#7C3AED] text-white text-xs font-bold hover:bg-[#6D28D9] transition-all"
+                            className="px-6 py-2 rounded-lg bg-[#666D59] text-white text-xs font-bold hover:bg-[#545A49] transition-all"
                           >
                             History write up with AI
                           </button>
@@ -1691,7 +1704,7 @@ export default function App() {
                 </button>
                 <button 
                   onClick={handleReset}
-                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[10px] md:text-xs font-bold hover:bg-[#6D28D9] transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-[#666D59] text-white text-[10px] md:text-xs font-bold hover:bg-[#545A49] transition-colors shadow-sm"
                 >
                   <RotateCcw className="w-3 md:w-3.5 h-3 md:h-3.5" />
                   <span className="hidden sm:inline">RESET SESSION</span>
@@ -1770,7 +1783,7 @@ export default function App() {
               ) : (
                 <button 
                   onClick={handleNext}
-                  className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#7C3AED] text-white text-xs md:text-sm font-bold hover:bg-[#6D28D9] transition-all shadow-lg shadow-[#7C3AED]/20 group"
+                  className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#666D59] text-white text-xs md:text-sm font-bold hover:bg-[#545A49] transition-all shadow-lg shadow-[#666D59]/20 group"
                 >
                   <span className="hidden sm:inline">PROCEED</span>
                   <span className="sm:hidden">NEXT</span>
@@ -1792,7 +1805,7 @@ export default function App() {
             className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center gap-4"
           >
             <div className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#666D59] animate-spin" />
             </div>
             <div className="text-center px-6">
               <h3 className="text-xl font-bold text-slate-800">Compiling Report</h3>
@@ -1878,7 +1891,7 @@ export default function App() {
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                       originalReportStatus === 'error' ? 'bg-red-500 text-white' :
                       originalReportStatus === 'completed' ? 'bg-emerald-500 text-white' :
-                      'bg-slate-100 text-slate-400 group-hover:bg-[#7C3AED] group-hover:text-white'
+                      'bg-slate-100 text-slate-400 group-hover:bg-[#666D59] group-hover:text-white'
                     }`}>
                       {originalReportStatus === 'generating' ? <Loader2 className="w-6 h-6 animate-spin" /> :
                        originalReportStatus === 'completed' ? <Check className="w-6 h-6" /> :
@@ -1909,13 +1922,13 @@ export default function App() {
                     className={`flex items-center gap-4 p-4 rounded-2xl border transition-all group text-left ${
                       storyReportStatus === 'error' ? 'border-red-200 bg-red-50' : 
                       storyReportStatus === 'completed' ? 'border-emerald-200 bg-emerald-50' :
-                      'border-[#8B5CF6]/20 bg-[#8B5CF6]/5 hover:bg-[#8B5CF6]/10'
+                      'border-[#7A816C]/20 bg-[#7A816C]/5 hover:bg-[#7A816C]/10'
                     }`}
                   >
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                       storyReportStatus === 'error' ? 'bg-red-500 text-white' :
                       storyReportStatus === 'completed' ? 'bg-emerald-500 text-white' :
-                      'bg-[#8B5CF6] text-white'
+                      'bg-[#7A816C] text-white'
                     }`}>
                       {storyReportStatus === 'generating' ? <Loader size="sm" /> :
                        storyReportStatus === 'completed' ? <Check className="w-6 h-6" /> :
@@ -1926,7 +1939,7 @@ export default function App() {
                       <p className={`font-bold ${
                         storyReportStatus === 'error' ? 'text-red-700' :
                         storyReportStatus === 'completed' ? 'text-emerald-700' :
-                        'text-[#8B5CF6]'
+                        'text-[#7A816C]'
                       }`}>
                         {storyReportStatus === 'generating' ? 'Writing...' : 
                          storyReportStatus === 'completed' ? 'Story Complete' :
@@ -1936,12 +1949,12 @@ export default function App() {
                       <p className={`text-[10px] uppercase tracking-tight ${
                         storyReportStatus === 'error' ? 'text-red-400' :
                         storyReportStatus === 'completed' ? 'text-emerald-400' :
-                        'text-[#8B5CF6]/60'
+                        'text-[#7A816C]/60'
                       }`}>
                         {storyReportStatus === 'error' ? 'Service unavailable' : 'A professional summary of the case.'}
                       </p>
                     </div>
-                    {storyReportStatus === 'idle' && <Zap className="w-4 h-4 text-[#8B5CF6]" />}
+                    {storyReportStatus === 'idle' && <Zap className="w-4 h-4 text-[#7A816C]" />}
                   </button>
                 </div>
 
