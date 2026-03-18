@@ -171,216 +171,295 @@ export const Auth = ({ onSuccess }: AuthProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F5F3FF] p-4 sm:p-6">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#8B5CF6] text-white mb-4 shadow-lg shadow-[#8B5CF6]/20">
-            <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
-          </h1>
-          <p className="text-sm sm:text-base text-slate-500 mt-2 px-4">
-            {isLogin ? 'Access your medical workspace' : 'Join Malae to start creating surgical case stories'}
-          </p>
+    <div className="min-h-screen flex bg-white font-sans selection:bg-[#8B5CF6]/30 selection:text-[#7C3AED]">
+      {/* Left Section: Immersive Branding & Imagery */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#151619]">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://picsum.photos/seed/surgery-clinical/1200/1600" 
+            alt="Medical Workspace" 
+            className="w-full h-full object-cover opacity-40 scale-105"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#151619] via-[#151619]/80 to-transparent" />
         </div>
 
-        <div className="bg-white rounded-[2rem] sm:rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-8">
-          <form onSubmit={handleAuth} className="space-y-4">
-            <AnimatePresence mode="wait">
-              {!isLogin && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4"
-                >
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                      <input
-                        type="text"
-                        required
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
-                        placeholder="Dr. Samantha"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hospital / Institution</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                      <input
-                        type="text"
-                        required
-                        value={hospital}
-                        onChange={(e) => setHospital(e.target.value)}
-                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
-                        placeholder="General Hospital"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
-                  placeholder="name@hospital.com"
-                />
+        {/* Content Overlay */}
+        <div className="relative z-10 w-full flex flex-col justify-between p-16">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <div className="flex items-center gap-3 mb-12">
+              <div className="w-12 h-12 rounded-xl bg-[#8B5CF6] flex items-center justify-center shadow-lg shadow-[#8B5CF6]/40">
+                <Lock className="w-6 h-6 text-white" />
               </div>
+              <span className="text-2xl font-bold text-white tracking-tight">Malae</span>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {!isLogin && (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
-                  {[
-                    { label: '8+ Characters', met: password.length >= 8 },
-                    { label: 'One Number', met: /\d/.test(password) },
-                    { label: 'One Symbol', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
-                    { label: 'Matches Confirm', met: password === confirmPassword && password.length > 0 }
-                  ].map((req, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      <div className={`w-1 h-1 rounded-full ${req.met ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-                      <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-tight ${req.met ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {req.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="space-y-6 max-w-md">
+              <h2 className="text-5xl font-bold text-white leading-[1.1] tracking-tight">
+                Crafting the <span className="text-[#C4B5FD]">narrative</span> of modern medicine.
+              </h2>
+              <p className="text-lg text-slate-400 leading-relaxed">
+                Empowering surgeons to transform clinical data into compelling case stories with the power of AI.
+              </p>
             </div>
+          </motion.div>
 
-            <AnimatePresence mode="wait">
-              {!isLogin && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-1.5"
-                >
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confirm Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="grid grid-cols-2 gap-8"
+          >
+            {[
+              { label: 'AI Synthesis', desc: 'Instant case stories' },
+              { label: 'Clinical Focus', desc: 'Designed for surgeons' },
+              { label: 'Secure Data', desc: 'HIPAA-ready infrastructure' },
+              { label: 'Global Reach', desc: 'Share your expertise' }
+            ].map((feature, i) => (
+              <div key={i} className="space-y-1">
+                <div className="text-[#8B5CF6] font-bold text-sm uppercase tracking-widest">{feature.label}</div>
+                <div className="text-slate-500 text-xs">{feature.desc}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
 
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="p-3 rounded-xl bg-red-50 border border-red-100 flex items-center gap-2 text-red-600 text-xs sm:text-sm"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <p>{error}</p>
-              </motion.div>
-            )}
+        {/* Decorative Elements */}
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#8B5CF6]/10 rounded-full blur-[120px]" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#C4B5FD]/10 rounded-full blur-[120px]" />
+      </div>
 
+      {/* Right Section: Interactive Auth Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-20 bg-[#F5F3FF]/30">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-[440px]"
+        >
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex justify-center mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#8B5CF6] flex items-center justify-center shadow-lg shadow-[#8B5CF6]/20">
+                <Lock className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-slate-900 tracking-tight">Malae</span>
+            </div>
+          </div>
+
+          <div className="mb-10">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mb-3">
+              {isLogin ? 'Welcome back' : 'Get started'}
+            </h1>
+            <p className="text-slate-500 text-sm sm:text-base">
+              {isLogin 
+                ? 'Enter your credentials to access your clinical workspace.' 
+                : 'Join the community of surgeons documenting the future of medicine.'}
+            </p>
+          </div>
+
+          <div className="space-y-6">
             <button
-              type="submit"
+              onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold py-3.5 sm:py-4 rounded-xl shadow-lg shadow-[#8B5CF6]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className="w-full bg-white border border-slate-200 hover:border-[#8B5CF6]/50 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base shadow-sm hover:shadow-md disabled:opacity-70 group"
             >
               {loading ? (
                 <Loader />
               ) : (
                 <>
-                  <span className="text-sm sm:text-base">{isLogin ? 'Sign In' : 'Create Account'}</span>
-                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                  <Chrome className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Continue with Google
                 </>
               )}
             </button>
-          </form>
 
-          <div className="mt-6">
-            <div className="relative mb-6">
+            <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-100"></div>
               </div>
               <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-white px-2 text-slate-400 font-bold tracking-widest">Or continue with</span>
+                <span className="bg-[#F5F3FF]/30 px-4 text-slate-400 font-bold tracking-[0.2em]">Or use email</span>
               </div>
             </div>
 
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base disabled:opacity-70"
-            >
-              {loading ? (
-                <Loader />
-              ) : (
-                <>
-                  <Chrome className="w-5 h-5" />
-                  Google
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+            <form onSubmit={handleAuth} className="space-y-5">
+              <AnimatePresence mode="wait">
+                {!isLogin && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-5"
+                  >
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
+                      <div className="relative group">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                        <input
+                          type="text"
+                          required
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                          placeholder="Dr. Samantha A."
+                        />
+                      </div>
+                    </div>
 
-        <p className="text-center mt-8 text-slate-500 text-sm">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-          <button 
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-[#8B5CF6] font-bold hover:underline"
-          >
-            {isLogin ? 'Sign Up' : 'Log In'}
-          </button>
-        </p>
-      </motion.div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hospital / Institution</label>
+                      <div className="relative group">
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                        <input
+                          type="text"
+                          required
+                          value={hospital}
+                          onChange={(e) => setHospital(e.target.value)}
+                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                          placeholder="General Hospital"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                    placeholder="name@hospital.com"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                  {isLogin && (
+                    <button type="button" className="text-[11px] font-bold text-[#8B5CF6] hover:underline uppercase tracking-wider">
+                      Forgot?
+                    </button>
+                  )}
+                </div>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {!isLogin && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 ml-1">
+                    {[
+                      { label: '8+ Characters', met: password.length >= 8 },
+                      { label: 'One Number', met: /\d/.test(password) },
+                      { label: 'One Symbol', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+                      { label: 'Matches Confirm', met: password === confirmPassword && password.length > 0 }
+                    ].map((req, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${req.met ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-200'}`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-tight transition-colors duration-300 ${req.met ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <AnimatePresence mode="wait">
+                {!isLogin && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2"
+                  >
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirm Password</label>
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#8B5CF6] transition-colors" />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#8B5CF6]/10 focus:border-[#8B5CF6] transition-all placeholder:text-slate-300"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-600 text-xs sm:text-sm"
+                >
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p className="font-medium">{error}</p>
+                </motion.div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#8B5CF6]/25 hover:shadow-[#8B5CF6]/40 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 active:scale-[0.98]"
+              >
+                {loading ? (
+                  <Loader />
+                ) : (
+                  <>
+                    <span className="text-sm sm:text-base">{isLogin ? 'Sign In' : 'Create Account'}</span>
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <p className="text-center mt-10 text-slate-500 text-sm">
+              {isLogin ? "New to Malae?" : "Already have an account?"}{' '}
+              <button 
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-[#8B5CF6] font-bold hover:underline ml-1"
+              >
+                {isLogin ? 'Create an account' : 'Log in here'}
+              </button>
+            </p>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
