@@ -3,6 +3,10 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-primary: #8B5CF6; /* Violet 500 */
+  --color-secondary: #FBCFE8; /* Pink 200 */
+  --color-accent: #D946EF; /* Fuchsia 500 */
+  --color-surface: #FDF2F8; /* Pink 50 */
 }
 
 @layer base {

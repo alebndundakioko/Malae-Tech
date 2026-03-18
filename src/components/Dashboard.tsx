@@ -9,7 +9,6 @@ import {
   ChevronRight, 
   Search,
   Plus,
-  Loader2,
   Clock,
   User as UserIcon,
   Filter,
@@ -21,12 +20,18 @@ import {
   BookOpen,
   Heart
 } from 'lucide-react';
+import { Loader } from './Loader';
 
 interface DashboardProps {
   onNewReport: () => void;
   onViewReport: (report: any) => void;
   onConfirmDelete: (onConfirm: () => void) => void;
 }
+
+const getInitials = (name: string) => {
+  if (!name) return 'N/A';
+  return name.split(' ').map(n => n[0]).join('.').toUpperCase();
+};
 
 export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: DashboardProps) => {
   const [reports, setReports] = useState<any[]>([]);
@@ -97,22 +102,22 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-12">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[#8B5E3C] font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em]">
-            <Heart className="w-4 h-4 fill-[#8B5E3C]" />
+          <div className="flex items-center gap-2 text-[#D946EF] font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em]">
+            <Heart className="w-4 h-4 fill-[#D946EF]" />
             Welcome back
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            {getGreeting()}, <span className="text-[#8B5E3C]">{auth.currentUser?.displayName?.split(' ')[0] || 'Doctor'}</span>
+            {getGreeting()}, <span className="text-[#D946EF]">{auth.currentUser?.displayName?.split(' ')[0] || 'Doctor'}</span>
           </h1>
           <p className="text-sm sm:text-base text-slate-500 max-w-md">
-            Here's a look at your clinical archive. Ready to synthesize a new case?
+            Here's a look at your clinical archive. Ready to document a new case?
           </p>
         </div>
         
         <div className="flex items-center gap-3">
           <button
             onClick={onNewReport}
-            className="w-full sm:w-auto group relative bg-[#8B5E3C] text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-xl shadow-[#8B5E3C]/20 hover:shadow-2xl hover:shadow-[#8B5E3C]/30 transition-all flex items-center justify-center gap-3 overflow-hidden"
+            className="w-full sm:w-auto group relative bg-[#D946EF] text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-xl shadow-[#D946EF]/20 hover:shadow-2xl hover:shadow-[#D946EF]/30 transition-all flex items-center justify-center gap-3 overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             <Plus className="w-5 h-5 relative z-10" />
@@ -132,7 +137,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
             desc: 'Total records saved'
           },
           { 
-            label: 'AI Case Stories', 
+            label: 'Case Stories', 
             value: reports.filter(r => r.type === 'story').length, 
             icon: Sparkles, 
             color: 'emerald',
@@ -180,11 +185,11 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                   onClick={() => setFilterType(type)}
                   className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all ${
                     filterType === type 
-                      ? 'bg-white text-[#8B5E3C] shadow-sm' 
+                      ? 'bg-white text-[#D946EF] shadow-sm' 
                       : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  {type === 'all' ? 'All' : type === 'original' ? 'Clinical' : 'AI Stories'}
+                  {type === 'all' ? 'All' : type === 'original' ? 'Clinical' : 'Case Stories'}
                 </button>
               ))}
             </div>
@@ -198,7 +203,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                 placeholder="Find a patient or complaint..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-[#8B5E3C]/5 focus:border-[#8B5E3C] transition-all placeholder:text-slate-400"
+                className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-[#D946EF]/5 focus:border-[#D946EF] transition-all placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -208,9 +213,8 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
         <div className="min-h-[400px]">
           {loading ? (
             <div className="py-24 flex flex-col items-center justify-center text-slate-400">
-              <div className="relative mb-6">
-                <div className="w-20 h-20 rounded-full border-4 border-slate-100 border-t-[#8B5E3C] animate-spin" />
-                <Activity className="absolute inset-0 m-auto w-8 h-8 text-[#8B5E3C] animate-pulse" />
+              <div className="mb-6">
+                <Loader />
               </div>
               <p className="font-bold text-sm uppercase tracking-[0.2em] text-slate-900">Gathering your records...</p>
               <p className="text-xs mt-2">Just a moment while we fetch your clinical archive.</p>
@@ -232,7 +236,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                       <div className={`
                         w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300
                         ${report.type === 'story' 
-                          ? 'bg-[#8B5E3C]/10 text-[#8B5E3C] group-hover:bg-[#8B5E3C] group-hover:text-white' 
+                          ? 'bg-[#D946EF]/10 text-[#D946EF] group-hover:bg-[#D946EF] group-hover:text-white' 
                           : 'bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white'}
                       `}>
                         {report.type === 'story' ? <Sparkles className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
@@ -240,22 +244,22 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                       
                       <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#8B5E3C] transition-colors truncate">
+                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#D946EF] transition-colors truncate">
                             {report.title}
                           </h3>
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
                             report.type === 'story' 
-                              ? 'bg-[#8B5E3C]/5 text-[#8B5E3C] border-[#8B5E3C]/20' 
+                              ? 'bg-[#D946EF]/5 text-[#D946EF] border-[#D946EF]/20' 
                               : 'bg-slate-50 text-slate-500 border-slate-200'
                           }`}>
-                            {report.type === 'story' ? 'AI Synthesis' : 'Clinical Data'}
+                            {report.type === 'story' ? 'Case Story' : 'Case Details'}
                           </span>
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <UserIcon className="w-3.5 h-3.5 text-slate-300" />
-                            <span className="font-semibold">{report.patientData?.fullName || 'Unidentified Patient'}</span>
+                            <span className="font-semibold">{getInitials(report.patientData?.fullName)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <Calendar className="w-3.5 h-3.5 text-slate-300" />
@@ -281,7 +285,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                           <Trash2 className="w-4.5 h-4.5" />
                         </button>
                       </div>
-                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-[#8B5E3C] group-hover:text-[#8B5E3C] transition-all">
+                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-[#D946EF] group-hover:text-[#D946EF] transition-all">
                         <ArrowUpRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       </div>
                     </div>
@@ -295,10 +299,10 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
                 <BookOpen className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" />
               </div>
               <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Your archive is empty</h3>
-              <p className="text-slate-500 mb-10 max-w-xs mx-auto">Ready to document your first case? We'll help you synthesize the data into a professional story.</p>
+              <p className="text-slate-500 mb-10 max-w-xs mx-auto">Ready to document your first case? We'll help you organize the details into a professional narrative.</p>
               <button
                 onClick={onNewReport}
-                className="inline-flex items-center gap-2 text-[#8B5E3C] font-black uppercase tracking-widest text-xs hover:gap-4 transition-all"
+                className="inline-flex items-center gap-2 text-[#D946EF] font-black uppercase tracking-widest text-xs hover:gap-4 transition-all"
               >
                 Start Your First Case
                 <ChevronRight className="w-4 h-4" />
@@ -319,7 +323,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
           <span>v2.5.0 Clinical</span>
         </div>
         <p className="text-[10px] font-medium text-slate-400">
-          Secure clinical intelligence for modern physicians.
+          Secure medical workspace for modern physicians.
         </p>
       </div>
     </div>

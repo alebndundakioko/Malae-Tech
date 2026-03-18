@@ -14,13 +14,13 @@ import {
   Lock, 
   User, 
   ArrowRight, 
-  Loader2, 
   AlertCircle,
   Chrome,
   Eye,
   EyeOff,
   Building2
 } from 'lucide-react';
+import { Loader } from './Loader';
 
 interface AuthProps {
   onSuccess: () => void;
@@ -102,9 +102,9 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         // Create user document in Firestore
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
-          email: user.email,
-          displayName,
-          hospital,
+          email: user.email || email,
+          displayName: displayName || user.displayName || '',
+          hospital: hospital || '',
           createdAt: serverTimestamp()
         });
       }
@@ -112,15 +112,19 @@ export const Auth = ({ onSuccess }: AuthProps) => {
     } catch (err: any) {
       console.error("Auth error:", err);
       if (err.code === 'auth/operation-not-allowed') {
-        setError("Sign-in method not enabled. Please enable Email/Password in the Firebase Console (Authentication > Sign-in method).");
+        setError("Sign-in method not enabled. Please enable Email/Password in the Firebase Console.");
       } else if (err.code === 'auth/email-already-in-use') {
         setError("This email is already registered. Please sign in instead.");
       } else if (err.code === 'auth/weak-password') {
         setError("Password is too weak. Please use at least 6 characters.");
       } else if (err.code === 'auth/invalid-credential') {
         setError("Invalid email or password. Please check your credentials.");
+      } else if (err.code === 'auth/popup-blocked') {
+        setError("Sign-in popup was blocked by your browser. Please allow popups for this site.");
+      } else if (err.message?.includes('Missing or insufficient permissions')) {
+        setError("Database access denied. Please check Firestore security rules.");
       } else {
-        setError(err.message);
+        setError(err.message || "An unexpected error occurred. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -135,11 +139,15 @@ export const Auth = ({ onSuccess }: AuthProps) => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
+      if (!user.email) {
+        throw new Error("No email associated with this Google account.");
+      }
+
       // Create/Update user document
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName,
+        displayName: user.displayName || '',
         createdAt: serverTimestamp()
       }, { merge: true });
       
@@ -149,9 +157,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
       if (err.code === 'auth/popup-closed-by-user') {
         setError("Sign-in cancelled. The popup was closed before completion.");
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError("Google sign-in is not enabled. Please enable it in the Firebase Console (Authentication > Sign-in method).");
+        setError("Google sign-in is not enabled. Please enable it in the Firebase Console.");
+      } else if (err.code === 'auth/popup-blocked') {
+        setError("Sign-in popup was blocked by your browser. Please allow popups for this site.");
+      } else if (err.message?.includes('Missing or insufficient permissions')) {
+        setError("Database access denied. Please check Firestore security rules.");
       } else {
-        setError(err.message);
+        setError(err.message || "Google Sign-In failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -159,21 +171,21 @@ export const Auth = ({ onSuccess }: AuthProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] p-4 sm:p-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#FDF2F8] p-4 sm:p-6">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#8B5E3C] text-white mb-4 shadow-lg shadow-[#8B5E3C]/20">
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#D946EF] text-white mb-4 shadow-lg shadow-[#D946EF]/20">
             <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h1>
           <p className="text-sm sm:text-base text-slate-500 mt-2 px-4">
-            {isLogin ? 'Access your clinical intelligence dashboard' : 'Join Malae to start generating surgical case stories'}
+            {isLogin ? 'Access your medical workspace' : 'Join Malae to start creating surgical case stories'}
           </p>
         </div>
 
@@ -196,7 +208,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                         required
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#D946EF]/20 focus:border-[#D946EF] transition-all"
                         placeholder="Dr. Samantha"
                       />
                     </div>
@@ -211,7 +223,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                         required
                         value={hospital}
                         onChange={(e) => setHospital(e.target.value)}
-                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#D946EF]/20 focus:border-[#D946EF] transition-all"
                         placeholder="General Hospital"
                       />
                     </div>
@@ -229,7 +241,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#D946EF]/20 focus:border-[#D946EF] transition-all"
                   placeholder="name@hospital.com"
                 />
               </div>
@@ -244,7 +256,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                  className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#D946EF]/20 focus:border-[#D946EF] transition-all"
                   placeholder="••••••••"
                 />
                 <button
@@ -290,7 +302,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all"
+                      className="w-full pl-11 pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#D946EF]/20 focus:border-[#D946EF] transition-all"
                       placeholder="••••••••"
                     />
                     <button
@@ -319,10 +331,10 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#8B5E3C] hover:bg-[#724C31] text-white font-bold py-3.5 sm:py-4 rounded-xl shadow-lg shadow-[#8B5E3C]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className="w-full bg-[#D946EF] hover:bg-[#C026D3] text-white font-bold py-3.5 sm:py-4 rounded-xl shadow-lg shadow-[#D946EF]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader />
               ) : (
                 <>
                   <span className="text-sm sm:text-base">{isLogin ? 'Sign In' : 'Create Account'}</span>
@@ -348,7 +360,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base disabled:opacity-70"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader />
               ) : (
                 <>
                   <Chrome className="w-5 h-5" />
@@ -363,7 +375,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
           {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
           <button 
             onClick={() => setIsLogin(!isLogin)}
-            className="text-[#8B5E3C] font-bold hover:underline"
+            className="text-[#D946EF] font-bold hover:underline"
           >
             {isLogin ? 'Sign Up' : 'Log In'}
           </button>
