@@ -3,10 +3,10 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #666D59; /* Muted Olive Dark */
-  --color-secondary: #9BA18D; /* Muted Olive Light */
-  --color-accent: #7A816C; /* Muted Olive Primary */
-  --color-surface: #F2F3F0; /* Muted Olive Surface */
+  --color-primary: #8E5450; /* Terracotta Dark */
+  --color-secondary: #D4A5A2; /* Terracotta Light */
+  --color-accent: #AE6965; /* Terracotta Primary */
+  --color-surface: #FAF5F5; /* Terracotta Surface */
 }
 
 @layer base {
