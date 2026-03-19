@@ -747,6 +747,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<'dashboard' | 'generator' | 'viewer' | 'profile'>('dashboard');
+  const [generatorMode, setGeneratorMode] = useState<'selection' | 'form' | 'upload' | 'audio'>('selection');
   const [selectedReport, setSelectedReport] = useState<any>(null);
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -937,6 +938,220 @@ export default function App() {
     } catch (err) {
       console.error("File processing error:", err);
       setIsProcessingFile(false);
+    }
+  };
+
+  const handleFullCaseFileProcessing = async (file: File) => {
+    setIsProcessingFile(true);
+    setGenerationStatus("Extracting full clinical data from file...");
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64Data = (reader.result as string).split(',')[1];
+        const mimeType = file.type;
+        
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const model = "gemini-3-flash-preview";
+        
+        const prompt = `
+          Extract all clinical data from this ${file.type.includes('pdf') ? 'PDF' : 'image'} and map it to the following JSON structure. 
+          If a field is not found, leave it blank.
+          
+          Structure:
+          {
+            "admissionDate": "...",
+            "fullName": "...",
+            "age": "...",
+            "sex": "...",
+            "ethnicity": "...",
+            "address": "...",
+            "religion": "...",
+            "occupation": "...",
+            "nextOfKin": "...",
+            "relationship": "...",
+            "chiefComplaint": "...",
+            "duration": "...",
+            "onset": "...",
+            "progression": "...",
+            "character": "...",
+            "severity": "...",
+            "location": "...",
+            "radiation": "...",
+            "associatedSymptoms": "...",
+            "negativeFindings": "...",
+            "aggravating": "...",
+            "relieving": "...",
+            "prevTreatment": "...",
+            "respTreatment": "...",
+            "impact": "...",
+            "GENERAL_present": "...",
+            "GENERAL_denied": "...",
+            "CARDIOVASCULAR_present": "...",
+            "CARDIOVASCULAR_denied": "...",
+            "RESPIRATORY_present": "...",
+            "RESPIRATORY_denied": "...",
+            "GASTROINTESTINAL_present": "...",
+            "GASTROINTESTINAL_denied": "...",
+            "chronicConditions": "...",
+            "medications": "...",
+            "allergies": "...",
+            "surgeries": "...",
+            "trauma": "...",
+            "transfusions": "...",
+            "familyHistory": "...",
+            "alcohol": "...",
+            "tobacco": "...",
+            "maritalStatus": "...",
+            "dependents": "..."
+          }
+        `;
+
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            { text: prompt },
+            { inlineData: { data: base64Data, mimeType } }
+          ],
+          config: { responseMimeType: "application/json" }
+        });
+
+        const extractedData = JSON.parse(response.text);
+        setFormData((prev: any) => ({ ...prev, ...extractedData }));
+        setGeneratorMode('form');
+        setIsProcessingFile(false);
+      };
+    } catch (err) {
+      console.error("File processing error:", err);
+      setIsProcessingFile(false);
+    }
+  };
+
+  const handleFullCaseAudioTranscription = async (blob: Blob) => {
+    setIsProcessingFile(true);
+    setGenerationStatus("Transcribing and extracting clinical data from audio...");
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64Audio = (reader.result as string).split(',')[1];
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const model = "gemini-3-flash-preview";
+        
+        const prompt = `
+          Transcribe this clinical case presentation and extract all relevant data into the following JSON structure. 
+          Be extremely thorough and professional. If a field is not found, leave it blank.
+          
+          Structure:
+          {
+            "admissionDate": "YYYY-MM-DD",
+            "fullName": "Patient Initials",
+            "age": "Number",
+            "sex": "Male/Female",
+            "ethnicity": "...",
+            "address": "...",
+            "religion": "...",
+            "occupation": "...",
+            "nextOfKin": "...",
+            "relationship": "...",
+            "chiefComplaint": "...",
+            "duration": "...",
+            "onset": "...",
+            "progression": "...",
+            "character": "...",
+            "severity": "...",
+            "location": "...",
+            "radiation": "...",
+            "associatedSymptoms": "...",
+            "negativeFindings": "...",
+            "aggravating": "...",
+            "relieving": "...",
+            "prevTreatment": "...",
+            "respTreatment": "...",
+            "impact": "...",
+            "GENERAL_present": "...",
+            "GENERAL_denied": "...",
+            "CARDIOVASCULAR_present": "...",
+            "CARDIOVASCULAR_denied": "...",
+            "RESPIRATORY_present": "...",
+            "RESPIRATORY_denied": "...",
+            "GASTROINTESTINAL_present": "...",
+            "GASTROINTESTINAL_denied": "...",
+            "chronicConditions": "...",
+            "medications": "...",
+            "allergies": "...",
+            "surgeries": "...",
+            "trauma": "...",
+            "transfusions": "...",
+            "familyHistory": "...",
+            "alcohol": "...",
+            "tobacco": "...",
+            "maritalStatus": "...",
+            "dependents": "..."
+          }
+        `;
+
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            { text: prompt },
+            { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
+          ],
+          config: { responseMimeType: "application/json" }
+        });
+
+        const extractedData = JSON.parse(response.text);
+        setFormData((prev: any) => ({ ...prev, ...extractedData }));
+        setGeneratorMode('form');
+        setIsProcessingFile(false);
+      };
+    } catch (err) {
+      console.error("Audio processing error:", err);
+      setIsProcessingFile(false);
+    }
+  };
+
+  const startFullCaseAudioInput = async () => {
+    if (isRecording) {
+      stopFullCaseAudioInput();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await handleFullCaseAudioTranscription(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      // Allow longer recording for full case (e.g., 2 minutes)
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          stopFullCaseAudioInput();
+        }
+      }, 120000);
+
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert("Could not access microphone. Please check permissions.");
+    }
+  };
+
+  const stopFullCaseAudioInput = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -1189,6 +1404,7 @@ export default function App() {
         setFormData({});
         setCurrentStepIndex(0);
         setCompletedSteps(new Set());
+        setGeneratorMode('selection');
         setShowConfirmModal(prev => ({ ...prev, show: false }));
       }
     });
@@ -1517,6 +1733,7 @@ export default function App() {
                 setFormData({});
                 setCurrentStepIndex(0);
                 setCompletedSteps(new Set());
+                setGeneratorMode('selection');
                 setView('generator');
               }}
               onViewReport={(report) => {
@@ -1717,23 +1934,185 @@ export default function App() {
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 py-6 sm:py-8 md:py-12">
               <div className="max-w-4xl mx-auto">
                 <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentStep.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex flex-col gap-6 md:gap-10"
-                  >
-                    <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
-                      <h2 className="text-xl sm:text-2xl md:text-4xl font-bold tracking-tight text-slate-800 leading-tight">{currentStep.title}</h2>
-                      <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
-                    </div>
+                  {generatorMode === 'selection' ? (
+                    <motion.div
+                      key="selection"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-10"
+                    >
+                      <div className="flex flex-col gap-2 text-center md:text-left">
+                        <h2 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 leading-tight">Start New Case</h2>
+                        <p className="text-lg text-slate-400 font-medium">Choose your preferred method of clinical data entry.</p>
+                      </div>
 
-                    <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[32px] p-5 sm:p-8 md:p-10 shadow-sm border border-slate-100">
-                      {renderStepContent(currentStep.id)}
-                    </div>
-                  </motion.div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <button 
+                          onClick={() => setGeneratorMode('form')}
+                          className="group p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-6 relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                          <div className="w-20 h-20 rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10">
+                            <ClipboardList className="w-10 h-10" />
+                          </div>
+                          <div className="relative z-10">
+                            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-[#AE6965] transition-colors">Direct Form</h3>
+                            <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors">Enter case details manually using our structured clinical form.</p>
+                          </div>
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-xs opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                            PROCEED <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </button>
+
+                        <button 
+                          onClick={() => setGeneratorMode('upload')}
+                          className="group p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-6 relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                          <div className="w-20 h-20 rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10">
+                            <FileUp className="w-10 h-10" />
+                          </div>
+                          <div className="relative z-10">
+                            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-[#AE6965] transition-colors">Document Upload</h3>
+                            <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors">Upload a PDF or image of clinical notes to extract data automatically.</p>
+                          </div>
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-xs opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                            UPLOAD FILE <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </button>
+
+                        <button 
+                          onClick={() => setGeneratorMode('audio')}
+                          className="group p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-6 relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                          <div className="w-20 h-20 rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10">
+                            <Mic className="w-10 h-10" />
+                          </div>
+                          <div className="relative z-10">
+                            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-[#AE6965] transition-colors">Audio Input</h3>
+                            <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors">Dictate the case details and let AI transcribe and organize the data.</p>
+                          </div>
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-xs opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                            START RECORDING <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : generatorMode === 'upload' ? (
+                    <motion.div
+                      key="upload"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="flex flex-col gap-8 max-w-2xl mx-auto"
+                    >
+                      <button 
+                        onClick={() => setGeneratorMode('selection')}
+                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-xs transition-colors self-start"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        BACK TO OPTIONS
+                      </button>
+                      
+                      <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-slate-100 text-center">
+                        <div className="w-24 h-24 rounded-3xl bg-[#AE6965]/5 text-[#AE6965] flex items-center justify-center mx-auto mb-8">
+                          <FileUp className="w-12 h-12" />
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 mb-4">Upload Clinical Document</h2>
+                        <p className="text-slate-500 mb-10">Select a PDF or image file (clinical notes, lab results, etc.) to extract patient data.</p>
+                        
+                        <FileUpload 
+                          label={isProcessingFile ? "Processing Document..." : "Select Document"}
+                          subtitle="PDF OR IMAGE (MAX 10MB)"
+                          onFileSelect={handleFullCaseFileProcessing}
+                          isProcessing={isProcessingFile}
+                        />
+                      </div>
+                    </motion.div>
+                  ) : generatorMode === 'audio' ? (
+                    <motion.div
+                      key="audio"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="flex flex-col gap-8 max-w-2xl mx-auto"
+                    >
+                      <button 
+                        onClick={() => setGeneratorMode('selection')}
+                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-xs transition-colors self-start"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        BACK TO OPTIONS
+                      </button>
+                      
+                      <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-slate-100 text-center">
+                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 transition-all duration-500 ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-2xl shadow-red-200' : 'bg-[#AE6965]/5 text-[#AE6965]'}`}>
+                          {isRecording ? <MicOff className="w-12 h-12" /> : <Mic className="w-12 h-12" />}
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 mb-4">
+                          {isRecording ? 'Recording Case Details...' : 'Dictate Case Details'}
+                        </h2>
+                        <p className="text-slate-500 mb-10">
+                          {isRecording ? 'Speak clearly. We are capturing your clinical dictation.' : 'Press the button below and start speaking your case presentation.'}
+                        </p>
+                        
+                        <button 
+                          onClick={startFullCaseAudioInput}
+                          disabled={isProcessingFile}
+                          className={`
+                            w-full py-6 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-4
+                            ${isRecording 
+                              ? 'bg-red-500 text-white shadow-xl shadow-red-200 hover:bg-red-600' 
+                              : 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20 hover:bg-[#8E5450]'}
+                            ${isProcessingFile ? 'opacity-50 cursor-not-allowed' : ''}
+                          `}
+                        >
+                          {isProcessingFile ? (
+                            <>
+                              <Loader2 className="w-6 h-6 animate-spin" />
+                              PROCESSING...
+                            </>
+                          ) : isRecording ? (
+                            <>
+                              <div className="w-3 h-3 rounded-full bg-white animate-ping" />
+                              STOP RECORDING
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="w-6 h-6" />
+                              START RECORDING
+                            </>
+                          )}
+                        </button>
+                        
+                        {!isRecording && !isProcessingFile && (
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-6">
+                            MAX DURATION: 2 MINUTES
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={currentStep.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col gap-6 md:gap-10"
+                    >
+                      <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
+                        <h2 className="text-xl sm:text-2xl md:text-4xl font-bold tracking-tight text-slate-800 leading-tight">{currentStep.title}</h2>
+                        <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                      </div>
+
+                      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[32px] p-5 sm:p-8 md:p-10 shadow-sm border border-slate-100">
+                        {renderStepContent(currentStep.id)}
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
             </div>
@@ -1741,54 +2120,64 @@ export default function App() {
             {/* Footer Navigation */}
             <footer className="h-20 md:h-24 bg-white border-t border-slate-100 px-4 md:px-10 flex items-center justify-between sticky bottom-0 z-30">
               <button 
-                onClick={handlePrev}
-                disabled={currentStepIndex === 0}
+                onClick={() => {
+                  if (generatorMode === 'selection') {
+                    setView('dashboard');
+                  } else {
+                    handlePrev();
+                  }
+                }}
+                disabled={currentStepIndex === 0 && generatorMode === 'form'}
                 className={`
                   flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all
-                  ${currentStepIndex === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50'}
+                  ${currentStepIndex === 0 && generatorMode === 'form' ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50'}
                 `}
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">PREVIOUS</span>
+                <span className="hidden sm:inline">{generatorMode === 'selection' ? 'CANCEL' : 'PREVIOUS'}</span>
               </button>
 
-              <button 
-                onClick={handleReset}
-                className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-red-50 text-red-600 text-xs md:text-sm font-bold hover:bg-red-100 transition-all sm:shadow-lg sm:shadow-red-100"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span className="hidden sm:inline">NEW CASE</span>
-              </button>
+              {generatorMode === 'form' && (
+                <button 
+                  onClick={handleReset}
+                  className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-red-50 text-red-600 text-xs md:text-sm font-bold hover:bg-red-100 transition-all sm:shadow-lg sm:shadow-red-100"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span className="hidden sm:inline">NEW CASE</span>
+                </button>
+              )}
 
-              {currentStepIndex === STEPS.length - 1 ? (
-                <button 
-                  onClick={handleCompileReport}
-                  disabled={isGenerating}
-                  className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-900 text-white text-xs md:text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="hidden sm:inline">GENERATING...</span>
-                      <span className="sm:hidden">...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4" />
-                      <span className="hidden sm:inline">COMPILE REPORT</span>
-                      <span className="sm:hidden">COMPILE</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button 
-                  onClick={handleNext}
-                  className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#AE6965] text-white text-xs md:text-sm font-bold hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 group"
-                >
-                  <span className="hidden sm:inline">PROCEED</span>
-                  <span className="sm:hidden">NEXT</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </button>
+              {generatorMode === 'form' && (
+                currentStepIndex === STEPS.length - 1 ? (
+                  <button 
+                    onClick={handleCompileReport}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-900 text-white text-xs md:text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">GENERATING...</span>
+                        <span className="sm:hidden">...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        <span className="hidden sm:inline">COMPILE REPORT</span>
+                        <span className="sm:hidden">COMPILE</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleNext}
+                    className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#AE6965] text-white text-xs md:text-sm font-bold hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 group"
+                  >
+                    <span className="hidden sm:inline">PROCEED</span>
+                    <span className="sm:hidden">NEXT</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                )
               )}
             </footer>
           </>
