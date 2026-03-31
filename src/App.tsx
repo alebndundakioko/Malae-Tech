@@ -136,8 +136,8 @@ const STEPS: Step[] = [
 const InputField = ({ label, placeholder, type = "text", value, onChange, required, onVoiceInput, isRecording, isTranscribing, recordingTimeLeft }: any) => {
   const id = useId();
   return (
-    <div className="flex flex-col gap-1.5 w-full group">
-      <label htmlFor={id} className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+    <div className="flex flex-col gap-1 sm:gap-1.5 w-full group">
+      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
@@ -148,19 +148,19 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
-          className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200"
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/30 text-sm sm:text-base text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200"
         />
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 sm:gap-2">
           {isTranscribing && (
-            <div className="flex items-center gap-2 px-2 py-1 bg-[#AE6965]/5 rounded-lg">
-              <Loader2 className="w-3 h-3 animate-spin text-[#AE6965]" />
-              <span className="text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">AI Transcribing</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-[#AE6965]/5 rounded-lg">
+              <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin text-[#AE6965]" />
+              <span className="text-[7px] sm:text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">Transcribing</span>
             </div>
           )}
           {onVoiceInput && !isTranscribing && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {isRecording && recordingTimeLeft !== undefined && (
-                <span className={`text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                <span className={`text-[9px] sm:text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
                   0:{recordingTimeLeft.toString().padStart(2, '0')}
                 </span>
               )}
@@ -168,9 +168,9 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
                 type="button"
                 onClick={onVoiceInput}
                 aria-label={isRecording ? `Stop recording ${label}` : `Start recording ${label}`}
-                className={`p-2 rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
+                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
               >
-                {isRecording ? <MicOff className="w-4 h-4 animate-pulse" /> : <Mic className="w-4 h-4" />}
+                {isRecording ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </button>
             </div>
           )}
@@ -183,8 +183,8 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
 const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceInput, isRecording, isTranscribing, recordingTimeLeft }: any) => {
   const id = useId();
   return (
-    <div className="flex flex-col gap-1.5 w-full group">
-      <label htmlFor={id} className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+    <div className="flex flex-col gap-1 sm:gap-1.5 w-full group">
+      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
@@ -195,19 +195,19 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
           onChange={(e) => onChange(e.target.value)}
           required={required}
           rows={4}
-          className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all resize-none shadow-sm hover:border-slate-200"
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/30 text-sm sm:text-base text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200 min-h-[100px] sm:min-h-[120px]"
         />
-        <div className="absolute right-4 bottom-4 flex items-center gap-2">
+        <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4 flex items-center gap-1.5 sm:gap-2">
           {isTranscribing && (
-            <div className="flex items-center gap-2 px-2 py-1 bg-[#AE6965]/5 rounded-lg">
-              <Loader2 className="w-3 h-3 animate-spin text-[#AE6965]" />
-              <span className="text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">AI Transcribing</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-[#AE6965]/5 rounded-lg">
+              <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin text-[#AE6965]" />
+              <span className="text-[7px] sm:text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">Transcribing</span>
             </div>
           )}
           {onVoiceInput && !isTranscribing && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {isRecording && recordingTimeLeft !== undefined && (
-                <span className={`text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                <span className={`text-[9px] sm:text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
                   0:{recordingTimeLeft.toString().padStart(2, '0')}
                 </span>
               )}
@@ -215,9 +215,9 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
                 type="button"
                 onClick={onVoiceInput}
                 aria-label={isRecording ? `Stop recording ${label}` : `Start recording ${label}`}
-                className={`p-2 rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
+                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
               >
-                {isRecording ? <MicOff className="w-4 h-4 animate-pulse" /> : <Mic className="w-4 h-4" />}
+                {isRecording ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </button>
             </div>
           )}
@@ -230,23 +230,25 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
 const SelectField = ({ label, options, value, onChange, required }: any) => {
   const id = useId();
   return (
-    <div className="flex flex-col gap-1.5 w-full group">
-      <label htmlFor={id} className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+    <div className="flex flex-col gap-1 sm:gap-1.5 w-full group">
+      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200 appearance-none cursor-pointer"
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
-      >
-        <option value="">Select an option</option>
-        {options.map((opt: string) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/30 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200 appearance-none cursor-pointer pr-10 sm:pr-12"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '0.875rem' }}
+        >
+          <option value="">Select an option</option>
+          {options.map((opt: string) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 };
@@ -254,13 +256,13 @@ const SelectField = ({ label, options, value, onChange, required }: any) => {
 const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => {
   const id = useId();
   return (
-    <div className="flex flex-col gap-1.5 w-full">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+    <div className="flex flex-col gap-1 sm:gap-1.5 w-full">
+      <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
         {label}
       </span>
       <label 
         htmlFor={id}
-        className={`w-full border-2 border-dashed border-slate-100 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/30 hover:bg-slate-50/50 transition-colors cursor-pointer group ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full border-2 border-dashed border-slate-100 rounded-xl sm:rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center gap-2 sm:gap-3 bg-slate-50/30 hover:bg-slate-50/50 transition-colors cursor-pointer group ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input 
           id={id}
@@ -273,12 +275,12 @@ const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => {
           }}
           disabled={isProcessing}
         />
-        <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#AE6965] transition-colors">
-          {isProcessing ? <Loader size="sm" /> : <Upload className="w-6 h-6" aria-hidden="true" />}
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#AE6965] transition-colors">
+          {isProcessing ? <Loader size="sm" /> : <Upload className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />}
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold text-slate-700">{isProcessing ? 'Processing...' : label}</p>
-          <p className="text-[10px] text-slate-400 uppercase tracking-tight">{subtitle}</p>
+          <p className="text-xs sm:text-sm font-bold text-slate-700">{isProcessing ? 'Processing...' : label}</p>
+          <p className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-tight">{subtitle}</p>
         </div>
       </label>
     </div>
@@ -1652,48 +1654,48 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-80 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
-        <div className="p-10 flex flex-col items-center gap-1">
-          <div className="w-12 h-12 rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4 group hover:border-[#AE6965] transition-all duration-500">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#AE6965] animate-pulse group-hover:scale-125 transition-transform" />
+      <aside className="hidden md:flex w-72 lg:w-80 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
+        <div className="p-8 lg:p-10 flex flex-col items-center gap-1">
+          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-[1rem] lg:rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4 group hover:border-[#AE6965] transition-all duration-500">
+            <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-[#AE6965] animate-pulse group-hover:scale-125 transition-transform" />
           </div>
-          <h1 className="text-2xl font-black tracking-tighter text-slate-900">Malae</h1>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
+          <h1 className="text-xl lg:text-2xl font-black tracking-tighter text-slate-900 uppercase tracking-widest">Malae</h1>
+          <p className="text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
             Medical Workspace
           </p>
         </div>
 
-        <nav className="flex-1 px-6 py-4 flex flex-col gap-1 overflow-y-auto">
+        <nav className="flex-1 px-4 lg:px-6 py-4 flex flex-col gap-1 overflow-y-auto no-scrollbar">
           <button
             onClick={() => setView('dashboard')}
             className={`
-              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group relative mb-2
+              flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl transition-all group relative mb-2
               ${view === 'dashboard' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
             <div className={`
-              w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+              w-8 h-8 lg:w-9 lg:h-9 rounded-lg lg:rounded-xl flex items-center justify-center transition-colors
               ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#AE6965]'}
             `}>
-              <LayoutDashboard className="w-4.5 h-4.5" />
+              <LayoutDashboard className="w-4 lg:h-4.5" />
             </div>
-            <span className="text-sm font-bold tracking-tight">My Cases</span>
+            <span className="text-xs lg:text-sm font-black uppercase tracking-widest">My Cases</span>
           </button>
 
           <button
             onClick={() => setView('profile')}
             className={`
-              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group relative mb-6
+              flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl transition-all group relative mb-6
               ${view === 'profile' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
             <div className={`
-              w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+              w-8 h-8 lg:w-9 lg:h-9 rounded-lg lg:rounded-xl flex items-center justify-center transition-colors
               ${view === 'profile' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#AE6965]'}
             `}>
-              <UserIcon className="w-4.5 h-4.5" />
+              <UserIcon className="w-4 lg:h-4.5" />
             </div>
-            <span className="text-sm font-bold tracking-tight">My Profile</span>
+            <span className="text-xs lg:text-sm font-black uppercase tracking-widest">My Profile</span>
           </button>
 
           {view === 'generator' && (
@@ -1703,7 +1705,7 @@ export default function App() {
               className="space-y-1"
             >
               <div className="px-5 py-3">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Case Details</span>
+                <span className="text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Case Details</span>
               </div>
               {STEPS.map((step, index) => {
                 const isActive = currentStepIndex === index;
@@ -1715,17 +1717,17 @@ export default function App() {
                     key={step.id}
                     onClick={() => setCurrentStepIndex(index)}
                     className={`
-                      w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all group relative
+                      w-full flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 lg:py-3.5 rounded-xl lg:rounded-2xl transition-all group relative
                       ${isActive ? 'bg-[#AE6965]/10 text-[#AE6965]' : 'text-slate-500 hover:bg-slate-50'}
                     `}
                   >
                     <div className={`
-                      w-8 h-8 rounded-xl flex items-center justify-center transition-all
+                      w-7 h-7 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl flex items-center justify-center transition-all
                       ${isActive ? 'bg-[#AE6965] text-white shadow-lg shadow-[#AE6965]/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
                     `}>
-                      {isCompleted && !isActive ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                      {isCompleted && !isActive ? <CheckCircle2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> : <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />}
                     </div>
-                    <span className={`text-xs font-bold tracking-tight transition-colors ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
+                    <span className={`text-[10px] lg:text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
                       {step.label}
                     </span>
                     {isActive && (
@@ -1743,19 +1745,19 @@ export default function App() {
 
         <div className="p-6 border-t border-slate-50 space-y-4">
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
-            <div className="w-10 h-10 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-bold">
+            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-black text-xs shadow-sm">
               {user.displayName?.[0] || user.email?.[0].toUpperCase()}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-slate-800 truncate">{user.displayName || 'Physician'}</span>
-              <span className="text-[10px] text-slate-400 truncate">{user.email}</span>
+              <span className="text-[10px] lg:text-xs font-black text-slate-800 truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
+              <span className="text-[8px] lg:text-[10px] text-slate-400 truncate font-medium">{user.email}</span>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all font-bold text-xs"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all font-black text-[10px] uppercase tracking-widest"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             SIGN OUT
           </button>
         </div>
@@ -1770,83 +1772,119 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] md:hidden"
             />
             <motion.aside 
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 bg-[#AE6965] z-50 flex flex-col shadow-2xl md:hidden"
+              className="fixed inset-y-0 left-0 w-[85%] max-w-[300px] bg-white z-[70] flex flex-col shadow-2xl md:hidden rounded-r-3xl overflow-hidden"
             >
-              <div className="p-6 flex items-center justify-between border-b border-white/10">
+              <div className="p-6 flex items-center justify-between border-b border-slate-50 bg-slate-50/50">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#AE6965]">
-                    <Stethoscope className="w-4 h-4" />
+                  <div className="w-10 h-10 rounded-xl bg-[#AE6965] flex items-center justify-center text-white shadow-lg shadow-[#AE6965]/20">
+                    <Stethoscope className="w-5 h-5" />
                   </div>
-                  <span className="font-bold text-white">Malae</span>
+                  <div className="flex flex-col">
+                    <span className="font-black text-slate-900 tracking-tighter text-xl uppercase tracking-widest leading-none">Malae</span>
+                    <span className="text-[8px] font-black text-[#AE6965] uppercase tracking-[0.2em] mt-1">Clinical Workspace</span>
+                  </div>
                 </div>
-                <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-white/60 hover:text-white">
+                <button 
+                  onClick={() => setIsSidebarOpen(false)} 
+                  className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-100"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <nav className="flex-1 px-4 py-6 flex flex-col gap-1 overflow-y-auto">
+
+              <nav className="flex-1 px-4 py-8 flex flex-col gap-2 overflow-y-auto no-scrollbar">
                 <button
                   onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
                   className={`
-                    flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all mb-2
-                    ${view === 'dashboard' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10'}
+                    flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
+                    ${view === 'dashboard' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
                   `}
                 >
-                  <LayoutDashboard className="w-5 h-5" />
-                  <span className="text-sm font-semibold tracking-tight">My Cases</span>
+                  <div className={`
+                    w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+                    ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}
+                  `}>
+                    <LayoutDashboard className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-widest">My Cases</span>
                 </button>
 
                 <button
                   onClick={() => { setView('profile'); setIsSidebarOpen(false); }}
                   className={`
-                    flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all mb-4
-                    ${view === 'profile' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10'}
+                    flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
+                    ${view === 'profile' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
                   `}
                 >
-                  <UserIcon className="w-5 h-5" />
-                  <span className="text-sm font-semibold tracking-tight">My Profile</span>
+                  <div className={`
+                    w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+                    ${view === 'profile' ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}
+                  `}>
+                    <UserIcon className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-widest">My Profile</span>
                 </button>
 
-                {view === 'generator' && STEPS.map((step, index) => {
-                  const isActive = currentStepIndex === index;
-                  const isCompleted = completedSteps.has(step.id);
-                  const Icon = step.icon;
+                {view === 'generator' && (
+                  <div className="mt-6 space-y-1">
+                    <div className="px-5 py-2">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Case Progress</span>
+                    </div>
+                    {STEPS.map((step, index) => {
+                      const isActive = currentStepIndex === index;
+                      const isCompleted = completedSteps.has(step.id);
+                      const Icon = step.icon;
 
-                  return (
-                    <button
-                      key={step.id}
-                      onClick={() => {
-                        setCurrentStepIndex(index);
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`
-                        flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all
-                        ${isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10'}
-                      `}
-                    >
-                      <div className={`
-                        w-8 h-8 rounded-xl flex items-center justify-center
-                        ${isActive ? 'bg-white text-[#AE6965]' : isCompleted ? 'bg-white/20 text-white' : 'bg-white/10 text-white/40'}
-                      `}>
-                        {isCompleted && !isActive ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-                      </div>
-                      <span className="text-sm font-semibold tracking-tight">{step.label}</span>
-                    </button>
-                  );
-                })}
+                      return (
+                        <button
+                          key={step.id}
+                          onClick={() => {
+                            setCurrentStepIndex(index);
+                            setIsSidebarOpen(false);
+                          }}
+                          className={`
+                            w-full flex items-center gap-4 px-5 py-3 rounded-xl transition-all group
+                            ${isActive ? 'bg-[#AE6965]/5 text-[#AE6965]' : 'text-slate-500 hover:bg-slate-50'}
+                          `}
+                        >
+                          <div className={`
+                            w-7 h-7 rounded-lg flex items-center justify-center transition-all
+                            ${isActive ? 'bg-[#AE6965] text-white shadow-md' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                          `}>
+                            {isCompleted && !isActive ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
+                          </div>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
+                            {step.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </nav>
-              <div className="p-6 border-t border-white/10 bg-black/10">
+
+              <div className="p-6 border-t border-slate-50 space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+                  <div className="w-9 h-9 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-black text-xs shadow-sm">
+                    {user.displayName?.[0] || user.email?.[0].toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-black text-slate-800 truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
+                    <span className="text-[8px] text-slate-400 truncate font-medium">{user.email}</span>
+                  </div>
+                </div>
                 <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-white bg-white/10 hover:bg-white/20 transition-all font-bold text-xs"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-all font-black text-[10px] uppercase tracking-widest"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                   SIGN OUT
                 </button>
               </div>
@@ -1856,7 +1894,22 @@ export default function App() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+        {/* Mobile Header */}
+        <header className="md:hidden h-16 bg-white border-b border-slate-100 px-4 flex items-center justify-between sticky top-0 z-50">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 -ml-2 text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="font-black text-slate-900 tracking-tighter text-lg uppercase tracking-widest">Malae</span>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-black text-[10px]">
+            {user.displayName?.[0] || user.email?.[0].toUpperCase()}
+          </div>
+        </header>
         {view === 'dashboard' ? (
           <div className="flex-1 overflow-y-auto">
             <Dashboard 
@@ -1893,22 +1946,22 @@ export default function App() {
             <div className="max-w-4xl mx-auto">
               <button 
                 onClick={() => setView('dashboard')}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#AE6965] font-bold text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors"
+                className="flex items-center gap-2 text-slate-500 hover:text-[#AE6965] font-black text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors group"
               >
-                <ChevronLeft className="w-4 h-4" />
-                BACK TO MY CASES
+                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                <span className="uppercase tracking-widest">Back to My Cases</span>
               </button>
               
-              <div className="bg-white rounded-2xl sm:rounded-[32px] p-6 sm:p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="bg-white rounded-[2rem] sm:rounded-[32px] p-6 sm:p-8 md:p-12 shadow-sm border border-slate-100">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 sm:mb-12 pb-8 sm:pb-12 border-b border-slate-50">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2 leading-tight">{selectedReport.title}</h1>
-                    <div className="flex items-center gap-3">
-                      <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
+                  <div className="space-y-2">
+                    <h1 className="text-xl sm:text-3xl font-black text-slate-900 leading-tight">{selectedReport.title}</h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="text-[10px] sm:text-sm text-slate-500 font-medium flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         {selectedReport.createdAt?.toDate ? selectedReport.createdAt.toDate().toLocaleDateString() : 'Recently'}
                       </p>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
+                      <span className={`text-[8px] sm:text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
                         selectedReport.type === 'story' 
                           ? 'bg-[#AE6965]/5 text-[#AE6965] border-[#AE6965]/20' 
                           : 'bg-slate-50 text-slate-500 border-slate-200'
@@ -1928,10 +1981,10 @@ export default function App() {
                           triggerDownload(blob, `Clinical_Report_${selectedReport.patientData.fullName || 'Patient'}`);
                         }
                       }}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-xs sm:text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl sm:rounded-2xl bg-slate-900 text-white font-black text-[10px] sm:text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 group"
                     >
-                      <Download className="w-4 h-4" />
-                      DOWNLOAD PDF
+                      <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-y-0.5 transition-transform" />
+                      <span className="uppercase tracking-widest">Download PDF</span>
                     </button>
                   </div>
                 </div>
@@ -1940,24 +1993,24 @@ export default function App() {
                   {selectedReport.type === 'story' ? (
                     <>
                       <section>
-                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                        <h2 className="text-base sm:text-xl font-black text-slate-900 mb-4 flex items-center gap-3">
                           <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#AE6965] rounded-full" />
                           Case Summary
                         </h2>
-                        <p className="text-slate-600 leading-relaxed text-base sm:text-lg">{selectedReport.reportData.hpcNarrative}</p>
+                        <p className="text-slate-600 leading-relaxed text-sm sm:text-lg font-medium">{selectedReport.reportData.hpcNarrative}</p>
                       </section>
 
-                      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
                         <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
-                          <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Clinical Impression</h3>
-                          <p className="text-sm sm:text-base text-slate-700 font-medium">{selectedReport.reportData.impression}</p>
+                          <h3 className="font-black text-slate-900 mb-3 uppercase text-[9px] sm:text-[10px] tracking-widest">Clinical Impression</h3>
+                          <p className="text-sm sm:text-base text-slate-700 font-bold">{selectedReport.reportData.impression}</p>
                         </div>
                         <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100">
-                          <h3 className="font-bold text-slate-900 mb-3 uppercase text-[10px] tracking-widest">Management Plan</h3>
+                          <h3 className="font-black text-slate-900 mb-3 uppercase text-[9px] sm:text-[10px] tracking-widest">Management Plan</h3>
                           <ul className="space-y-2">
                             {selectedReport.reportData.plan?.map((item: string, i: number) => (
-                              <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-600">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-slate-600 font-medium">
+                                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0 mt-0.5" />
                                 {item}
                               </li>
                             ))}
@@ -1966,12 +2019,12 @@ export default function App() {
                       </section>
 
                       <section>
-                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-6">Possible Diagnoses</h2>
-                        <div className="space-y-4">
+                        <h2 className="text-base sm:text-xl font-black text-slate-900 mb-6">Possible Diagnoses</h2>
+                        <div className="space-y-3 sm:space-y-4">
                           {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
-                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#AE6965]/30 transition-colors">
-                              <h4 className="font-bold text-sm sm:text-base text-slate-900 mb-2">{i + 1}. {diff.diagnosis}</h4>
-                              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{diff.reasoning}</p>
+                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#AE6965]/30 transition-colors bg-white shadow-sm">
+                              <h4 className="font-black text-sm sm:text-base text-slate-900 mb-2 tracking-tight">{i + 1}. {diff.diagnosis}</h4>
+                              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{diff.reasoning}</p>
                             </div>
                           ))}
                         </div>
@@ -1981,33 +2034,33 @@ export default function App() {
                     <div className="space-y-8">
                       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Patient Name</p>
-                          <p className="text-sm font-bold text-slate-900">{selectedReport.patientData.fullName || 'Not recorded'}</p>
+                          <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patient Name</p>
+                          <p className="text-sm font-black text-slate-900">{selectedReport.patientData.fullName || 'Not recorded'}</p>
                         </div>
                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Chief Complaint</p>
-                          <p className="text-sm font-bold text-slate-900">{selectedReport.patientData.chiefComplaint || 'Not recorded'}</p>
+                          <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Chief Complaint</p>
+                          <p className="text-sm font-black text-slate-900">{selectedReport.patientData.chiefComplaint || 'Not recorded'}</p>
                         </div>
                       </section>
                       
                       <section>
-                        <h2 className="text-lg font-bold text-slate-900 mb-4">Clinical History</h2>
+                        <h2 className="text-base sm:text-lg font-black text-slate-900 mb-4">Clinical History</h2>
                         <div className="space-y-4">
                           <div className="p-4 rounded-xl border border-slate-100">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">History of Presenting Illness</h4>
-                            <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedReport.patientData.hpi || 'No data recorded'}</p>
+                            <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">History of Presenting Illness</h4>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.hpi || 'No data recorded'}</p>
                           </div>
                           <div className="p-4 rounded-xl border border-slate-100">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Past Medical History</h4>
-                            <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedReport.patientData.pmh || 'No data recorded'}</p>
+                            <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Past Medical History</h4>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.pmh || 'No data recorded'}</p>
                           </div>
                         </div>
                       </section>
 
-                      <div className="p-6 rounded-2xl bg-[#AE6965]/5 border border-[#AE6965]/10 text-center">
+                      <div className="p-6 sm:p-8 rounded-[2rem] bg-[#AE6965]/5 border border-[#AE6965]/10 text-center">
                         <Sparkles className="w-8 h-8 text-[#AE6965] mx-auto mb-3" />
-                        <h4 className="font-bold text-slate-900 mb-2">Write a case story?</h4>
-                        <p className="text-xs text-slate-500 mb-4">Create a professional narrative summary from these details.</p>
+                        <h4 className="font-black text-slate-900 mb-2">Write a case story?</h4>
+                        <p className="text-xs text-slate-500 mb-6 font-medium">Create a professional narrative summary from these details.</p>
                           <button 
                             onClick={() => {
                               setFormData(selectedReport.patientData);
@@ -2015,7 +2068,7 @@ export default function App() {
                               setCompletedSteps(new Set(STEPS.map(s => s.id))); // Mark all as done
                               setView('generator');
                             }}
-                            className="px-6 py-2 rounded-lg bg-[#AE6965] text-white text-xs font-bold hover:bg-[#8E5450] transition-all"
+                            className="px-8 py-3 rounded-xl bg-[#AE6965] text-white text-xs font-black hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 uppercase tracking-widest"
                           >
                             History write up with AI
                           </button>
@@ -2029,35 +2082,32 @@ export default function App() {
         ) : (
           <>
             {/* Header */}
-            <header className="h-16 md:h-20 bg-white border-b border-slate-100 px-4 md:px-10 flex items-center justify-between sticky top-0 z-30">
-              <div className="flex items-center gap-3">
+            <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 sm:px-8 py-3 sm:py-5 flex items-center justify-between">
+              <div className="flex items-center gap-3 sm:gap-6">
                 <button 
                   onClick={() => setIsSidebarOpen(true)}
-                  className="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl md:hidden"
+                  className="md:hidden p-2.5 -ml-1 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all active:scale-95"
                 >
-                  <Menu className="w-6 h-6" />
+                  <Menu className="w-5 h-5" />
                 </button>
                 <div className="flex flex-col">
-                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module {currentStepIndex + 1}/{STEPS.length}</span>
-                  <span className="text-xs md:text-sm font-bold text-slate-800 truncate max-w-[150px] md:max-w-none">{currentStep.label}</span>
+                  <h2 className="text-sm sm:text-xl font-black text-slate-900 tracking-tight uppercase tracking-widest">
+                    Case Story Generator
+                  </h2>
+                  <p className="text-[8px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    Step {currentStepIndex + 1} of {STEPS.length}: {STEPS[currentStepIndex].title}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setView('dashboard')}
-                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-slate-500 text-[10px] md:text-xs font-bold hover:bg-slate-50 transition-colors"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">DASHBOARD</span>
-                </button>
-                <button 
-                  onClick={handleReset}
-                  className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-[#AE6965] text-white text-[10px] md:text-xs font-bold hover:bg-[#8E5450] transition-colors shadow-sm"
-                >
-                  <RotateCcw className="w-3 md:w-3.5 h-3 md:h-3.5" />
-                  <span className="hidden sm:inline">RESET SESSION</span>
-                  <span className="sm:hidden">RESET</span>
-                </button>
+
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="hidden sm:flex flex-col items-end">
+                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest">{auth.currentUser?.displayName || 'Healthcare Professional'}</span>
+                  <span className="text-[10px] font-bold text-[#AE6965] uppercase tracking-widest">Clinical Workspace</span>
+                </div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#AE6965] to-[#8E5450] flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-lg shadow-[#AE6965]/20">
+                  {(auth.currentUser?.displayName || 'H').charAt(0).toUpperCase()}
+                </div>
               </div>
             </header>
 
@@ -2071,62 +2121,62 @@ export default function App() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-10"
+                      className="flex flex-col gap-6 sm:gap-8 md:gap-10"
                     >
                       <div className="flex flex-col gap-2 text-center md:text-left">
-                        <h2 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 leading-tight">Start New Case</h2>
-                        <p className="text-lg text-slate-400 font-medium">Choose your preferred method of clinical data entry.</p>
+                        <h2 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight text-slate-900 leading-tight">Start New Case</h2>
+                        <p className="text-sm sm:text-base md:text-lg text-slate-400 font-medium">Choose your preferred method of clinical data entry.</p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
                         <button 
                           onClick={() => setGeneratorMode('form')}
-                          className="group p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-6 relative overflow-hidden"
+                          className="group p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden active:scale-[0.98]"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                          <div className="w-20 h-20 rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10">
-                            <ClipboardList className="w-10 h-10" />
+                          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10 shadow-lg shadow-[#AE6965]/5">
+                            <ClipboardList className="w-8 h-8 sm:w-12 sm:h-12" />
                           </div>
                           <div className="relative z-10">
-                            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-[#AE6965] transition-colors">Direct Form</h3>
-                            <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors">Enter case details manually using our structured clinical form.</p>
+                            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#AE6965] transition-colors uppercase tracking-widest">Direct Form</h3>
+                            <p className="text-[10px] sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors font-medium">Enter case details manually using our structured clinical form.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-xs opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
-                            PROCEED <ChevronRight className="w-4 h-4" />
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-black text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                            <span className="uppercase tracking-widest">Proceed</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
 
                         <button 
                           onClick={() => setGeneratorMode('upload')}
-                          className="group p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-6 relative overflow-hidden"
+                          className="group p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden active:scale-[0.98]"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                          <div className="w-20 h-20 rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10">
-                            <FileUp className="w-10 h-10" />
+                          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10 shadow-lg shadow-[#AE6965]/5">
+                            <FileUp className="w-8 h-8 sm:w-12 sm:h-12" />
                           </div>
                           <div className="relative z-10">
-                            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-[#AE6965] transition-colors">Document Upload</h3>
-                            <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors">Upload a PDF or image of clinical notes to extract data automatically.</p>
+                            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#AE6965] transition-colors uppercase tracking-widest">Document Upload</h3>
+                            <p className="text-[10px] sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors font-medium">Upload a PDF or image of clinical notes to extract data automatically.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-xs opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
-                            UPLOAD FILE <ChevronRight className="w-4 h-4" />
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-black text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                            <span className="uppercase tracking-widest">Upload File</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
 
                         <button 
                           onClick={() => setGeneratorMode('audio')}
-                          className="group p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-6 relative overflow-hidden"
+                          className="group p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden active:scale-[0.98]"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                          <div className="w-20 h-20 rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10">
-                            <Mic className="w-10 h-10" />
+                          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10 shadow-lg shadow-[#AE6965]/5">
+                            <Mic className="w-8 h-8 sm:w-12 sm:h-12" />
                           </div>
                           <div className="relative z-10">
-                            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-[#AE6965] transition-colors">Audio Input</h3>
-                            <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors">Dictate the case details and let AI transcribe and organize the data.</p>
+                            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#AE6965] transition-colors uppercase tracking-widest">Audio Input</h3>
+                            <p className="text-[10px] sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors font-medium">Dictate the case details and let AI transcribe and organize the data.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-xs opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
-                            START RECORDING <ChevronRight className="w-4 h-4" />
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-black text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                            <span className="uppercase tracking-widest">Start Recording</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
                       </div>
@@ -2137,22 +2187,22 @@ export default function App() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex flex-col gap-8 max-w-2xl mx-auto"
+                      className="flex flex-col gap-6 sm:gap-8 max-w-2xl mx-auto"
                     >
                       <button 
                         onClick={() => setGeneratorMode('selection')}
-                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-xs transition-colors self-start"
+                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-[10px] sm:text-xs transition-colors self-start"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3.5 h-3.5 sm:w-4 h-4" />
                         BACK TO OPTIONS
                       </button>
                       
-                      <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-slate-100 text-center">
-                        <div className="w-24 h-24 rounded-3xl bg-[#AE6965]/5 text-[#AE6965] flex items-center justify-center mx-auto mb-8">
-                          <FileUp className="w-12 h-12" />
+                      <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-100 text-center">
+                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/5 text-[#AE6965] flex items-center justify-center mx-auto mb-6 sm:mb-8">
+                          <FileUp className="w-8 h-8 sm:w-12 sm:h-12" />
                         </div>
-                        <h2 className="text-3xl font-black text-slate-900 mb-4">Upload Clinical Document</h2>
-                        <p className="text-slate-500 mb-10">Select a PDF or image file (clinical notes, lab results, etc.) to extract patient data.</p>
+                        <h2 className="text-xl sm:text-3xl font-black text-slate-900 mb-2 sm:mb-4">Upload Clinical Document</h2>
+                        <p className="text-xs sm:text-base text-slate-500 mb-8 sm:mb-10 leading-relaxed">Select a PDF or image file (clinical notes, lab results, etc.) to extract patient data.</p>
                         
                         <FileUpload 
                           label={isProcessingFile ? "Processing Document..." : "Select Document"}
@@ -2168,24 +2218,24 @@ export default function App() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex flex-col gap-8 max-w-2xl mx-auto"
+                      className="flex flex-col gap-6 sm:gap-8 max-w-2xl mx-auto"
                     >
                       <button 
                         onClick={() => setGeneratorMode('selection')}
-                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-xs transition-colors self-start"
+                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-[10px] sm:text-xs transition-colors self-start"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3.5 h-3.5 sm:w-4 h-4" />
                         BACK TO OPTIONS
                       </button>
                       
-                      <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-slate-100 text-center">
-                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 transition-all duration-500 ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-2xl shadow-red-200' : 'bg-[#AE6965]/5 text-[#AE6965]'}`}>
-                          {isRecording ? <MicOff className="w-12 h-12" /> : <Mic className="w-12 h-12" />}
+                      <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-100 text-center">
+                        <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 transition-all duration-500 ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-2xl shadow-red-200' : 'bg-[#AE6965]/5 text-[#AE6965]'}`}>
+                          {isRecording ? <MicOff className="w-8 h-8 sm:w-12 sm:h-12" /> : <Mic className="w-8 h-8 sm:w-12 sm:h-12" />}
                         </div>
-                        <h2 className="text-3xl font-black text-slate-900 mb-4">
+                        <h2 className="text-xl sm:text-3xl font-black text-slate-900 mb-2 sm:mb-4">
                           {isRecording ? 'Recording Case Details...' : 'Dictate Case Details'}
                         </h2>
-                        <p className="text-slate-500 mb-10">
+                        <p className="text-xs sm:text-base text-slate-500 mb-8 sm:mb-10 leading-relaxed">
                           {isRecording ? 'Speak clearly. We are capturing your clinical dictation.' : 'Press the button below and start speaking your case presentation.'}
                         </p>
                         
@@ -2193,7 +2243,7 @@ export default function App() {
                           onClick={startFullCaseAudioInput}
                           disabled={isProcessingFile}
                           className={`
-                            w-full py-6 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-4
+                            w-full py-4 sm:py-6 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-lg transition-all flex items-center justify-center gap-3 sm:gap-4
                             ${isRecording 
                               ? 'bg-red-500 text-white shadow-xl shadow-red-200 hover:bg-red-600' 
                               : 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20 hover:bg-[#8E5450]'}
@@ -2202,24 +2252,24 @@ export default function App() {
                         >
                           {isProcessingFile ? (
                             <>
-                              <Loader2 className="w-6 h-6 animate-spin" />
+                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
                               PROCESSING...
                             </>
                           ) : isRecording ? (
                             <>
-                              <div className="w-3 h-3 rounded-full bg-white animate-ping" />
+                              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white animate-ping" />
                               STOP RECORDING
                             </>
                           ) : (
                             <>
-                              <Mic className="w-6 h-6" />
+                              <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
                               START RECORDING
                             </>
                           )}
                         </button>
                         
                         {!isRecording && !isProcessingFile && (
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-6">
+                          <p className="text-[8px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-4 sm:mt-6">
                             MAX DURATION: 2 MINUTES
                           </p>
                         )}
@@ -2273,7 +2323,7 @@ export default function App() {
             </div>
 
             {/* Footer Navigation */}
-            <footer className="h-20 md:h-24 bg-white border-t border-slate-100 px-4 md:px-10 flex items-center justify-between sticky bottom-0 z-30">
+            <footer className="h-20 sm:h-24 bg-white/90 backdrop-blur-xl border-t border-slate-100 px-4 sm:px-10 flex items-center justify-between sticky bottom-0 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
               <button 
                 onClick={() => {
                   if (generatorMode === 'selection') {
@@ -2284,55 +2334,52 @@ export default function App() {
                 }}
                 disabled={currentStepIndex === 0 && generatorMode === 'form'}
                 className={`
-                  flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all
+                  flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs md:text-sm font-black transition-all active:scale-95
                   ${currentStepIndex === 0 && generatorMode === 'form' ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50'}
                 `}
               >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">{generatorMode === 'selection' ? 'CANCEL' : 'PREVIOUS'}</span>
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="uppercase tracking-widest">{generatorMode === 'selection' ? 'Cancel' : 'Prev'}</span>
               </button>
 
               {generatorMode === 'form' && (
-                <button 
-                  onClick={handleReset}
-                  className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-red-50 text-red-600 text-xs md:text-sm font-bold hover:bg-red-100 transition-all sm:shadow-lg sm:shadow-red-100"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span className="hidden sm:inline">NEW CASE</span>
-                </button>
-              )}
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <button 
+                    onClick={handleReset}
+                    className="hidden sm:flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-red-50 text-red-600 text-xs font-black hover:bg-red-100 transition-all active:scale-95"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span className="uppercase tracking-widest">New Case</span>
+                  </button>
 
-              {generatorMode === 'form' && (
-                currentStepIndex === STEPS.length - 1 ? (
-                  <button 
-                    onClick={handleCompileReport}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-900 text-white text-xs md:text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="hidden sm:inline">GENERATING...</span>
-                        <span className="sm:hidden">...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-4 h-4" />
-                        <span className="hidden sm:inline text-xs tracking-widest">HISTORY WRITE UP WITH AI</span>
-                        <span className="sm:hidden">WRITE UP</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button 
-                    onClick={handleNext}
-                    className="flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-[#AE6965] text-white text-xs md:text-sm font-bold hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 group"
-                  >
-                    <span className="hidden sm:inline">PROCEED</span>
-                    <span className="sm:hidden">NEXT</span>
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                )
+                  {currentStepIndex === STEPS.length - 1 ? (
+                    <button 
+                      onClick={handleCompileReport}
+                      disabled={isGenerating}
+                      className="flex items-center gap-2 md:gap-3 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-slate-900 text-white text-[11px] sm:text-xs md:text-sm font-black hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="uppercase tracking-widest">Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          <span className="uppercase tracking-widest">Generate Story</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleNext}
+                      className="flex items-center gap-2 md:gap-3 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-[#AE6965] text-white text-[11px] sm:text-xs md:text-sm font-black hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 group active:scale-95"
+                    >
+                      <span className="uppercase tracking-widest">Next</span>
+                      <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  )}
+                </div>
               )}
             </footer>
           </>

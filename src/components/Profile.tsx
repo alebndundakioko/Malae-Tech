@@ -92,101 +92,113 @@ export const Profile = ({ onBack }: ProfileProps) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
       <button 
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-500 hover:text-[#AE6965] transition-colors mb-8 group"
+        className="flex items-center gap-2 text-slate-500 hover:text-[#AE6965] transition-colors mb-6 sm:mb-10 group"
       >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-sm font-bold uppercase tracking-wider">Back to My Cases</span>
+        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:-translate-x-1 transition-transform" />
+        <span className="text-[8px] sm:text-xs font-black uppercase tracking-widest">Back to My Cases</span>
       </button>
 
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-        <div className="bg-[#AE6965] p-8 text-white">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <User className="w-8 h-8" />
+      <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div className="bg-[#AE6965] p-6 sm:p-10 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-white/10 rounded-full blur-3xl" />
+          <div className="flex items-center gap-4 sm:gap-6 relative z-10">
+            <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+              <User className="w-6 h-6 sm:w-10 sm:h-10" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Clinical Profile</h1>
-              <p className="text-white/70 text-sm">Manage your professional identity</p>
+              <h1 className="text-lg sm:text-3xl font-black tracking-tight uppercase tracking-widest">Clinical Profile</h1>
+              <p className="text-white/70 text-[10px] sm:text-sm font-medium">Manage your professional identity</p>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleUpdate} className="p-8 space-y-6">
-          <div className="space-y-1.5">
-            <label htmlFor="profile-email" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" aria-hidden="true" />
+        <form onSubmit={handleUpdate} className="p-6 sm:p-10 space-y-6 sm:space-y-8">
+          <div className="space-y-2 sm:space-y-3">
+            <label htmlFor="profile-email" className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Email Address</label>
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-5 sm:h-5 text-slate-300" aria-hidden="true" />
               <input
                 id="profile-email"
                 type="email"
                 disabled
                 value={auth.currentUser?.email || ''}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed"
+                className="w-full pl-10 sm:pl-12 pr-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed text-[10px] sm:text-sm font-medium"
               />
             </div>
-            <p className="text-[10px] text-slate-400 italic">Email cannot be changed</p>
+            <p className="text-[8px] sm:text-[10px] text-slate-400 font-medium ml-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Email cannot be changed for security reasons.
+            </p>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="profile-display-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" aria-hidden="true" />
+          <div className="space-y-2 sm:space-y-3">
+            <label htmlFor="profile-display-name" className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Full Name</label>
+            <div className="relative group">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-5 sm:h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
               <input
                 id="profile-display-name"
                 type="text"
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#AE6965]/20 focus:border-[#AE6965] transition-all"
+                className="w-full pl-10 sm:pl-12 pr-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all text-[10px] sm:text-base font-medium"
                 placeholder="Dr. Samantha"
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="profile-hospital" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hospital / Institution</label>
-            <div className="relative">
-              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" aria-hidden="true" />
+          <div className="space-y-2 sm:space-y-3">
+            <label htmlFor="profile-hospital" className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Hospital / Institution</label>
+            <div className="relative group">
+              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-5 sm:h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
               <input
                 id="profile-hospital"
                 type="text"
                 required
                 value={hospital}
                 onChange={(e) => setHospital(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#AE6965]/20 focus:border-[#AE6965] transition-all"
+                className="w-full pl-10 sm:pl-12 pr-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all text-[10px] sm:text-base font-medium"
                 placeholder="General Hospital"
               />
             </div>
           </div>
 
           {error && (
-            <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-600 text-sm">
-              <AlertCircle className="w-5 h-5 shrink-0" />
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-600 text-[10px] sm:text-sm font-bold"
+            >
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
               <p>{error}</p>
-            </div>
+            </motion.div>
           )}
 
           {success && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-600 text-sm">
-              <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-600 text-[10px] sm:text-sm font-bold"
+            >
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
               <p>Profile updated successfully!</p>
-            </div>
+            </motion.div>
           )}
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-[#AE6965] hover:bg-[#8E5450] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#AE6965]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full bg-[#AE6965] hover:bg-[#8E5450] text-white font-black py-3.5 sm:py-5 rounded-xl sm:rounded-2xl shadow-xl shadow-[#AE6965]/20 transition-all flex items-center justify-center gap-3 disabled:opacity-70 group"
           >
             {saving ? (
               <Loader />
             ) : (
               <>
-                <Save className="w-5 h-5" />
-                <span>Save Changes</span>
+                <Save className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] sm:text-sm tracking-widest uppercase">Save Changes</span>
               </>
             )}
           </button>
