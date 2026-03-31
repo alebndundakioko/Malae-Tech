@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Malae Tech</string>
+    <string name="title_activity_main">Malae Tech</string>
+    <string name="package_name">com.malaetech.app</string>
+    <string name="custom_url_scheme">com.malaetech.app</string>
+</resources>
