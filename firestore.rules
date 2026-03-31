@@ -35,6 +35,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "drsamanthaainembabazi@gmail.com" && request.auth.token.email_verified == true)); // Default admin
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -77,6 +83,10 @@ service cloud.firestore {
       allow update: if isDocOwner() && isValidReport(request.resource.data) && 
                       request.resource.data.userId == resource.data.userId;
       allow delete: if isDocOwner();
+    }
+
+    match /test/{docId} {
+      allow read: if true;
     }
   }
 }

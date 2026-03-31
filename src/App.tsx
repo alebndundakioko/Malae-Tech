@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Document, 
@@ -48,7 +48,7 @@ import {
 } from 'lucide-react';
 
 // Firebase imports
-import { auth, db } from './firebase';
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, doc, getDocFromServer } from 'firebase/firestore';
 
@@ -133,102 +133,157 @@ const STEPS: Step[] = [
 
 // --- Components ---
 
-const InputField = ({ label, placeholder, type = "text", value, onChange, required, onVoiceInput, isRecording }: any) => (
-  <div className="flex flex-col gap-1.5 w-full">
-    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative">
-      <input
-        type={type}
-        placeholder={placeholder}
+const InputField = ({ label, placeholder, type = "text", value, onChange, required, onVoiceInput, isRecording, isTranscribing, recordingTimeLeft }: any) => {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5 w-full group">
+      <label htmlFor={id} className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+        {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200"
+        />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          {isTranscribing && (
+            <div className="flex items-center gap-2 px-2 py-1 bg-[#AE6965]/5 rounded-lg">
+              <Loader2 className="w-3 h-3 animate-spin text-[#AE6965]" />
+              <span className="text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">AI Transcribing</span>
+            </div>
+          )}
+          {onVoiceInput && !isTranscribing && (
+            <div className="flex items-center gap-2">
+              {isRecording && recordingTimeLeft !== undefined && (
+                <span className={`text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                  0:{recordingTimeLeft.toString().padStart(2, '0')}
+                </span>
+              )}
+              <button 
+                type="button"
+                onClick={onVoiceInput}
+                aria-label={isRecording ? `Stop recording ${label}` : `Start recording ${label}`}
+                className={`p-2 rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
+              >
+                {isRecording ? <MicOff className="w-4 h-4 animate-pulse" /> : <Mic className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceInput, isRecording, isTranscribing, recordingTimeLeft }: any) => {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5 w-full group">
+      <label htmlFor={id} className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+        {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
+      </label>
+      <div className="relative">
+        <textarea
+          id={id}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          rows={4}
+          className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all resize-none shadow-sm hover:border-slate-200"
+        />
+        <div className="absolute right-4 bottom-4 flex items-center gap-2">
+          {isTranscribing && (
+            <div className="flex items-center gap-2 px-2 py-1 bg-[#AE6965]/5 rounded-lg">
+              <Loader2 className="w-3 h-3 animate-spin text-[#AE6965]" />
+              <span className="text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">AI Transcribing</span>
+            </div>
+          )}
+          {onVoiceInput && !isTranscribing && (
+            <div className="flex items-center gap-2">
+              {isRecording && recordingTimeLeft !== undefined && (
+                <span className={`text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                  0:{recordingTimeLeft.toString().padStart(2, '0')}
+                </span>
+              )}
+              <button 
+                type="button"
+                onClick={onVoiceInput}
+                aria-label={isRecording ? `Stop recording ${label}` : `Start recording ${label}`}
+                className={`p-2 rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
+              >
+                {isRecording ? <MicOff className="w-4 h-4 animate-pulse" /> : <Mic className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SelectField = ({ label, options, value, onChange, required }: any) => {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5 w-full group">
+      <label htmlFor={id} className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+        {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
+      </label>
+      <select
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#AE6965]/20 focus:border-[#AE6965] transition-all"
-      />
-      {onVoiceInput && (
-        <button 
-          type="button"
-          onClick={onVoiceInput}
-          className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-[#AE6965]'}`}
-        >
-          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        </button>
-      )}
+        required={required}
+        className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200 appearance-none cursor-pointer"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
+      >
+        <option value="">Select an option</option>
+        {options.map((opt: string) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
     </div>
-  </div>
-);
+  );
+};
 
-const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceInput, isRecording }: any) => (
-  <div className="flex flex-col gap-1.5 w-full">
-    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative">
-      <textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={4}
-        className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#AE6965]/20 focus:border-[#AE6965] transition-all resize-none"
-      />
-      {onVoiceInput && (
-        <button 
-          type="button"
-          onClick={onVoiceInput}
-          className={`absolute right-3 bottom-3 p-1.5 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-[#AE6965]'}`}
-        >
-          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        </button>
-      )}
+const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        {label}
+      </span>
+      <label 
+        htmlFor={id}
+        className={`w-full border-2 border-dashed border-slate-100 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/30 hover:bg-slate-50/50 transition-colors cursor-pointer group ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <input 
+          id={id}
+          type="file" 
+          className="hidden" 
+          accept="image/*,.pdf" 
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFileSelect(file);
+          }}
+          disabled={isProcessing}
+        />
+        <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#AE6965] transition-colors">
+          {isProcessing ? <Loader size="sm" /> : <Upload className="w-6 h-6" aria-hidden="true" />}
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-700">{isProcessing ? 'Processing...' : label}</p>
+          <p className="text-[10px] text-slate-400 uppercase tracking-tight">{subtitle}</p>
+        </div>
+      </label>
     </div>
-  </div>
-);
-
-const SelectField = ({ label, options, value, onChange, required }: any) => (
-  <div className="flex flex-col gap-1.5 w-full">
-    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#AE6965]/20 focus:border-[#AE6965] transition-all"
-    >
-      <option value="">Select an option</option>
-      {options.map((opt: string) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  </div>
-);
-
-const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => (
-  <div className="flex flex-col gap-1.5 w-full">
-    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-      {label}
-    </label>
-    <label className={`w-full border-2 border-dashed border-slate-100 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/30 hover:bg-slate-50/50 transition-colors cursor-pointer group ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-      <input 
-        type="file" 
-        className="hidden" 
-        accept="image/*,.pdf" 
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFileSelect(file);
-        }}
-        disabled={isProcessing}
-      />
-      <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#AE6965] transition-colors">
-        {isProcessing ? <Loader size="sm" /> : <Upload className="w-6 h-6" />}
-      </div>
-      <div className="text-center">
-        <p className="text-sm font-bold text-slate-700">{isProcessing ? 'Processing...' : label}</p>
-        <p className="text-[10px] text-slate-400 uppercase tracking-tight">{subtitle}</p>
-      </div>
-    </label>
-  </div>
-);
+  );
+};
 
 // --- PDF Styles ---
 
@@ -751,15 +806,25 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState<any>(null);
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>(() => {
+    const saved = localStorage.getItem('malae_form_data');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('malae_form_data', JSON.stringify(formData));
+  }, [formData]);
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingField, setRecordingField] = useState<string | null>(null);
+  const [recordingTimeLeft, setRecordingTimeLeft] = useState(30);
+  const [transcribingField, setTranscribingField] = useState<string | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [showConfirmModal, setShowConfirmModal] = useState<{
     show: boolean;
@@ -777,12 +842,14 @@ export default function App() {
 
   useEffect(() => {
     async function testConnection() {
+      const path = 'test/connection';
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error) {
         if(error instanceof Error && error.message.includes('the client is offline')) {
           console.error("Please check your Firebase configuration. The client is offline.");
         }
+        handleFirestoreError(error, OperationType.GET, path);
       }
     }
     testConnection();
@@ -792,8 +859,7 @@ export default function App() {
       setAuthLoading(false);
     });
 
-    // Load autosave data
-    const savedData = localStorage.getItem('malae_autosave_form');
+    const savedData = localStorage.getItem('malae_form_data');
     if (savedData) {
       try {
         setFormData(JSON.parse(savedData));
@@ -805,10 +871,9 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Autosave effect
   useEffect(() => {
     if (Object.keys(formData).length > 0) {
-      localStorage.setItem('malae_autosave_form', JSON.stringify(formData));
+      localStorage.setItem('malae_form_data', JSON.stringify(formData));
     }
   }, [formData]);
 
@@ -836,18 +901,26 @@ export default function App() {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await transcribeAudio(audioBlob, field);
         setRecordingField(null);
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+        }
       };
 
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingField(field);
-      
-      // Stop after 10 seconds automatically or on user click
-      setTimeout(() => {
-        if (mediaRecorder.state === 'recording') {
-          stopVoiceInput();
-        }
-      }, 10000);
+      setRecordingTimeLeft(30);
+
+      // Start timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTimeLeft((prev) => {
+          if (prev <= 1) {
+            stopVoiceInput();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
     } catch (err) {
       console.error("Error accessing microphone:", err);
@@ -860,34 +933,52 @@ export default function App() {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setRecordingField(null);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
     }
   };
 
   const transcribeAudio = async (blob: Blob, field: string) => {
-    setGenerationStatus("Transcribing audio...");
+    setGenerationStatus("Transcribing clinical audio...");
+    setTranscribingField(field);
     try {
       const reader = new FileReader();
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = "gemini-3-flash-preview";
-        
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            { text: "Transcribe this clinical audio accurately. Return only the transcription text." },
-            { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
-          ]
-        });
+        try {
+          const base64Audio = (reader.result as string).split(',')[1];
+          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          const model = "gemini-3-flash-preview";
+          
+          const response = await ai.models.generateContent({
+            model,
+            contents: [{
+              parts: [
+                { text: "Transcribe this clinical audio accurately. Return only the transcription text. If the audio is silent or unintelligible, return an empty string." },
+                { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
+              ]
+            }]
+          });
 
-        const transcription = response.text;
-        if (transcription) {
-          updateField(field, (formData[field] || '') + ' ' + transcription.trim());
+          const transcription = response.text;
+          if (transcription && transcription.trim()) {
+            updateField(field, (prev: string) => {
+              const current = prev || '';
+              return current ? `${current} ${transcription.trim()}` : transcription.trim();
+            });
+          }
+        } catch (err) {
+          console.error("Transcription error:", err);
+        } finally {
+          setTranscribingField(null);
+          setGenerationStatus("");
         }
       };
     } catch (err) {
-      console.error("Transcription error:", err);
+      console.error("FileReader error:", err);
+      setTranscribingField(null);
+      setGenerationStatus("");
     }
   };
 
@@ -1163,6 +1254,7 @@ export default function App() {
       onConfirm: async () => {
         try {
           await signOut(auth);
+          localStorage.removeItem('malae_form_data');
           setView('dashboard');
         } catch (error) {
           console.error("Logout Error:", error);
@@ -1190,7 +1282,12 @@ export default function App() {
         reportPayload.hpcNarrative = storyData.hpcNarrative;
       }
 
-      await addDoc(collection(db, 'reports'), reportPayload);
+      const path = 'reports';
+      try {
+        await addDoc(collection(db, 'reports'), reportPayload);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, path);
+      }
       // Silent save for automatic generations to avoid interrupting flow
       console.log(`${type} report saved successfully`);
     } catch (error) {
@@ -1266,30 +1363,37 @@ export default function App() {
       const model = "gemini-3-flash-preview";
       
       const prompt = `
-        You are a senior surgical consultant. Based on the following patient data, write a high-level, cohesive academic surgical case write-up.
-        Strictly adhere to professional medical writing style, clinical nomenclature, and a formal academic tone.
-        
+        You are a Chief Surgical Consultant at a tertiary academic hospital. Based on the following patient data, synthesize a high-level, cohesive academic surgical case write-up.
+        Strictly adhere to formal medical writing standards, utilizing precise clinical nomenclature and a rigorous academic tone consistent with peer-reviewed surgical case reports.
+
         Patient Data:
         ${JSON.stringify(formData, null, 2)}
         
         Instructions:
-        1. HPC Narrative: Write a detailed chronological story of the presenting complaint. Use phrases like "presented with history of...", "gradually progressive", "associated with...", "however no history of...".
-        2. ROS Narrative: Provide a cohesive summary of the review of systems, mentioning both positive and negative findings in a professional manner.
-        3. PMH Narrative: Summarize medical history, chronic conditions (e.g., "known ISS on HAART"), and medications.
-        4. PSH Narrative: Summarize surgical history and trauma.
-        5. FSH Narrative: Summarize family and social history, including lifestyle factors.
-        6. Examination Narrative: Provide a professional write-up of physical examination findings, including General Examination, Vitals, Local Examination (e.g., "Anterior neck swelling, asymmetrical..."), and Systemic Examination (Cardiovascular, Respiratory, CNS, Abdominal).
-        7. Differentials: Provide a list of 5-10 differential diagnoses. For each, include the diagnosis name and a detailed medical reasoning "in view of..." and "unlikely because...".
-        8. Case Discussion: Provide a deep academic discussion with sections: "Definition and Pathophysiology", "Pathophysiological Mechanisms", "Clinical Features and Presentation", "Investigations and Diagnostic Workup", "Management and Treatment Approach".
-        9. Impression: Provide a concise clinical impression (e.g., "46/F known ISS on HAART with non-toxic nodular goitre").
-        10. Plan: Provide a 5-10 point clinical management plan.
-        11. References: Provide 4-5 academic references in standard medical format.
+        1. HPC Narrative: Construct a detailed, chronological narrative of the history of presenting complaint (HPC). Utilize professional syntax such as "presented with a [duration] history of...", "insidious vs. acute onset", "gradually progressive nature", and "pertinent negatives including...". Ensure the narrative flows logically from the primary complaint to associated symptoms and clinical progression.
+        2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal) and highlight both positive findings and significant negatives in a professional, concise manner.
+        3. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing chronic comorbidities (e.g., "known retroviral disease on HAART", "hypertensive on ACE inhibitors") and their potential impact on the current presentation.
+        4. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history, noting dates, procedures, and any relevant perioperative complications.
+        5. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions, lifestyle factors (tobacco/alcohol units), and socioeconomic context relevant to surgical recovery.
+        6. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include:
+           - General Examination: Nutritional status, pallor, jaundice, lymphadenopathy, edema.
+           - Vitals: Hemodynamic stability and physiological parameters.
+           - Local/Regional Examination: Detailed description using surgical descriptors (e.g., "asymmetrical anterior neck mass, moves with deglutition, no bruits...").
+           - Systemic Examination: Focused cardiorespiratory, abdominal, and neurological assessments.
+        7. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification. Use "in view of [specific positive findings]" to support the diagnosis and "unlikely because of [specific negative findings or clinical inconsistencies]" to argue against it. Maintain a high level of diagnostic precision and prioritize by clinical likelihood.
+        8. Case Discussion: Provide an exhaustive academic discourse. This section must be deeply analytical and evidence-based. Include the following sub-sections:
+           - Definition and Pathophysiology: Discuss the molecular, cellular, or anatomical basis of the condition.
+           - Pathophysiological Mechanisms: Detail the disease progression, etiology, and typical sequelae.
+           - Clinical Features and Presentation: Contrast the typical presentation with this specific patient's findings.
+           - Investigations and Diagnostic Workup: Discuss the gold standard investigations, relevant imaging (e.g., USG, CT, MRI), and laboratory markers based on current surgical guidelines.
+           - Management and Treatment Approach: Detail the surgical vs. conservative management options, including specific operative techniques if applicable and postoperative care protocols.
+        9. Impression: Provide a concise, multi-axial clinical impression (e.g., "A [age]/[sex] patient with [comorbidities] presenting with clinical features highly suggestive of [primary diagnosis]").
+        10. Plan: Formulate a 5-10 point evidence-based clinical management plan, ranging from immediate stabilization and further investigations to definitive surgical intervention and follow-up.
+        11. References: Provide 4-5 high-impact academic references (e.g., NEJM, Lancet, Journal of Surgery) in standard Vancouver or AMA format.
         
         Handling Missing Data & Edge Cases:
-        - If specific clinical details (e.g., vitals, specific system reviews, or surgical history) are missing from the input, DO NOT hallucinate or invent data.
-        - Instead, use professional clinical language to indicate the absence of data, such as "Not documented at the time of presentation," "Further history required to clarify...", or "Clinical records regarding [specific area] were unavailable."
-        - If examination findings are missing, the "Examination Narrative" should state that a formal examination was not recorded, and the "Plan" MUST prioritize "Complete physical and systemic examination" as a primary step.
-        - If diagnostic data is sparse, the "Case Discussion" should focus on the typical diagnostic workup for the suspected condition, and the "Plan" should include the necessary investigations.
+        - If specific clinical details are absent from the input, DO NOT hallucinate. Use professional language like "Not documented at presentation," "Further clinical correlation required," or "Records regarding [system] were unavailable."
+        - If examination findings are sparse, the "Examination Narrative" should reflect this, and the "Plan" MUST prioritize "Comprehensive physical and systemic examination" as the first step.
         
         Return the response in JSON format with the following structure:
         {
@@ -1402,6 +1506,7 @@ export default function App() {
       message: 'Are you sure you want to reset the session? All current patient data will be lost.',
       onConfirm: () => {
         setFormData({});
+        localStorage.removeItem('malae_form_data');
         setCurrentStepIndex(0);
         setCompletedSteps(new Set());
         setGeneratorMode('selection');
@@ -1411,7 +1516,11 @@ export default function App() {
   };
 
   const updateField = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+    if (typeof value === 'function') {
+      setFormData((prev: any) => ({ ...prev, [field]: value(prev[field]) }));
+    } else {
+      setFormData((prev: any) => ({ ...prev, [field]: value }));
+    }
   };
 
   const renderStepContent = (stepId: StepId) => {
@@ -1420,45 +1529,67 @@ export default function App() {
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputField label="Date of Admission" type="date" value={formData.admissionDate} onChange={(v: any) => updateField('admissionDate', v)} required />
-            <InputField label="Patient Initials" placeholder="J.D" value={formData.fullName} onChange={(v: any) => updateField('fullName', v)} required onVoiceInput={() => startVoiceInput('fullName')} isRecording={recordingField === 'fullName'} />
-            <InputField label="Age (years)" placeholder="45" value={formData.age} onChange={(v: any) => updateField('age', v)} required onVoiceInput={() => startVoiceInput('age')} isRecording={recordingField === 'age'} />
-            <InputField label="Sex" placeholder="Male/Female" value={formData.sex} onChange={(v: any) => updateField('sex', v)} required onVoiceInput={() => startVoiceInput('sex')} isRecording={recordingField === 'sex'} />
-            <InputField label="Tribe/Ethnicity" placeholder="Kikuyu" value={formData.ethnicity} onChange={(v: any) => updateField('ethnicity', v)} onVoiceInput={() => startVoiceInput('ethnicity')} isRecording={recordingField === 'ethnicity'} />
-            <InputField label="Address/Location" placeholder="Nairobi" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} isRecording={recordingField === 'address'} />
-            <InputField label="Religion" placeholder="Christian" value={formData.religion} onChange={(v: any) => updateField('religion', v)} onVoiceInput={() => startVoiceInput('religion')} isRecording={recordingField === 'religion'} />
-            <InputField label="Occupation" placeholder="Teacher" value={formData.occupation} onChange={(v: any) => updateField('occupation', v)} onVoiceInput={() => startVoiceInput('occupation')} isRecording={recordingField === 'occupation'} />
-            <InputField label="Next of Kin (Initials)" placeholder="J.D" value={formData.nextOfKin} onChange={(v: any) => updateField('nextOfKin', v)} onVoiceInput={() => startVoiceInput('nextOfKin')} isRecording={recordingField === 'nextOfKin'} />
-            <InputField label="Relationship" placeholder="Spouse" value={formData.relationship} onChange={(v: any) => updateField('relationship', v)} onVoiceInput={() => startVoiceInput('relationship')} isRecording={recordingField === 'relationship'} />
+            <InputField label="Patient Initials" placeholder="J.D" value={formData.fullName} onChange={(v: any) => updateField('fullName', v)} required onVoiceInput={() => startVoiceInput('fullName')} isRecording={recordingField === 'fullName'} isTranscribing={transcribingField === 'fullName'} recordingTimeLeft={recordingTimeLeft} />
+            <SelectField 
+              label="Age (years)" 
+              options={Array.from({ length: 121 }, (_, i) => i.toString())} 
+              value={formData.age} 
+              onChange={(v: any) => updateField('age', v)} 
+              required 
+            />
+            <SelectField 
+              label="Sex" 
+              options={['Male', 'Female', 'Other']} 
+              value={formData.sex} 
+              onChange={(v: any) => updateField('sex', v)} 
+              required 
+            />
+            <SelectField 
+              label="Tribe/Ethnicity" 
+              options={['Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Meru', 'Kisii', 'Mijikenda', 'Somali', 'Other']} 
+              value={formData.ethnicity} 
+              onChange={(v: any) => updateField('ethnicity', v)} 
+            />
+            <InputField label="Address/Location" placeholder="Nairobi" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} isRecording={recordingField === 'address'} isTranscribing={transcribingField === 'address'} recordingTimeLeft={recordingTimeLeft} />
+            <SelectField 
+              label="Religion" 
+              options={['Christian', 'Muslim', 'Hindu', 'Traditional', 'None', 'Other']} 
+              value={formData.religion} 
+              onChange={(v: any) => updateField('religion', v)} 
+            />
+            <InputField label="Occupation" placeholder="Teacher" value={formData.occupation} onChange={(v: any) => updateField('occupation', v)} onVoiceInput={() => startVoiceInput('occupation')} isRecording={recordingField === 'occupation'} isTranscribing={transcribingField === 'occupation'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Next of Kin (Initials)" placeholder="J.D" value={formData.nextOfKin} onChange={(v: any) => updateField('nextOfKin', v)} onVoiceInput={() => startVoiceInput('nextOfKin')} isRecording={recordingField === 'nextOfKin'} isTranscribing={transcribingField === 'nextOfKin'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Relationship" placeholder="Spouse" value={formData.relationship} onChange={(v: any) => updateField('relationship', v)} onVoiceInput={() => startVoiceInput('relationship')} isRecording={recordingField === 'relationship'} isTranscribing={transcribingField === 'relationship'} recordingTimeLeft={recordingTimeLeft} />
           </div>
         );
       case 'presenting_complaint':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Chief Complaint" placeholder="e.g., Neck swelling, Epigastric pain" value={formData.chiefComplaint} onChange={(v: any) => updateField('chiefComplaint', v)} required onVoiceInput={() => startVoiceInput('chiefComplaint')} isRecording={recordingField === 'chiefComplaint'} />
-            <InputField label="Duration" placeholder="e.g., 1 year, 2 months" value={formData.duration} onChange={(v: any) => updateField('duration', v)} required onVoiceInput={() => startVoiceInput('duration')} isRecording={recordingField === 'duration'} />
+            <TextAreaField label="Chief Complaint" placeholder="e.g., Neck swelling, Epigastric pain" value={formData.chiefComplaint} onChange={(v: any) => updateField('chiefComplaint', v)} required onVoiceInput={() => startVoiceInput('chiefComplaint')} isRecording={recordingField === 'chiefComplaint'} isTranscribing={transcribingField === 'chiefComplaint'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Duration" placeholder="e.g., 1 year, 2 months" value={formData.duration} onChange={(v: any) => updateField('duration', v)} required onVoiceInput={() => startVoiceInput('duration')} isRecording={recordingField === 'duration'} isTranscribing={transcribingField === 'duration'} recordingTimeLeft={recordingTimeLeft} />
           </div>
         );
       case 'hpc_details':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField label="Onset" placeholder="sudden/gradual/insidious" value={formData.onset} onChange={(v: any) => updateField('onset', v)} onVoiceInput={() => startVoiceInput('onset')} isRecording={recordingField === 'onset'} />
-            <InputField label="Progression" placeholder="progressive/static/improving" value={formData.progression} onChange={(v: any) => updateField('progression', v)} onVoiceInput={() => startVoiceInput('progression')} isRecording={recordingField === 'progression'} />
-            <InputField label="Character" placeholder="sharp, dull, burning, aching" value={formData.character} onChange={(v: any) => updateField('character', v)} onVoiceInput={() => startVoiceInput('character')} isRecording={recordingField === 'character'} />
-            <InputField label="Severity" placeholder="mild/moderate/severe or 1-10" value={formData.severity} onChange={(v: any) => updateField('severity', v)} onVoiceInput={() => startVoiceInput('severity')} isRecording={recordingField === 'severity'} />
-            <InputField label="Location" placeholder="exact anatomical location" value={formData.location} onChange={(v: any) => updateField('location', v)} onVoiceInput={() => startVoiceInput('location')} isRecording={recordingField === 'location'} />
-            <InputField label="Radiation" placeholder="where symptoms radiate" value={formData.radiation} onChange={(v: any) => updateField('radiation', v)} onVoiceInput={() => startVoiceInput('radiation')} isRecording={recordingField === 'radiation'} />
+            <InputField label="Onset" placeholder="sudden/gradual/insidious" value={formData.onset} onChange={(v: any) => updateField('onset', v)} onVoiceInput={() => startVoiceInput('onset')} isRecording={recordingField === 'onset'} isTranscribing={transcribingField === 'onset'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Progression" placeholder="progressive/static/improving" value={formData.progression} onChange={(v: any) => updateField('progression', v)} onVoiceInput={() => startVoiceInput('progression')} isRecording={recordingField === 'progression'} isTranscribing={transcribingField === 'progression'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Character" placeholder="sharp, dull, burning, aching" value={formData.character} onChange={(v: any) => updateField('character', v)} onVoiceInput={() => startVoiceInput('character')} isRecording={recordingField === 'character'} isTranscribing={transcribingField === 'character'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Severity" placeholder="mild/moderate/severe or 1-10" value={formData.severity} onChange={(v: any) => updateField('severity', v)} onVoiceInput={() => startVoiceInput('severity')} isRecording={recordingField === 'severity'} isTranscribing={transcribingField === 'severity'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Location" placeholder="exact anatomical location" value={formData.location} onChange={(v: any) => updateField('location', v)} onVoiceInput={() => startVoiceInput('location')} isRecording={recordingField === 'location'} isTranscribing={transcribingField === 'location'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Radiation" placeholder="where symptoms radiate" value={formData.radiation} onChange={(v: any) => updateField('radiation', v)} onVoiceInput={() => startVoiceInput('radiation')} isRecording={recordingField === 'radiation'} isTranscribing={transcribingField === 'radiation'} recordingTimeLeft={recordingTimeLeft} />
             <div className="md:col-span-2">
-              <TextAreaField label="Associated Symptoms (Present)" placeholder="fever, weight loss, night sweats, cough, etc." value={formData.associatedSymptoms} onChange={(v: any) => updateField('associatedSymptoms', v)} onVoiceInput={() => startVoiceInput('associatedSymptoms')} isRecording={recordingField === 'associatedSymptoms'} />
+              <TextAreaField label="Associated Symptoms (Present)" placeholder="fever, weight loss, night sweats, cough, etc." value={formData.associatedSymptoms} onChange={(v: any) => updateField('associatedSymptoms', v)} onVoiceInput={() => startVoiceInput('associatedSymptoms')} isRecording={recordingField === 'associatedSymptoms'} isTranscribing={transcribingField === 'associatedSymptoms'} recordingTimeLeft={recordingTimeLeft} />
             </div>
             <div className="md:col-span-2">
-              <TextAreaField label="Important Negative Findings" placeholder="symptoms NOT present that help rule out differentials" value={formData.negativeFindings} onChange={(v: any) => updateField('negativeFindings', v)} onVoiceInput={() => startVoiceInput('negativeFindings')} isRecording={recordingField === 'negativeFindings'} />
+              <TextAreaField label="Important Negative Findings" placeholder="symptoms NOT present that help rule out differentials" value={formData.negativeFindings} onChange={(v: any) => updateField('negativeFindings', v)} onVoiceInput={() => startVoiceInput('negativeFindings')} isRecording={recordingField === 'negativeFindings'} isTranscribing={transcribingField === 'negativeFindings'} recordingTimeLeft={recordingTimeLeft} />
             </div>
-            <InputField label="Aggravating Factors" placeholder="lying flat, spicy foods, movement" value={formData.aggravating} onChange={(v: any) => updateField('aggravating', v)} onVoiceInput={() => startVoiceInput('aggravating')} isRecording={recordingField === 'aggravating'} />
-            <InputField label="Relieving Factors" placeholder="rest, medication, position" value={formData.relieving} onChange={(v: any) => updateField('relieving', v)} onVoiceInput={() => startVoiceInput('relieving')} isRecording={recordingField === 'relieving'} />
-            <InputField label="Previous Treatment" placeholder="medications tried" value={formData.prevTreatment} onChange={(v: any) => updateField('prevTreatment', v)} onVoiceInput={() => startVoiceInput('prevTreatment')} isRecording={recordingField === 'prevTreatment'} />
-            <InputField label="Response to Treatment" placeholder="improvement/no change/worsening" value={formData.respTreatment} onChange={(v: any) => updateField('respTreatment', v)} onVoiceInput={() => startVoiceInput('respTreatment')} isRecording={recordingField === 'respTreatment'} />
+            <InputField label="Aggravating Factors" placeholder="lying flat, spicy foods, movement" value={formData.aggravating} onChange={(v: any) => updateField('aggravating', v)} onVoiceInput={() => startVoiceInput('aggravating')} isRecording={recordingField === 'aggravating'} isTranscribing={transcribingField === 'aggravating'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Relieving Factors" placeholder="rest, medication, position" value={formData.relieving} onChange={(v: any) => updateField('relieving', v)} onVoiceInput={() => startVoiceInput('relieving')} isRecording={recordingField === 'relieving'} isTranscribing={transcribingField === 'relieving'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Previous Treatment" placeholder="medications tried" value={formData.prevTreatment} onChange={(v: any) => updateField('prevTreatment', v)} onVoiceInput={() => startVoiceInput('prevTreatment')} isRecording={recordingField === 'prevTreatment'} isTranscribing={transcribingField === 'prevTreatment'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Response to Treatment" placeholder="improvement/no change/worsening" value={formData.respTreatment} onChange={(v: any) => updateField('respTreatment', v)} onVoiceInput={() => startVoiceInput('respTreatment')} isRecording={recordingField === 'respTreatment'} isTranscribing={transcribingField === 'respTreatment'} recordingTimeLeft={recordingTimeLeft} />
             <div className="md:col-span-2">
-              <TextAreaField label="Impact on Daily Activities" placeholder="how symptoms affect daily life" value={formData.impact} onChange={(v: any) => updateField('impact', v)} onVoiceInput={() => startVoiceInput('impact')} isRecording={recordingField === 'impact'} />
+              <TextAreaField label="Impact on Daily Activities" placeholder="how symptoms affect daily life" value={formData.impact} onChange={(v: any) => updateField('impact', v)} onVoiceInput={() => startVoiceInput('impact')} isRecording={recordingField === 'impact'} isTranscribing={transcribingField === 'impact'} recordingTimeLeft={recordingTimeLeft} />
             </div>
           </div>
         );
@@ -1472,8 +1603,8 @@ export default function App() {
                   <span className="text-[10px] font-bold text-slate-700 tracking-widest">{system}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputField label="Symptoms Present" value={formData[`${system}_present`]} onChange={(v: any) => updateField(`${system}_present`, v)} onVoiceInput={() => startVoiceInput(`${system}_present`)} isRecording={recordingField === `${system}_present`} />
-                  <InputField label="Symptoms Denied" value={formData[`${system}_denied`]} onChange={(v: any) => updateField(`${system}_denied`, v)} onVoiceInput={() => startVoiceInput(`${system}_denied`)} isRecording={recordingField === `${system}_denied`} />
+                  <InputField label="Symptoms Present" value={formData[`${system}_present`]} onChange={(v: any) => updateField(`${system}_present`, v)} onVoiceInput={() => startVoiceInput(`${system}_present`)} isRecording={recordingField === `${system}_present`} isTranscribing={transcribingField === `${system}_present`} recordingTimeLeft={recordingTimeLeft} />
+                  <InputField label="Symptoms Denied" value={formData[`${system}_denied`]} onChange={(v: any) => updateField(`${system}_denied`, v)} onVoiceInput={() => startVoiceInput(`${system}_denied`)} isRecording={recordingField === `${system}_denied`} isTranscribing={transcribingField === `${system}_denied`} recordingTimeLeft={recordingTimeLeft} />
                 </div>
               </div>
             ))}
@@ -1482,9 +1613,9 @@ export default function App() {
       case 'past_medical_hx':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Chronic Medical Conditions" value={formData.chronicConditions} onChange={(v: any) => updateField('chronicConditions', v)} onVoiceInput={() => startVoiceInput('chronicConditions')} isRecording={recordingField === 'chronicConditions'} />
-            <TextAreaField label="Current Pharmacotherapy" value={formData.medications} onChange={(v: any) => updateField('medications', v)} onVoiceInput={() => startVoiceInput('medications')} isRecording={recordingField === 'medications'} />
-            <TextAreaField label="Allergies & Hypersensitivities" value={formData.allergies} onChange={(v: any) => updateField('allergies', v)} onVoiceInput={() => startVoiceInput('allergies')} isRecording={recordingField === 'allergies'} />
+            <TextAreaField label="Chronic Medical Conditions" value={formData.chronicConditions} onChange={(v: any) => updateField('chronicConditions', v)} onVoiceInput={() => startVoiceInput('chronicConditions')} isRecording={recordingField === 'chronicConditions'} isTranscribing={transcribingField === 'chronicConditions'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Current Pharmacotherapy" value={formData.medications} onChange={(v: any) => updateField('medications', v)} onVoiceInput={() => startVoiceInput('medications')} isRecording={recordingField === 'medications'} isTranscribing={transcribingField === 'medications'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Allergies & Hypersensitivities" value={formData.allergies} onChange={(v: any) => updateField('allergies', v)} onVoiceInput={() => startVoiceInput('allergies')} isRecording={recordingField === 'allergies'} isTranscribing={transcribingField === 'allergies'} recordingTimeLeft={recordingTimeLeft} />
             <FileUpload 
               label="Supporting Records" 
               subtitle="UPLOAD LAB RESULTS OR CLINICAL NOTES" 
@@ -1496,20 +1627,20 @@ export default function App() {
       case 'past_surgical_hx':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Previous Surgeries" placeholder="Appendectomy 2015, etc." value={formData.surgeries} onChange={(v: any) => updateField('surgeries', v)} onVoiceInput={() => startVoiceInput('surgeries')} isRecording={recordingField === 'surgeries'} />
-            <InputField label="Major Trauma/Fractures" placeholder="Describe any major injuries" value={formData.trauma} onChange={(v: any) => updateField('trauma', v)} onVoiceInput={() => startVoiceInput('trauma')} isRecording={recordingField === 'trauma'} />
-            <InputField label="Blood Transfusion History" placeholder="Yes/No, if yes when and why" value={formData.transfusions} onChange={(v: any) => updateField('transfusions', v)} onVoiceInput={() => startVoiceInput('transfusions')} isRecording={recordingField === 'transfusions'} />
+            <TextAreaField label="Previous Surgeries" placeholder="Appendectomy 2015, etc." value={formData.surgeries} onChange={(v: any) => updateField('surgeries', v)} onVoiceInput={() => startVoiceInput('surgeries')} isRecording={recordingField === 'surgeries'} isTranscribing={transcribingField === 'surgeries'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Major Trauma/Fractures" placeholder="Describe any major injuries" value={formData.trauma} onChange={(v: any) => updateField('trauma', v)} onVoiceInput={() => startVoiceInput('trauma')} isRecording={recordingField === 'trauma'} isTranscribing={transcribingField === 'trauma'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Blood Transfusion History" placeholder="Yes/No, if yes when and why" value={formData.transfusions} onChange={(v: any) => updateField('transfusions', v)} onVoiceInput={() => startVoiceInput('transfusions')} isRecording={recordingField === 'transfusions'} isTranscribing={transcribingField === 'transfusions'} recordingTimeLeft={recordingTimeLeft} />
           </div>
         );
       case 'family_social_hx':
         return (
           <div className="flex flex-col gap-8">
-            <TextAreaField label="Familial Health Patterns" value={formData.familyHistory} onChange={(v: any) => updateField('familyHistory', v)} onVoiceInput={() => startVoiceInput('familyHistory')} isRecording={recordingField === 'familyHistory'} />
+            <TextAreaField label="Familial Health Patterns" value={formData.familyHistory} onChange={(v: any) => updateField('familyHistory', v)} onVoiceInput={() => startVoiceInput('familyHistory')} isRecording={recordingField === 'familyHistory'} isTranscribing={transcribingField === 'familyHistory'} recordingTimeLeft={recordingTimeLeft} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SelectField label="Alcohol Consumption" options={['None', 'Social', 'Heavy']} value={formData.alcohol} onChange={(v: any) => updateField('alcohol', v)} />
               <SelectField label="Tobacco Consumption" options={['None', 'Occasional', 'Regular']} value={formData.tobacco} onChange={(v: any) => updateField('tobacco', v)} />
-              <InputField label="Current Marital Status" value={formData.maritalStatus} onChange={(v: any) => updateField('maritalStatus', v)} onVoiceInput={() => startVoiceInput('maritalStatus')} isRecording={recordingField === 'maritalStatus'} />
-              <InputField label="Household Dependents" value={formData.dependents} onChange={(v: any) => updateField('dependents', v)} onVoiceInput={() => startVoiceInput('dependents')} isRecording={recordingField === 'dependents'} />
+              <InputField label="Current Marital Status" value={formData.maritalStatus} onChange={(v: any) => updateField('maritalStatus', v)} onVoiceInput={() => startVoiceInput('maritalStatus')} isRecording={recordingField === 'maritalStatus'} isTranscribing={transcribingField === 'maritalStatus'} recordingTimeLeft={recordingTimeLeft} />
+              <InputField label="Household Dependents" value={formData.dependents} onChange={(v: any) => updateField('dependents', v)} onVoiceInput={() => startVoiceInput('dependents')} isRecording={recordingField === 'dependents'} isTranscribing={transcribingField === 'dependents'} recordingTimeLeft={recordingTimeLeft} />
             </div>
           </div>
         );
@@ -1881,7 +2012,7 @@ export default function App() {
                             onClick={() => {
                               setFormData(selectedReport.patientData);
                               setCurrentStepIndex(0);
-                              setCompletedSteps(new Set([0, 1, 2, 3, 4, 5, 6])); // Mark all as done
+                              setCompletedSteps(new Set(STEPS.map(s => s.id))); // Mark all as done
                               setView('generator');
                             }}
                             className="px-6 py-2 rounded-lg bg-[#AE6965] text-white text-xs font-bold hover:bg-[#8E5450] transition-all"
@@ -2103,12 +2234,36 @@ export default function App() {
                       transition={{ duration: 0.2 }}
                       className="flex flex-col gap-6 md:gap-10"
                     >
-                      <div className="flex flex-col gap-1 md:gap-2 text-center md:text-left">
-                        <h2 className="text-xl sm:text-2xl md:text-4xl font-bold tracking-tight text-slate-800 leading-tight">{currentStep.title}</h2>
-                        <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex flex-col gap-1">
+                            <h2 className="text-xl sm:text-2xl md:text-4xl font-black tracking-tight text-slate-800 leading-tight">{currentStep.title}</h2>
+                            <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                          </div>
+                          <div className="hidden md:flex flex-col items-end gap-1">
+                            <span className="text-[10px] font-bold text-[#AE6965] uppercase tracking-[0.2em]">Progress</span>
+                            <div className="flex items-center gap-1.5">
+                              {STEPS.map((s, i) => (
+                                <div 
+                                  key={s.id} 
+                                  className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= currentStepIndex ? 'bg-[#AE6965] scale-110' : 'bg-slate-100'}`} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden md:hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
+                            className="h-full bg-[#AE6965]"
+                          />
+                        </div>
                       </div>
 
-                      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[32px] p-5 sm:p-8 md:p-10 shadow-sm border border-slate-100">
+                      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[40px] p-6 sm:p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#AE6965]/10 to-transparent" />
                         {renderStepContent(currentStep.id)}
                       </div>
                     </motion.div>
@@ -2163,8 +2318,8 @@ export default function App() {
                     ) : (
                       <>
                         <FileText className="w-4 h-4" />
-                        <span className="hidden sm:inline">COMPILE REPORT</span>
-                        <span className="sm:hidden">COMPILE</span>
+                        <span className="hidden sm:inline text-xs tracking-widest">HISTORY WRITE UP WITH AI</span>
+                        <span className="sm:hidden">WRITE UP</span>
                       </>
                     )}
                   </button>
@@ -2197,8 +2352,8 @@ export default function App() {
               <Loader2 className="w-8 h-8 text-[#AE6965] animate-spin" />
             </div>
             <div className="text-center px-6">
-              <h3 className="text-xl font-bold text-slate-800">Compiling Report</h3>
-              <p className="text-sm text-slate-400 font-medium">{generationStatus || "Capturing clinical data and generating PDF..."}</p>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight">Generating Case Story</h3>
+              <p className="text-xs text-[#AE6965] font-bold uppercase tracking-[0.2em] mt-2">{generationStatus || "Synthesizing clinical data..."}</p>
             </div>
           </motion.div>
         )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -100,13 +100,18 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         await updateProfile(user, { displayName });
         
         // Create user document in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email || email,
-          displayName: displayName || user.displayName || '',
-          hospital: hospital || '',
-          createdAt: serverTimestamp()
-        });
+        const path = `users/${user.uid}`;
+        try {
+          await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            email: user.email || email,
+            displayName: displayName || user.displayName || '',
+            hospital: hospital || '',
+            createdAt: serverTimestamp()
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, path);
+        }
       }
       onSuccess();
     } catch (err: any) {
@@ -144,12 +149,17 @@ export const Auth = ({ onSuccess }: AuthProps) => {
       }
 
       // Create/Update user document
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || '',
-        createdAt: serverTimestamp()
-      }, { merge: true });
+      const path = `users/${user.uid}`;
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || '',
+          createdAt: serverTimestamp()
+        }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, path);
+      }
       
       onSuccess();
     } catch (err: any) {
@@ -177,12 +187,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://picsum.photos/seed/surgery-clinical/1200/1600" 
-            alt="Medical Workspace" 
-            className="w-full h-full object-cover opacity-40 scale-105"
+            src="https://images.unsplash.com/photo-1584467735815-f778f274e296?auto=format&fit=crop&q=80&w=1974" 
+            alt="Medical Professional" 
+            className="w-full h-full object-cover opacity-60 scale-105"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#151619] via-[#151619]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#151619] via-[#151619]/80 to-transparent mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#151619] via-transparent to-transparent opacity-60" />
         </div>
 
         {/* Content Overlay */}
@@ -199,12 +210,13 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               <span className="text-2xl font-bold text-white tracking-tight">Malae</span>
             </div>
 
-            <div className="space-y-6 max-w-md">
-              <h2 className="text-5xl font-bold text-white leading-[1.1] tracking-tight">
-                Crafting the <span className="text-[#D4A5A2]">narrative</span> of modern medicine.
+            <div className="space-y-6 max-w-lg">
+              <h2 className="text-6xl font-bold text-white leading-[0.95] tracking-tight">
+                Crafting the <span className="font-serif italic text-[#D4A5A2] font-normal">narrative</span> of modern medicine.
               </h2>
-              <p className="text-lg text-slate-400 leading-relaxed">
-                Empowering surgeons to transform clinical data into compelling case stories with the power of AI.
+              <div className="w-20 h-1 bg-[#AE6965] rounded-full" />
+              <p className="text-xl text-slate-400 leading-relaxed font-medium">
+                Empowering healthcare professionals to transform clinical data into compelling case stories with the power of AI.
               </p>
             </div>
           </motion.div>
@@ -212,18 +224,18 @@ export const Auth = ({ onSuccess }: AuthProps) => {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="grid grid-cols-2 gap-8"
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="grid grid-cols-2 gap-4"
           >
             {[
               { label: 'AI Synthesis', desc: 'Instant case stories' },
-              { label: 'Clinical Focus', desc: 'Designed for surgeons' },
+              { label: 'Clinical Focus', desc: 'Designed for medical professionals' },
               { label: 'Secure Data', desc: 'HIPAA-ready infrastructure' },
               { label: 'Global Reach', desc: 'Share your expertise' }
             ].map((feature, i) => (
-              <div key={i} className="space-y-1">
-                <div className="text-[#AE6965] font-bold text-sm uppercase tracking-widest">{feature.label}</div>
-                <div className="text-slate-500 text-xs">{feature.desc}</div>
+              <div key={i} className="p-6 rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all group">
+                <div className="text-[#AE6965] font-bold text-[10px] uppercase tracking-[0.2em] mb-2 group-hover:text-[#D4A5A2] transition-colors">{feature.label}</div>
+                <div className="text-white font-semibold text-sm">{feature.desc}</div>
               </div>
             ))}
           </motion.div>
@@ -258,7 +270,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             <p className="text-slate-500 text-sm sm:text-base">
               {isLogin 
                 ? 'Enter your credentials to access your clinical workspace.' 
-                : 'Join the community of surgeons documenting the future of medicine.'}
+                : 'Join the community of medical professionals documenting the future of medicine.'}
             </p>
           </div>
 
@@ -297,10 +309,11 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                     className="space-y-5"
                   >
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
+                      <label htmlFor="auth-display-name" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
                       <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
                         <input
+                          id="auth-display-name"
                           type="text"
                           required
                           value={displayName}
@@ -312,10 +325,11 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hospital / Institution</label>
+                      <label htmlFor="auth-hospital" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hospital / Institution</label>
                       <div className="relative group">
-                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" />
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
                         <input
+                          id="auth-hospital"
                           type="text"
                           required
                           value={hospital}
@@ -330,10 +344,11 @@ export const Auth = ({ onSuccess }: AuthProps) => {
               </AnimatePresence>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+                <label htmlFor="auth-email" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
                   <input
+                    id="auth-email"
                     type="email"
                     required
                     value={email}
@@ -346,7 +361,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center ml-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                  <label htmlFor="auth-password" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
                   {isLogin && (
                     <button type="button" className="text-[11px] font-bold text-[#AE6965] hover:underline uppercase tracking-wider">
                       Forgot?
@@ -354,8 +369,9 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   )}
                 </div>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
                   <input
+                    id="auth-password"
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
@@ -366,6 +382,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -398,10 +415,11 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-2"
                   >
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirm Password</label>
+                    <label htmlFor="auth-confirm-password" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Confirm Password</label>
                     <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
                       <input
+                        id="auth-confirm-password"
                         type={showConfirmPassword ? "text" : "password"}
                         required
                         value={confirmPassword}
@@ -412,6 +430,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                       >
                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

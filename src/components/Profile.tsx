@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { motion } from 'framer-motion';
@@ -29,6 +29,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!auth.currentUser) return;
+      const path = `users/${auth.currentUser.uid}`;
       try {
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
         if (userDoc.exists()) {
@@ -37,7 +38,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
           setHospital(data.hospital || '');
         }
       } catch (err: any) {
-        console.error("Error fetching profile:", err);
+        handleFirestoreError(err, OperationType.GET, path);
         setError("Failed to load profile data.");
       } finally {
         setLoading(false);
@@ -60,15 +61,19 @@ export const Profile = ({ onBack }: ProfileProps) => {
       await updateProfile(auth.currentUser, { displayName });
 
       // Update Firestore Document
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        displayName,
-        hospital
-      });
+      const path = `users/${auth.currentUser.uid}`;
+      try {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          displayName,
+          hospital
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, path);
+      }
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      console.error("Error updating profile:", err);
       setError(err.message || "Failed to update profile.");
     } finally {
       setSaving(false);
@@ -111,10 +116,11 @@ export const Profile = ({ onBack }: ProfileProps) => {
 
         <form onSubmit={handleUpdate} className="p-8 space-y-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+            <label htmlFor="profile-email" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" aria-hidden="true" />
               <input
+                id="profile-email"
                 type="email"
                 disabled
                 value={auth.currentUser?.email || ''}
@@ -125,10 +131,11 @@ export const Profile = ({ onBack }: ProfileProps) => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+            <label htmlFor="profile-display-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" aria-hidden="true" />
               <input
+                id="profile-display-name"
                 type="text"
                 required
                 value={displayName}
@@ -140,10 +147,11 @@ export const Profile = ({ onBack }: ProfileProps) => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hospital / Institution</label>
+            <label htmlFor="profile-hospital" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hospital / Institution</label>
             <div className="relative">
-              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" aria-hidden="true" />
               <input
+                id="profile-hospital"
                 type="text"
                 required
                 value={hospital}

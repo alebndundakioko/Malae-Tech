@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,6 +15,7 @@ import {
   MoreVertical,
   ArrowUpRight,
   Activity,
+  ArrowUpDown,
   ShieldCheck,
   Sparkles,
   BookOpen,
@@ -38,6 +39,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'original' | 'story'>('all');
+  const [sortBy, setSortBy] = useState<'date-newest' | 'date-oldest' | 'type-story' | 'type-original'>('date-newest');
 
   useEffect(() => {
     fetchReports();
@@ -47,6 +49,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
     if (!auth.currentUser) return;
     
     setLoading(true);
+    const path = 'reports';
     try {
       const q = query(
         collection(db, 'reports'),
@@ -61,7 +64,7 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
       }));
       setReports(fetchedReports);
     } catch (error) {
-      console.error("Error fetching reports:", error);
+      handleFirestoreError(error, OperationType.LIST, path);
     } finally {
       // Small delay for a smoother "human" feel
       setTimeout(() => setLoading(false), 600);
@@ -72,11 +75,12 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
     e.stopPropagation();
     
     onConfirmDelete(async () => {
+      const path = `reports/${reportId}`;
       try {
         await deleteDoc(doc(db, 'reports', reportId));
         setReports(reports.filter(r => r.id !== reportId));
       } catch (error) {
-        console.error("Error deleting report:", error);
+        handleFirestoreError(error, OperationType.DELETE, path);
       }
     });
   };
@@ -90,6 +94,26 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
     return matchesSearch && matchesType;
   });
 
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    const dateA = a.createdAt?.seconds || 0;
+    const dateB = b.createdAt?.seconds || 0;
+
+    switch (sortBy) {
+      case 'date-newest':
+        return dateB - dateA;
+      case 'date-oldest':
+        return dateA - dateB;
+      case 'type-story':
+        if (a.type === b.type) return dateB - dateA;
+        return a.type === 'story' ? -1 : 1;
+      case 'type-original':
+        if (a.type === b.type) return dateB - dateA;
+        return a.type === 'original' ? -1 : 1;
+      default:
+        return 0;
+    }
+  });
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -98,233 +122,279 @@ export const Dashboard = ({ onNewReport, onViewReport, onConfirmDelete }: Dashbo
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-12">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[#AE6965] font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em]">
-            <Heart className="w-4 h-4 fill-[#AE6965]" />
-            Welcome back
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            {getGreeting()}, <span className="text-[#AE6965]">{auth.currentUser?.displayName?.split(' ')[0] || 'Doctor'}</span>
-          </h1>
-          <p className="text-sm sm:text-base text-slate-500 max-w-md">
-            Here's a look at your clinical archive. Ready to document a new case?
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onNewReport}
-            className="w-full sm:w-auto group relative bg-[#AE6965] text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-xl shadow-[#AE6965]/20 hover:shadow-2xl hover:shadow-[#AE6965]/30 transition-all flex items-center justify-center gap-3 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-            <Plus className="w-5 h-5 relative z-10" />
-            <span className="relative z-10">Start New Case</span>
-          </button>
-        </div>
+    <div className="min-h-full bg-[#FAFAFA] selection:bg-[#AE6965]/10">
+      {/* Decorative Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-[10%] -right-[5%] w-[40%] h-[40%] rounded-full bg-[#AE6965]/5 blur-[120px]" />
+        <div className="absolute top-[20%] -left-[10%] w-[30%] h-[30%] rounded-full bg-blue-50/50 blur-[100px]" />
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
-        {[
-          { 
-            label: 'Your Case Archive', 
-            value: reports.length, 
-            icon: FileText, 
-            color: 'blue',
-            desc: 'Total records saved'
-          },
-          { 
-            label: 'Case Stories', 
-            value: reports.filter(r => r.type === 'story').length, 
-            icon: Sparkles, 
-            color: 'emerald',
-            desc: 'Synthesized narratives'
-          },
-          { 
-            label: 'Clinical Activity', 
-            value: reports.length > 0 ? 'Active' : 'Starting out', 
-            icon: Activity, 
-            color: 'amber',
-            desc: 'Your recent engagement'
-          }
-        ].map((stat, i) => (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+        {/* Header Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12 sm:mb-16"
+        >
+          <div className="space-y-4">
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#AE6965]/10 text-[#AE6965] font-bold text-[10px] uppercase tracking-[0.2em]"
+            >
+              <Sparkles className="w-3 h-3" />
+              Clinical Workspace
+            </motion.div>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
+              {getGreeting()}, <br />
+              <span className="text-[#AE6965]">{auth.currentUser?.displayName?.split(' ')[0] || 'Professional'}</span>
+            </h1>
+            <p className="text-base sm:text-lg text-slate-500 max-w-xl font-medium leading-relaxed">
+              Your clinical archive is ready. You have documented <span className="text-slate-900 font-bold">{reports.length} cases</span> so far.
+            </p>
+          </div>
+          
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center gap-4"
+          >
+            <button
+              onClick={onNewReport}
+              className="group relative bg-slate-900 text-white px-8 py-5 rounded-[2rem] font-bold shadow-2xl shadow-slate-200 hover:shadow-slate-300 hover:-translate-y-1 transition-all flex items-center gap-3 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#AE6965] to-[#8E5450] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <Plus className="w-5 h-5 relative z-10" />
+              <span className="relative z-10">Start New Case</span>
+            </button>
+          </motion.div>
+        </motion.div>
+
+        {/* Stats Grid - Bento Style */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           <motion.div
-            key={i}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className={`bg-white p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group ${i === 2 ? 'sm:col-span-2 lg:col-span-1' : ''}`}
+            transition={{ delay: 0.4 }}
+            className="md:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden group"
           >
-            <div className={`absolute -right-4 -top-4 w-20 sm:w-24 h-20 sm:h-24 rounded-full bg-${stat.color}-50/50 group-hover:scale-110 transition-transform duration-500`} />
-            <div className={`w-10 sm:w-12 h-10 sm:h-12 rounded-xl sm:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center mb-4 sm:mb-6 relative z-10`}>
-              <stat.icon className="w-5 sm:w-6 h-5 sm:h-6" />
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Activity className="w-32 h-32 text-[#AE6965]" />
             </div>
-            <div className="relative z-10">
-              <p className="text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 mb-1">{stat.value}</p>
-              <p className="text-slate-400 text-[10px] sm:text-xs">{stat.desc}</p>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Clinical Summary</p>
+              <div className="flex items-end gap-4 mb-2">
+                <span className="text-6xl font-black text-slate-900">{reports.length}</span>
+                <span className="text-lg font-bold text-slate-400 mb-2">Total Cases</span>
+              </div>
+              <div className="flex items-center gap-6 mt-8">
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold text-slate-900">{reports.filter(r => r.type === 'story').length}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Stories</span>
+                </div>
+                <div className="w-px h-8 bg-slate-100" />
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold text-slate-900">{reports.filter(r => r.type === 'original').length}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clinical Records</span>
+                </div>
+              </div>
             </div>
           </motion.div>
-        ))}
-      </div>
 
-      {/* Main Content Area */}
-      <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-5 sm:p-8 border-b border-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Your Saved Cases</h2>
-            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 self-start">
-              {(['all', 'original', 'story'] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all ${
-                    filterType === type 
-                      ? 'bg-white text-[#AE6965] shadow-sm' 
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  {type === 'all' ? 'All' : type === 'original' ? 'Clinical' : 'Case Stories'}
-                </button>
-              ))}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-[#AE6965] p-8 rounded-[2.5rem] shadow-2xl shadow-[#AE6965]/20 text-white flex flex-col justify-between relative overflow-hidden group"
+          >
+            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div>
+              <Sparkles className="w-8 h-8 mb-6" />
+              <h3 className="text-2xl font-bold mb-2">AI Ready</h3>
+              <p className="text-white/70 text-sm leading-relaxed">
+                Your clinical data is being synthesized into professional narratives.
+              </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 lg:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Find a patient or complaint..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/50 text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all placeholder:text-slate-400"
-              />
-            </div>
-          </div>
+            <button 
+              onClick={onNewReport}
+              className="mt-8 flex items-center gap-2 text-sm font-bold group/btn"
+            >
+              Create now
+              <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+            </button>
+          </motion.div>
         </div>
 
-        {/* Reports List */}
-        <div className="min-h-[400px]">
-          {loading ? (
-            <div className="py-24 flex flex-col items-center justify-center text-slate-400">
-              <div className="mb-6">
-                <Loader />
-              </div>
-              <p className="font-bold text-sm uppercase tracking-[0.2em] text-slate-900">Gathering your records...</p>
-              <p className="text-xs mt-2">Just a moment while we fetch your clinical archive.</p>
-            </div>
-          ) : filteredReports.length > 0 ? (
-            <div className="divide-y divide-slate-50">
-              <AnimatePresence mode="popLayout">
-                {filteredReports.map((report, idx) => (
-                  <motion.div
-                    key={report.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: idx * 0.05 }}
-                    onClick={() => onViewReport(report)}
-                    className="group p-6 lg:p-8 hover:bg-slate-50/80 transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6"
+        {/* Main Content Area */}
+        <div className="space-y-8">
+          {/* Toolbar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Archive</h2>
+              <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
+                {(['all', 'original', 'story'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFilterType(type)}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
+                      filterType === type 
+                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                    }`}
                   >
-                    <div className="flex items-start gap-6 flex-1">
-                      <div className={`
-                        w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300
-                        ${report.type === 'story' 
-                          ? 'bg-[#AE6965]/10 text-[#AE6965] group-hover:bg-[#AE6965] group-hover:text-white' 
-                          : 'bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white'}
-                      `}>
-                        {report.type === 'story' ? <Sparkles className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
-                      </div>
-                      
-                      <div className="space-y-2 flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#AE6965] transition-colors truncate">
+                    {type === 'all' ? 'All' : type === 'original' ? 'Clinical' : 'Stories'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="relative hidden sm:block">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search patient..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-11 pr-4 py-3 rounded-2xl border border-slate-100 bg-white text-sm focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all w-64 shadow-sm"
+                />
+              </div>
+              
+              <div className="relative">
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="pl-4 pr-10 py-3 rounded-2xl border border-slate-100 bg-white text-[10px] font-bold uppercase tracking-wider text-slate-600 focus:outline-none cursor-pointer appearance-none shadow-sm hover:border-[#AE6965]/30 transition-colors"
+                >
+                  <option value="date-newest">Newest First</option>
+                  <option value="date-oldest">Oldest First</option>
+                  <option value="type-story">Stories First</option>
+                </select>
+                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 rotate-90 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Reports Grid */}
+          <div className="min-h-[400px]">
+            {loading ? (
+              <div className="py-32 flex flex-col items-center justify-center">
+                <Loader />
+                <p className="mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] animate-pulse">Syncing Archive</p>
+              </div>
+            ) : sortedReports.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <AnimatePresence mode="popLayout">
+                  {sortedReports.map((report, idx) => (
+                    <motion.div
+                      key={report.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: idx * 0.05 }}
+                      onClick={() => onViewReport(report)}
+                      className="group bg-white p-6 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden"
+                    >
+                      {/* Card Background Accent */}
+                      <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full blur-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-500 ${report.type === 'story' ? 'bg-[#AE6965]' : 'bg-slate-900'}`} />
+
+                      <div className="flex flex-col h-full">
+                        <div className="flex items-start justify-between mb-6">
+                          <div className={`
+                            w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500
+                            ${report.type === 'story' 
+                              ? 'bg-[#AE6965]/10 text-[#AE6965] group-hover:bg-[#AE6965] group-hover:text-white group-hover:rotate-12' 
+                              : 'bg-slate-50 text-slate-400 group-hover:bg-slate-900 group-hover:text-white group-hover:-rotate-12'}
+                          `}>
+                            {report.type === 'story' ? <Sparkles className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                            <button
+                              onClick={(e) => handleDelete(e, report.id)}
+                              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${
+                              report.type === 'story' 
+                                ? 'bg-[#AE6965]/5 text-[#AE6965] border-[#AE6965]/10' 
+                                : 'bg-slate-50 text-slate-400 border-slate-100'
+                            }`}>
+                              {report.type === 'story' ? 'Story' : 'Clinical'}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                              {report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recent'}
+                            </span>
+                          </div>
+                          
+                          <h3 className="text-xl font-bold text-slate-900 group-hover:text-[#AE6965] transition-colors line-clamp-2 leading-tight">
                             {report.title}
                           </h3>
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
-                            report.type === 'story' 
-                              ? 'bg-[#AE6965]/5 text-[#AE6965] border-[#AE6965]/20' 
-                              : 'bg-slate-50 text-slate-500 border-slate-200'
-                          }`}>
-                            {report.type === 'story' ? 'Case Story' : 'Case Details'}
-                          </span>
-                        </div>
-                        
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <UserIcon className="w-3.5 h-3.5 text-slate-300" />
-                            <span className="font-semibold">{getInitials(report.patientData?.fullName)}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <Calendar className="w-3.5 h-3.5 text-slate-300" />
-                            <span>{report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}</span>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400 border border-white shadow-sm">
+                              {getInitials(report.patientData?.fullName)}
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                              {report.patientData?.fullName || 'Anonymous'}
+                            </span>
                           </div>
                         </div>
 
-                        {report.hpcNarrative && (
-                          <p className="text-xs text-slate-400 line-clamp-1 italic mt-2">
-                            "{report.hpcNarrative}"
-                          </p>
-                        )}
+                        <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <Clock className="w-3 h-3" />
+                            {report.createdAt?.toDate ? report.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                          </div>
+                          <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-[#AE6965] group-hover:text-white transition-all">
+                            <ArrowUpRight className="w-4 h-4" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 self-end md:self-center">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => handleDelete(e, report.id)}
-                          className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                          title="Delete Record"
-                        >
-                          <Trash2 className="w-4.5 h-4.5" />
-                        </button>
-                      </div>
-                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-[#AE6965] group-hover:text-[#AE6965] transition-all">
-                        <ArrowUpRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <div className="py-32 text-center px-6">
-              <div className="w-24 h-24 rounded-[2rem] bg-slate-50 flex items-center justify-center mx-auto mb-8 text-slate-200 group">
-                <BookOpen className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
-              <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Your archive is empty</h3>
-              <p className="text-slate-500 mb-10 max-w-xs mx-auto">Ready to document your first case? We'll help you organize the details into a professional narrative.</p>
-              <button
-                onClick={onNewReport}
-                className="inline-flex items-center gap-2 text-[#AE6965] font-black uppercase tracking-widest text-xs hover:gap-4 transition-all"
-              >
-                Start Your First Case
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="py-32 text-center">
+                <div className="w-24 h-24 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center mx-auto mb-8 text-slate-200 group">
+                  <BookOpen className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Your archive is empty</h3>
+                <p className="text-slate-500 mb-10 max-w-xs mx-auto font-medium">Ready to document your first case? We'll help you organize the details into a professional narrative.</p>
+                <button
+                  onClick={onNewReport}
+                  className="px-8 py-4 rounded-2xl bg-[#AE6965] text-white font-bold shadow-xl shadow-[#AE6965]/20 hover:shadow-2xl hover:shadow-[#AE6965]/30 transition-all"
+                >
+                  Start Your First Case
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Footer Info */}
-      <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-6 px-4">
-        <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Malae is Online
-          </span>
-          <span className="w-1 h-1 rounded-full bg-slate-200" />
-          <span>v2.5.0 Clinical</span>
+        {/* Footer Info */}
+        <div className="mt-20 flex flex-col md:flex-row items-center justify-between gap-6 px-4">
+          <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            <span className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
+              System Online
+            </span>
+            <span className="w-1 h-1 rounded-full bg-slate-200" />
+            <span>v2.5.0 Clinical</span>
+          </div>
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+            Secure medical workspace for modern healthcare professionals.
+          </p>
         </div>
-        <p className="text-[10px] font-medium text-slate-400">
-          Secure medical workspace for modern physicians.
-        </p>
       </div>
     </div>
   );
