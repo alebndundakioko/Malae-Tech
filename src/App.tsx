@@ -58,9 +58,12 @@ import { Dashboard } from './components/Dashboard';
 import { Profile } from './components/Profile';
 import { Loader } from './components/Loader';
 
+import pptxgen from "pptxgenjs";
+
 // --- Types ---
 
 type StepId = 
+  | 'specialty'
   | 'demographics' 
   | 'presenting_complaint' 
   | 'hpc_details' 
@@ -79,7 +82,22 @@ interface Step {
 
 // --- Constants ---
 
+const SPECIALTIES = [
+  'Internal Medicine',
+  'Surgical',
+  'Paediatrics',
+  'Obstetrics & Gynaecology',
+  'General Practice'
+];
+
 const STEPS: Step[] = [
+  { 
+    id: 'specialty', 
+    label: 'Specialty', 
+    icon: Stethoscope, 
+    title: 'Clinical Specialty', 
+    subtitle: 'Select the clinical department for this case.' 
+  },
   { 
     id: 'demographics', 
     label: 'Demographics', 
@@ -511,6 +529,13 @@ const MedicalReportPDF = ({ formData }: { formData: any }) => (
         </View>
 
         <View style={pdfStyles.content}>
+          {step.id === 'specialty' && (
+            <View style={pdfStyles.fullWidth}>
+              <Text style={pdfStyles.fieldLabel}>Clinical Specialty</Text>
+              <Text style={pdfStyles.fieldValue}>{formData.specialty || 'General Practice'}</Text>
+            </View>
+          )}
+
           {step.id === 'demographics' && (
             <View style={pdfStyles.grid}>
               {[
@@ -676,14 +701,15 @@ const MedicalReportPDF = ({ formData }: { formData: any }) => (
   </Document>
 );
 
-const SurgicalCaseWriteUpPDF = ({ formData, storyData, title }: { formData: any, storyData: any, title?: string }) => (
+const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, storyData: any, title?: string }) => (
   <Document>
     {/* Page 1: Cover Page */}
     <Page size="A4" style={pdfStyles.page}>
       <View style={pdfStyles.coverPage}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 60 }}>{getInitials(formData.fullName)}</Text>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>{getInitials(formData.fullName)}</Text>
+        <Text style={{ fontSize: 12, color: '#AE6965', marginBottom: 40, textTransform: 'uppercase', letterSpacing: 2 }}>{formData.specialty || 'General Clinical'} Case</Text>
         <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 60 }}>CASE STORY</Text>
-        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>TOPIC: {title?.toUpperCase() || storyData.impression?.toUpperCase() || formData.chiefComplaint?.toUpperCase() || 'CLINICAL CASE'}</Text>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center', paddingHorizontal: 40 }}>TOPIC: {title?.toUpperCase() || storyData.impression?.toUpperCase() || formData.chiefComplaint?.toUpperCase() || 'CLINICAL CASE'}</Text>
       </View>
       <View style={pdfStyles.footer}>
         <Text style={pdfStyles.footerText}>Malae Medical Workspace</Text>
@@ -998,7 +1024,8 @@ export default function App() {
         const model = "gemini-3-flash-preview";
         
         const prompt = `
-          Extract all clinical data from this ${file.type.includes('pdf') ? 'PDF' : 'image'} and map it to the following JSON structure. 
+          Extract clinical data from this ${file.type.includes('pdf') ? 'PDF' : 'image'} and map it to the following JSON structure. 
+          The case is in the specialty of ${formData.specialty || 'General Medicine'}.
           If a field is not found, leave it blank.
           
           Structure:
@@ -1248,6 +1275,49 @@ export default function App() {
     }
   };
 
+  const generatePPT = async (formData: any, storyData: any) => {
+    const pres = new pptxgen();
+    
+    // Title Slide
+    const slide1 = pres.addSlide();
+    slide1.addText("Clinical Case Presentation", { x: 1, y: 1, w: 8, h: 1, fontSize: 36, bold: true, color: "363636", align: "center" });
+    slide1.addText(storyData.impression || formData.chiefComplaint || "Clinical Case", { x: 1, y: 2, w: 8, h: 1, fontSize: 24, color: "AE6965", align: "center" });
+    slide1.addText(`Patient: ${getInitials(formData.fullName)} | Age: ${formData.age} | Sex: ${formData.sex}`, { x: 1, y: 4, w: 8, h: 1, fontSize: 18, color: "666666", align: "center" });
+    slide1.addText(`Specialty: ${formData.specialty || 'General'}`, { x: 1, y: 5, w: 8, h: 0.5, fontSize: 14, color: "999999", align: "center" });
+
+    // Demographics
+    const slide2 = pres.addSlide();
+    slide2.addText("Patient Demographics", { x: 0.5, y: 0.5, w: 9, h: 0.5, fontSize: 24, bold: true, color: "AE6965" });
+    slide2.addText([
+      { text: `Initials: ${getInitials(formData.fullName)}`, options: { bullet: true } },
+      { text: `Age: ${formData.age}`, options: { bullet: true } },
+      { text: `Sex: ${formData.sex}`, options: { bullet: true } },
+      { text: `Occupation: ${formData.occupation}`, options: { bullet: true } },
+      { text: `Address: ${formData.address}`, options: { bullet: true } },
+      { text: `Religion: ${formData.religion}`, options: { bullet: true } },
+    ], { x: 0.5, y: 1.5, w: 9, h: 3.5, fontSize: 18 });
+
+    // History of Presenting Complaint
+    const slide3 = pres.addSlide();
+    slide3.addText("History of Presenting Complaint", { x: 0.5, y: 0.5, w: 9, h: 0.5, fontSize: 24, bold: true, color: "AE6965" });
+    slide3.addText(storyData.hpcNarrative, { x: 0.5, y: 1.5, w: 9, h: 4, fontSize: 14 });
+
+    // Differentials
+    const slide4 = pres.addSlide();
+    slide4.addText("Differential Diagnoses", { x: 0.5, y: 0.5, w: 9, h: 0.5, fontSize: 24, bold: true, color: "AE6965" });
+    const diffs = storyData.differentials?.map((d: any) => ({ text: `${d.diagnosis}: ${d.reasoning}`, options: { bullet: true } })) || [];
+    slide4.addText(diffs, { x: 0.5, y: 1.5, w: 9, h: 4, fontSize: 14 });
+
+    // Impression & Plan
+    const slide5 = pres.addSlide();
+    slide5.addText("Impression & Management Plan", { x: 0.5, y: 0.5, w: 9, h: 0.5, fontSize: 24, bold: true, color: "AE6965" });
+    slide5.addText(`Impression: ${storyData.impression}`, { x: 0.5, y: 1.2, w: 9, h: 1, fontSize: 16, bold: true });
+    const planItems = storyData.plan?.map((p: string) => ({ text: p, options: { bullet: true } })) || [];
+    slide5.addText(planItems, { x: 0.5, y: 2.5, w: 9, h: 3, fontSize: 14 });
+
+    pres.writeFile({ fileName: `Clinical_Case_${getInitials(formData.fullName)}.pptx` });
+  };
+
   const handleLogout = async () => {
     setShowConfirmModal({
       show: true,
@@ -1365,8 +1435,8 @@ export default function App() {
       const model = "gemini-3-flash-preview";
       
       const prompt = `
-        You are a Chief Surgical Consultant at a tertiary academic hospital. Based on the following patient data, synthesize a high-level, cohesive academic surgical case write-up.
-        Strictly adhere to formal medical writing standards, utilizing precise clinical nomenclature and a rigorous academic tone consistent with peer-reviewed surgical case reports.
+        You are a Senior Consultant specializing in ${formData.specialty || 'General Medicine'} at a tertiary academic hospital. Based on the following patient data, synthesize a high-level, cohesive academic clinical case write-up.
+        Strictly adhere to formal medical writing standards, utilizing precise clinical nomenclature and a rigorous academic tone consistent with peer-reviewed case reports in ${formData.specialty || 'this field'}.
 
         Patient Data:
         ${JSON.stringify(formData, null, 2)}
@@ -1376,22 +1446,22 @@ export default function App() {
         2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal) and highlight both positive findings and significant negatives in a professional, concise manner.
         3. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing chronic comorbidities (e.g., "known retroviral disease on HAART", "hypertensive on ACE inhibitors") and their potential impact on the current presentation.
         4. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history, noting dates, procedures, and any relevant perioperative complications.
-        5. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions, lifestyle factors (tobacco/alcohol units), and socioeconomic context relevant to surgical recovery.
+        5. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions, lifestyle factors (tobacco/alcohol units), and socioeconomic context relevant to clinical recovery.
         6. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include:
            - General Examination: Nutritional status, pallor, jaundice, lymphadenopathy, edema.
            - Vitals: Hemodynamic stability and physiological parameters.
-           - Local/Regional Examination: Detailed description using surgical descriptors (e.g., "asymmetrical anterior neck mass, moves with deglutition, no bruits...").
+           - Local/Regional Examination: Detailed description using appropriate clinical descriptors.
            - Systemic Examination: Focused cardiorespiratory, abdominal, and neurological assessments.
         7. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification. Use "in view of [specific positive findings]" to support the diagnosis and "unlikely because of [specific negative findings or clinical inconsistencies]" to argue against it. Maintain a high level of diagnostic precision and prioritize by clinical likelihood.
         8. Case Discussion: Provide an exhaustive academic discourse. This section must be deeply analytical and evidence-based. Include the following sub-sections:
            - Definition and Pathophysiology: Discuss the molecular, cellular, or anatomical basis of the condition.
            - Pathophysiological Mechanisms: Detail the disease progression, etiology, and typical sequelae.
            - Clinical Features and Presentation: Contrast the typical presentation with this specific patient's findings.
-           - Investigations and Diagnostic Workup: Discuss the gold standard investigations, relevant imaging (e.g., USG, CT, MRI), and laboratory markers based on current surgical guidelines.
-           - Management and Treatment Approach: Detail the surgical vs. conservative management options, including specific operative techniques if applicable and postoperative care protocols.
+           - Investigations and Diagnostic Workup: Discuss the gold standard investigations, relevant imaging (e.g., USG, CT, MRI), and laboratory markers based on current clinical guidelines.
+           - Management and Treatment Approach: Detail the management options, including specific techniques if applicable and care protocols.
         9. Impression: Provide a concise, multi-axial clinical impression (e.g., "A [age]/[sex] patient with [comorbidities] presenting with clinical features highly suggestive of [primary diagnosis]").
-        10. Plan: Formulate a 5-10 point evidence-based clinical management plan, ranging from immediate stabilization and further investigations to definitive surgical intervention and follow-up.
-        11. References: Provide 4-5 high-impact academic references (e.g., NEJM, Lancet, Journal of Surgery) in standard Vancouver or AMA format.
+        10. Plan: Formulate a 5-10 point evidence-based clinical management plan, ranging from immediate stabilization and further investigations to definitive intervention and follow-up.
+        11. References: Provide 4-5 high-impact academic references (e.g., NEJM, Lancet, specialized journals) in standard Vancouver or AMA format.
         
         Handling Missing Data & Edge Cases:
         - If specific clinical details are absent from the input, DO NOT hallucinate. Use professional language like "Not documented at presentation," "Further clinical correlation required," or "Records regarding [system] were unavailable."
@@ -1527,6 +1597,24 @@ export default function App() {
 
   const renderStepContent = (stepId: StepId) => {
     switch (stepId) {
+      case 'specialty':
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {SPECIALTIES.map((spec) => (
+              <button
+                key={spec}
+                onClick={() => {
+                  setFormData((prev: any) => ({ ...prev, specialty: spec }));
+                  handleNext();
+                }}
+                className={`p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2 group ${formData.specialty === spec ? 'border-[#AE6965] bg-[#AE6965]/5' : 'border-slate-50 bg-slate-50/30 hover:border-slate-200'}`}
+              >
+                <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${formData.specialty === spec ? 'text-[#AE6965]' : 'text-slate-400 group-hover:text-slate-600'}`}>Department</span>
+                <span className={`text-lg font-black transition-colors ${formData.specialty === spec ? 'text-slate-900' : 'text-slate-700'}`}>{spec}</span>
+              </button>
+            ))}
+          </div>
+        );
       case 'demographics':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1654,58 +1742,51 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-72 lg:w-80 bg-white border-r border-slate-100 flex-col shrink-0 sticky top-0 h-screen shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
-        <div className="p-8 lg:p-10 flex flex-col items-center gap-1">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-[1rem] lg:rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4 group hover:border-[#AE6965] transition-all duration-500">
-            <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-[#AE6965] animate-pulse group-hover:scale-125 transition-transform" />
+      <aside className="hidden md:flex w-64 lg:w-72 bg-[#FDFCFB] border-r border-slate-100 flex-col h-screen sticky top-0 shrink-0">
+        <div className="p-8 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#1A1A1A] flex items-center justify-center text-white shadow-sm">
+            <Stethoscope className="w-5 h-5" />
           </div>
-          <h1 className="text-xl lg:text-2xl font-black tracking-tighter text-slate-900 uppercase tracking-widest">Malae</h1>
-          <p className="text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
-            Medical Workspace
-          </p>
+          <div className="flex flex-col">
+            <span className="font-black text-2xl text-slate-900 leading-none uppercase tracking-widest">Malae</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Clinical Workspace</span>
+          </div>
         </div>
 
-        <nav className="flex-1 px-4 lg:px-6 py-4 flex flex-col gap-1 overflow-y-auto no-scrollbar">
+        <nav className="flex-1 px-4 py-4 flex flex-col gap-1 overflow-y-auto no-scrollbar">
+          <div className="px-4 py-3">
+            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">Navigation</span>
+          </div>
           <button
             onClick={() => setView('dashboard')}
             className={`
-              flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl transition-all group relative mb-2
-              ${view === 'dashboard' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
+              flex items-center gap-4 px-4 py-3 rounded-xl transition-all group
+              ${view === 'dashboard' ? 'bg-white text-[#AE6965] shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
-            <div className={`
-              w-8 h-8 lg:w-9 lg:h-9 rounded-lg lg:rounded-xl flex items-center justify-center transition-colors
-              ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#AE6965]'}
-            `}>
-              <LayoutDashboard className="w-4 lg:h-4.5" />
-            </div>
-            <span className="text-xs lg:text-sm font-black uppercase tracking-widest">My Cases</span>
+            <LayoutDashboard className={`w-4 h-4 transition-colors ${view === 'dashboard' ? 'text-[#AE6965]' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span className="text-[11px] font-bold uppercase tracking-widest">My Cases</span>
           </button>
 
           <button
             onClick={() => setView('profile')}
             className={`
-              flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl transition-all group relative mb-6
-              ${view === 'profile' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
+              flex items-center gap-4 px-4 py-3 rounded-xl transition-all group
+              ${view === 'profile' ? 'bg-white text-[#AE6965] shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-slate-50'}
             `}
           >
-            <div className={`
-              w-8 h-8 lg:w-9 lg:h-9 rounded-lg lg:rounded-xl flex items-center justify-center transition-colors
-              ${view === 'profile' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-[#AE6965]'}
-            `}>
-              <UserIcon className="w-4 lg:h-4.5" />
-            </div>
-            <span className="text-xs lg:text-sm font-black uppercase tracking-widest">My Profile</span>
+            <UserIcon className={`w-4 h-4 transition-colors ${view === 'profile' ? 'text-[#AE6965]' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span className="text-[11px] font-bold uppercase tracking-widest">My Profile</span>
           </button>
 
           {view === 'generator' && (
             <motion.div 
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="space-y-1"
+              className="mt-6 space-y-1"
             >
-              <div className="px-5 py-3">
-                <span className="text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Case Details</span>
+              <div className="px-4 py-3">
+                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">Case Progress</span>
               </div>
               {STEPS.map((step, index) => {
                 const isActive = currentStepIndex === index;
@@ -1717,25 +1798,19 @@ export default function App() {
                     key={step.id}
                     onClick={() => setCurrentStepIndex(index)}
                     className={`
-                      w-full flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 lg:py-3.5 rounded-xl lg:rounded-2xl transition-all group relative
-                      ${isActive ? 'bg-[#AE6965]/10 text-[#AE6965]' : 'text-slate-500 hover:bg-slate-50'}
+                      w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group relative
+                      ${isActive ? 'bg-white text-[#AE6965] shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-slate-50'}
                     `}
                   >
                     <div className={`
-                      w-7 h-7 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl flex items-center justify-center transition-all
-                      ${isActive ? 'bg-[#AE6965] text-white shadow-lg shadow-[#AE6965]/20' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                      w-6 h-6 rounded-lg flex items-center justify-center transition-all
+                      ${isActive ? 'bg-[#AE6965] text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
                     `}>
-                      {isCompleted && !isActive ? <CheckCircle2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> : <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />}
+                      {isCompleted && !isActive ? <CheckCircle2 className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
                     </div>
-                    <span className={`text-[10px] lg:text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
                       {step.label}
                     </span>
-                    {isActive && (
-                      <motion.div 
-                        layoutId="activeStep"
-                        className="absolute left-0 w-1 h-6 bg-[#AE6965] rounded-r-full"
-                      />
-                    )}
                   </button>
                 );
               })}
@@ -1744,20 +1819,20 @@ export default function App() {
         </nav>
 
         <div className="p-6 border-t border-slate-50 space-y-4">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
-            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-black text-xs shadow-sm">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-50">
+            <div className="w-10 h-10 rounded-lg bg-[#AE6965] flex items-center justify-center text-white font-bold text-xs">
               {user.displayName?.[0] || user.email?.[0].toUpperCase()}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[10px] lg:text-xs font-black text-slate-800 truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
-              <span className="text-[8px] lg:text-[10px] text-slate-400 truncate font-medium">{user.email}</span>
+              <span className="text-[11px] font-bold text-slate-800 truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
+              <span className="text-[9px] text-slate-400 truncate font-medium">{user.email}</span>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all font-black text-[10px] uppercase tracking-widest"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all font-bold text-[10px] uppercase tracking-widest"
           >
-            <LogOut className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+            <LogOut className="w-4 h-4" />
             SIGN OUT
           </button>
         </div>
@@ -1970,21 +2045,45 @@ export default function App() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                      onClick={async () => {
+                        const blob = await pdf(<MedicalReportPDF formData={selectedReport.patientData} />).toBlob();
+                        triggerDownload(blob, `Clinical_Report_${selectedReport.patientData.fullName || 'Patient'}`);
+                      }}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-[10px] hover:bg-slate-200 transition-all"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span className="uppercase tracking-widest">Original Report</span>
+                    </button>
+
                     <button 
                       onClick={async () => {
                         if (selectedReport.type === 'story') {
-                          const blob = await pdf(<SurgicalCaseWriteUpPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
-                          triggerDownload(blob, `Surgical_Case_WriteUp_${selectedReport.patientData.fullName || 'Patient'}`);
+                          const blob = await pdf(<ClinicalCaseStoryPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
+                          triggerDownload(blob, `Case_Story_${selectedReport.patientData.fullName || 'Patient'}`);
                         } else {
-                          const blob = await pdf(<MedicalReportPDF formData={selectedReport.patientData} />).toBlob();
-                          triggerDownload(blob, `Clinical_Report_${selectedReport.patientData.fullName || 'Patient'}`);
+                          alert("This is a clinical record. Generate a Case Story first to access AI-Assisted Compilation.");
                         }
                       }}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl sm:rounded-2xl bg-slate-900 text-white font-black text-[10px] sm:text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 group"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#AE6965] text-white font-bold text-[10px] hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/10"
                     >
-                      <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-y-0.5 transition-transform" />
-                      <span className="uppercase tracking-widest">Download PDF</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span className="uppercase tracking-widest">AI Compilation</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        if (selectedReport.type === 'story') {
+                          generatePPT(selectedReport.patientData, selectedReport.reportData);
+                        } else {
+                          alert("Generate a Case Story first to create a PowerPoint presentation.");
+                        }
+                      }}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                    >
+                      <History className="w-3.5 h-3.5" />
+                      <span className="uppercase tracking-widest">PowerPoint</span>
                     </button>
                   </div>
                 </div>
@@ -2082,8 +2181,8 @@ export default function App() {
         ) : (
           <>
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 sm:px-8 py-3 sm:py-5 flex items-center justify-between">
-              <div className="flex items-center gap-3 sm:gap-6">
+            <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 sm:px-10 py-4 sm:py-6 flex items-center justify-between">
+              <div className="flex items-center gap-4 sm:gap-6">
                 <button 
                   onClick={() => setIsSidebarOpen(true)}
                   className="md:hidden p-2.5 -ml-1 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all active:scale-95"
@@ -2091,21 +2190,21 @@ export default function App() {
                   <Menu className="w-5 h-5" />
                 </button>
                 <div className="flex flex-col">
-                  <h2 className="text-sm sm:text-xl font-black text-slate-900 tracking-tight uppercase tracking-widest">
+                  <h2 className="text-lg sm:text-2xl font-black text-slate-900 uppercase tracking-widest">
                     Case Story Generator
                   </h2>
-                  <p className="text-[8px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
                     Step {currentStepIndex + 1} of {STEPS.length}: {STEPS[currentStepIndex].title}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-6">
                 <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest">{auth.currentUser?.displayName || 'Healthcare Professional'}</span>
-                  <span className="text-[10px] font-bold text-[#AE6965] uppercase tracking-widest">Clinical Workspace</span>
+                  <span className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">{auth.currentUser?.displayName || 'Healthcare Professional'}</span>
+                  <span className="text-[9px] font-bold text-[#AE6965] uppercase tracking-widest">Clinical Workspace</span>
                 </div>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#AE6965] to-[#8E5450] flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-lg shadow-[#AE6965]/20">
+                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                   {(auth.currentUser?.displayName || 'H').charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -2123,59 +2222,56 @@ export default function App() {
                       exit={{ opacity: 0, y: -20 }}
                       className="flex flex-col gap-6 sm:gap-8 md:gap-10"
                     >
-                      <div className="flex flex-col gap-2 text-center md:text-left">
-                        <h2 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight text-slate-900 leading-tight">Start New Case</h2>
-                        <p className="text-sm sm:text-base md:text-lg text-slate-400 font-medium">Choose your preferred method of clinical data entry.</p>
+                      <div className="flex flex-col gap-4 text-center md:text-left">
+                        <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 leading-tight uppercase tracking-widest">Start New Case</h2>
+                        <p className="text-sm sm:text-base md:text-xl text-slate-400 font-medium">Choose your preferred method of clinical data entry.</p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <button 
                           onClick={() => setGeneratorMode('form')}
-                          className="group p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden active:scale-[0.98]"
+                          className="group p-10 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
                         >
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10 shadow-lg shadow-[#AE6965]/5">
-                            <ClipboardList className="w-8 h-8 sm:w-12 sm:h-12" />
+                          <div className="w-20 h-20 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
+                            <ClipboardList className="w-10 h-10" />
                           </div>
-                          <div className="relative z-10">
-                            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#AE6965] transition-colors uppercase tracking-widest">Direct Form</h3>
-                            <p className="text-[10px] sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors font-medium">Enter case details manually using our structured clinical form.</p>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-widest group-hover:text-[#AE6965] transition-colors">Direct Form</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed font-medium">Enter case details manually using our structured clinical form.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-black text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                             <span className="uppercase tracking-widest">Proceed</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
 
                         <button 
                           onClick={() => setGeneratorMode('upload')}
-                          className="group p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden active:scale-[0.98]"
+                          className="group p-10 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
                         >
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10 shadow-lg shadow-[#AE6965]/5">
-                            <FileUp className="w-8 h-8 sm:w-12 sm:h-12" />
+                          <div className="w-20 h-20 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
+                            <FileUp className="w-10 h-10" />
                           </div>
-                          <div className="relative z-10">
-                            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#AE6965] transition-colors uppercase tracking-widest">Document Upload</h3>
-                            <p className="text-[10px] sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors font-medium">Upload a PDF or image of clinical notes to extract data automatically.</p>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-widest group-hover:text-[#AE6965] transition-colors">Document Upload</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed font-medium">Upload a PDF or image of clinical notes to extract data automatically.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-black text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                             <span className="uppercase tracking-widest">Upload File</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
 
                         <button 
                           onClick={() => setGeneratorMode('audio')}
-                          className="group p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[2.5rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#AE6965]/20 hover:border-[#AE6965] hover:bg-[#AE6965]/[0.02] transition-all flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden active:scale-[0.98]"
+                          className="group p-10 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
                         >
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-[#AE6965]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/10 text-[#AE6965] flex items-center justify-center group-hover:bg-[#AE6965] group-hover:text-white transition-all duration-500 relative z-10 shadow-lg shadow-[#AE6965]/5">
-                            <Mic className="w-8 h-8 sm:w-12 sm:h-12" />
+                          <div className="w-20 h-20 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
+                            <Mic className="w-10 h-10" />
                           </div>
-                          <div className="relative z-10">
-                            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#AE6965] transition-colors uppercase tracking-widest">Audio Input</h3>
-                            <p className="text-[10px] sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-500 transition-colors font-medium">Dictate the case details and let AI transcribe and organize the data.</p>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-widest group-hover:text-[#AE6965] transition-colors">Audio Input</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed font-medium">Dictate the case details and let AI transcribe and organize the data.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-black text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 relative z-10">
+                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                             <span className="uppercase tracking-widest">Start Recording</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
@@ -2287,7 +2383,7 @@ export default function App() {
                       <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between px-2">
                           <div className="flex flex-col gap-1">
-                            <h2 className="text-xl sm:text-2xl md:text-4xl font-black tracking-tight text-slate-800 leading-tight">{currentStep.title}</h2>
+                            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-widest uppercase text-slate-900 leading-tight">{currentStep.title}</h2>
                             <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
                           </div>
                           <div className="hidden md:flex flex-col items-end gap-1">

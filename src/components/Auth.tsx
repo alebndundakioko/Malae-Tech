@@ -203,11 +203,19 @@ export const Auth = ({ onSuccess }: AuthProps) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-12 h-12 rounded-xl bg-[#AE6965] flex items-center justify-center shadow-lg shadow-[#AE6965]/40">
-                <Lock className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-4 mb-12">
+              <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-2xl shadow-black/20 overflow-hidden border border-white/20">
+                <img 
+                  src="https://images.unsplash.com/photo-1631217818217-058317d921cd?auto=format&fit=crop&q=80&w=200" 
+                  alt="Malae Logo" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
-              <span className="text-2xl font-bold text-white tracking-tight">Malae</span>
+              <div className="flex flex-col">
+                <span className="text-3xl font-black text-white tracking-widest uppercase leading-none">Malae</span>
+                <span className="text-[10px] font-bold text-[#AE6965] uppercase tracking-[0.3em] mt-1">Clinical Workspace</span>
+              </div>
             </div>
 
             <div className="space-y-6 max-w-lg">
@@ -255,11 +263,19 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#AE6965] flex items-center justify-center shadow-lg shadow-[#AE6965]/20">
-                <Lock className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#AE6965] flex items-center justify-center shadow-lg shadow-[#AE6965]/20 overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1631217818217-058317d921cd?auto=format&fit=crop&q=80&w=200" 
+                  alt="Malae Logo" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
-              <span className="text-xl font-bold text-slate-900 tracking-tight">Malae</span>
+              <div className="flex flex-col">
+                <span className="text-xl font-black text-slate-900 tracking-widest uppercase leading-none">Malae</span>
+                <span className="text-[8px] font-bold text-[#AE6965] uppercase tracking-[0.3em] mt-1">Clinical Workspace</span>
+              </div>
             </div>
           </div>
 
