@@ -22,19 +22,25 @@ import { auth } from '../firebase';
 
 interface DashboardProps {
   reports: Report[];
+  user: any;
   onSelectReport: (report: Report) => void;
   onNewReport: () => void;
   onDeleteReport: (id: string) => void;
+  onInviteCollaborator: (reportId: string, email: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
   reports = [], 
+  user,
   onSelectReport, 
   onNewReport,
-  onDeleteReport 
+  onDeleteReport,
+  onInviteCollaborator
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'recent' | 'draft'>('all');
+  const [filter, setFilter] = useState<'all' | 'recent' | 'finalized' | 'shared'>('all');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [selectedReportForInvite, setSelectedReportForInvite] = useState<string | null>(null);
 
   const filteredReports = useMemo(() => {
     return reports.filter(report => {
@@ -43,21 +49,41 @@ export const Dashboard: React.FC<DashboardProps> = ({
       
       const matchesSearch = patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           diagnosis.toLowerCase().includes(searchQuery.toLowerCase());
-      if (filter === 'all') return matchesSearch;
+      if (!matchesSearch) return false;
+
+      if (filter === 'all') return true;
       if (filter === 'recent') {
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         const reportDate = report.createdAt?.toDate ? report.createdAt.toDate() : new Date(report.createdAt);
-        return matchesSearch && reportDate > oneWeekAgo;
+        return reportDate > oneWeekAgo;
       }
-      return matchesSearch;
+      if (filter === 'finalized') {
+        return report.type === 'story';
+      }
+      if (filter === 'shared') {
+        return report.collaborators && report.collaborators.length > 0;
+      }
+      return true;
     });
   }, [reports, searchQuery, filter]);
 
   const stats = [
-    { label: 'Total Cases', value: reports.length, icon: Database, color: 'text-primary' },
-    { label: 'Active Insights', value: reports.filter(r => r.diagnosis).length, icon: Activity, color: 'text-emerald-500' },
-    { label: 'Collaborators', value: 1, icon: Users, color: 'text-blue-500' },
+    { label: 'Total Cases', value: reports.length, icon: Database, color: 'text-primary', filter: 'all' as const },
+    { 
+      label: 'Active Insights', 
+      value: reports.filter(r => r.diagnosis || r.reportData?.impression || r.type === 'story').length, 
+      icon: Activity, 
+      color: 'text-emerald-500',
+      filter: 'finalized' as const
+    },
+    { 
+      label: 'Collaborators', 
+      value: new Set(reports.flatMap(r => r.collaborators || []).filter(email => email !== user?.email)).size, 
+      icon: Users, 
+      color: 'text-blue-500',
+      filter: 'shared' as const
+    },
   ];
 
   const getGreeting = () => {
@@ -76,20 +102,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h1 className="text-3xl font-bold text-text-main tracking-tight">{getGreeting()}</h1>
           <p className="text-text-muted font-medium">Your clinical command center is synchronized.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative group w-full sm:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
             <input 
               type="text"
               placeholder="Search clinical records..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 pr-6 py-3 bg-surface border border-line rounded-2xl w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+              className="pl-11 pr-6 py-3 bg-surface border border-line rounded-2xl w-full sm:w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
             />
           </div>
           <button 
             onClick={onNewReport}
-            className="flex items-center gap-2 px-6 py-3 pink-gradient text-white rounded-2xl font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="flex items-center justify-center gap-2 px-6 py-3 pink-gradient text-white rounded-2xl font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             New Case
@@ -103,24 +129,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Main Stats Panel */}
         <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           {stats.map((stat, idx) => (
-            <motion.div
+            <button
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="glass-card p-6 rounded-3xl pink-glow group hover:border-primary/30 transition-all"
+              onClick={() => setFilter(stat.filter)}
+              className={`glass-card p-6 rounded-3xl pink-glow group cursor-pointer transition-all border-2 text-left w-full active:scale-[0.98] ${
+                filter === stat.filter ? 'border-primary shadow-lg shadow-primary/5' : 'border-transparent hover:border-primary/30'
+              }`}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-2xl bg-bg ${stat.color}`}>
                   <stat.icon className="w-5 h-5" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-text-muted opacity-0 group-hover:opacity-100 transition-all" />
+                <ArrowUpRight className={`w-4 h-4 transition-all ${
+                  filter === stat.filter ? 'text-primary opacity-100' : 'text-text-muted opacity-0 group-hover:opacity-100'
+                }`} />
               </div>
               <div className="space-y-1">
-                <span className="text-3xl font-bold text-text-main">{stat.value}</span>
+                <span className="text-3xl font-bold text-text-main block">{stat.value}</span>
                 <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">{stat.label}</p>
               </div>
-            </motion.div>
+            </button>
           ))}
         </div>
 
@@ -131,15 +159,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Sparkles className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-widest">AI Insights</span>
             </div>
-            <h3 className="text-xl font-bold text-text-main leading-tight">Case compilation efficiency is up 24% this week.</h3>
+            <h3 className="text-xl font-bold text-text-main leading-tight">
+              {stats[1].value > 0 
+                ? `You have ${stats[1].value} clinical insight${stats[1].value > 1 ? 's' : ''} ready for review.`
+                : "Generate a Case Story to see AI-powered clinical insights here."}
+            </h3>
           </div>
           <div className="mt-8 pt-6 border-t border-line">
             <div className="flex items-center justify-between text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
               <span>Weekly Goal</span>
-              <span>12/15 Cases</span>
+              <span>{reports.length}/15 Cases</span>
             </div>
             <div className="h-2 bg-bg rounded-full overflow-hidden">
-              <div className="h-full pink-gradient w-[80%]" />
+              <div className="h-full pink-gradient transition-all duration-500" style={{ width: `${Math.min((reports.length / 15) * 100, 100)}%` }} />
             </div>
           </div>
         </div>
@@ -150,11 +182,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-bold text-text-main">Clinical Archive</h2>
               <div className="flex bg-surface border border-line p-1 rounded-xl">
-                {(['all', 'recent'] as const).map((t) => (
+                {(['all', 'recent', 'finalized', 'shared'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setFilter(t)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
                       filter === t ? 'bg-primary text-white shadow-sm' : 'text-text-muted hover:text-text-main'
                     }`}
                   >
@@ -163,7 +195,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 ))}
               </div>
             </div>
-            <button className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-widest hover:gap-3 transition-all">
+            <button 
+              onClick={() => {
+                setFilter('all');
+                setSearchQuery('');
+              }}
+              className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-widest hover:gap-3 transition-all active:scale-95 py-2 px-4 rounded-xl hover:bg-primary/5"
+            >
               View All Records <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -208,8 +246,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             {format(reportDate, 'MMM dd, yyyy')}
                           </span>
                           <div className="flex items-center gap-1.5 mt-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Finalized</span>
+                            <div className={`w-1.5 h-1.5 rounded-full ${report.type === 'story' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${report.type === 'story' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              {report.type === 'story' ? 'Finalized' : 'Draft'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -230,12 +270,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             {format(reportDate, 'HH:mm')}
                           </span>
                         </div>
-                        <div className="flex -space-x-2">
-                          {[1, 2].map((i) => (
-                            <div key={i} className="w-6 h-6 rounded-full border-2 border-surface bg-bg flex items-center justify-center text-[8px] font-bold text-text-muted">
-                              {i}
-                            </div>
-                          ))}
+                        <div className="flex items-center gap-3">
+                          <div className="flex -space-x-2">
+                            {report.collaborators?.slice(0, 3).map((email, i) => (
+                              <div key={i} className="w-6 h-6 rounded-full border-2 border-surface bg-bg flex items-center justify-center text-[8px] font-bold text-text-muted" title={email}>
+                                {email[0].toUpperCase()}
+                              </div>
+                            ))}
+                            {(report.collaborators?.length || 0) > 3 && (
+                              <div className="w-6 h-6 rounded-full border-2 border-surface bg-bg flex items-center justify-center text-[8px] font-bold text-text-muted">
+                                +{(report.collaborators?.length || 0) - 3}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const email = prompt("Enter collaborator's email:");
+                              if (email) onInviteCollaborator(report.id, email);
+                            }}
+                            className="p-1.5 rounded-lg bg-bg text-text-muted hover:text-primary hover:bg-primary/5 transition-all active:scale-90"
+                            title="Invite Collaborator"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -255,7 +313,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <button 
                     onClick={onNewReport}
-                    className="px-6 py-2.5 bg-primary/10 text-primary rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                    className="px-6 py-2.5 bg-primary/10 text-primary rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-white transition-all active:scale-95"
                   >
                     Create New Case
                   </button>

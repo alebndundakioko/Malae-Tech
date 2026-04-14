@@ -8,4 +8,5 @@ export interface Report {
   reportData?: any;
   type: 'original' | 'story';
   title: string;
+  collaborators?: string[]; // Array of user emails or UIDs
 }

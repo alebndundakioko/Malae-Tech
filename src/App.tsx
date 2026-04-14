@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef, useId, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Document, 
@@ -44,7 +44,8 @@ import {
   Mic,
   MicOff,
   FileUp,
-  History
+  History,
+  Edit
 } from 'lucide-react';
 
 // Firebase imports
@@ -60,7 +61,8 @@ import {
   query, 
   orderBy, 
   where,
-  deleteDoc
+  deleteDoc,
+  updateDoc
 } from 'firebase/firestore';
 import { Report } from './types';
 
@@ -98,8 +100,7 @@ const SPECIALTIES = [
   'Internal Medicine',
   'Surgical',
   'Paediatrics',
-  'Obstetrics & Gynaecology',
-  'General Practice'
+  'Obstetrics & Gynaecology'
 ];
 
 const STEPS: Step[] = [
@@ -544,7 +545,7 @@ const MedicalReportPDF = ({ formData }: { formData: any }) => (
           {step.id === 'specialty' && (
             <View style={pdfStyles.fullWidth}>
               <Text style={pdfStyles.fieldLabel}>Clinical Specialty</Text>
-              <Text style={pdfStyles.fieldValue}>{formData.specialty || 'General Practice'}</Text>
+              <Text style={pdfStyles.fieldValue}>{formData.specialty || 'Internal Medicine'}</Text>
             </View>
           )}
 
@@ -856,6 +857,7 @@ export default function App() {
   }, [formData]);
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
   const [reports, setReports] = useState<Report[]>([]);
+  const [collaboratorReports, setCollaboratorReports] = useState<Report[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -901,6 +903,7 @@ export default function App() {
     });
 
     let reportsUnsubscribe: (() => void) | undefined;
+    let collabUnsubscribe: (() => void) | undefined;
 
     if (user) {
       const q = query(
@@ -918,8 +921,28 @@ export default function App() {
       }, (error) => {
         handleFirestoreError(error, OperationType.LIST, 'reports');
       });
+
+      if (user.email) {
+        const qCollab = query(
+          collection(db, 'reports'),
+          where('collaborators', 'array-contains', user.email),
+          orderBy('createdAt', 'desc')
+        );
+
+        collabUnsubscribe = onSnapshot(qCollab, (snapshot) => {
+          const reportsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Report[];
+          setCollaboratorReports(reportsData);
+        }, (error) => {
+          // Silently handle or log
+          console.error("Collab fetch error:", error);
+        });
+      }
     } else {
       setReports([]);
+      setCollaboratorReports([]);
     }
 
     const savedData = localStorage.getItem('malae_form_data');
@@ -934,15 +957,67 @@ export default function App() {
     return () => {
       unsubscribe();
       if (reportsUnsubscribe) reportsUnsubscribe();
+      if (collabUnsubscribe) collabUnsubscribe();
     };
   }, [user]);
 
-  useEffect(() => {
-    if (Object.keys(formData).length > 0) {
-      localStorage.setItem('malae_form_data', JSON.stringify(formData));
-    }
-  }, [formData]);
+  const allReports = useMemo(() => {
+    const combined = [...reports, ...collaboratorReports];
+    // Remove duplicates by ID
+    const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+    return unique.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return dateB - dateA;
+    });
+  }, [reports, collaboratorReports]);
 
+  // Auto-save logic
+  useEffect(() => {
+    if (!user || Object.keys(formData).length === 0 || isGenerating) return;
+
+    const timeoutId = setTimeout(async () => {
+      if (selectedReport?.id) {
+        try {
+          await updateDoc(doc(db, 'reports', selectedReport.id), {
+            patientData: formData,
+            updatedAt: serverTimestamp()
+          });
+          console.log("Auto-saved existing report");
+        } catch (error) {
+          console.error("Auto-save error:", error);
+        }
+      }
+      // For new cases, we could save as a draft, but the user might not want a new doc every time.
+      // We'll stick to localStorage for new cases until they are explicitly saved/generated.
+      localStorage.setItem('malae_form_data', JSON.stringify(formData));
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, user, selectedReport, isGenerating]);
+
+  const handleInviteCollaborator = async (reportId: string, email: string) => {
+    if (!email) return;
+    try {
+      const reportRef = doc(db, 'reports', reportId);
+      const reportSnap = await getDocFromServer(reportRef);
+      if (reportSnap.exists()) {
+        const data = reportSnap.data();
+        const currentCollabs = data.collaborators || [];
+        if (!currentCollabs.includes(email)) {
+          await updateDoc(reportRef, {
+            collaborators: [...currentCollabs, email]
+          });
+          alert(`Invited ${email} to collaborate!`);
+        } else {
+          alert(`${email} is already a collaborator.`);
+        }
+      }
+    } catch (error) {
+      console.error("Invite error:", error);
+      alert("Failed to invite collaborator.");
+    }
+  };
   const startVoiceInput = async (field: string) => {
     if (isRecording && recordingField === field) {
       stopVoiceInput();
@@ -1389,9 +1464,11 @@ export default function App() {
       const reportPayload: any = {
         userId: user.uid,
         title: type === 'story' ? (storyData?.impression || formData.chiefComplaint || 'Clinical Case') : (formData.chiefComplaint || 'Clinical Case'),
+        diagnosis: type === 'story' ? (storyData?.impression || '') : '',
         type,
         patientData: formData,
         reportData: storyData,
+        collaborators: [],
         createdAt: serverTimestamp()
       };
 
@@ -1682,11 +1759,11 @@ export default function App() {
             />
             <SelectField 
               label="Tribe/Ethnicity" 
-              options={['Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Meru', 'Kisii', 'Mijikenda', 'Somali', 'Other']} 
+              options={['Baganda', 'Banyankole', 'Basoga', 'Bakiga', 'Iteso', 'Langi', 'Acholi', 'Bagisu', 'Lugbara', 'Bunyoro', 'Other']} 
               value={formData.ethnicity} 
               onChange={(v: any) => updateField('ethnicity', v)} 
             />
-            <InputField label="Address/Location" placeholder="Nairobi" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} isRecording={recordingField === 'address'} isTranscribing={transcribingField === 'address'} recordingTimeLeft={recordingTimeLeft} />
+            <InputField label="Address/Location" placeholder="Kampala" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} isRecording={recordingField === 'address'} isTranscribing={transcribingField === 'address'} recordingTimeLeft={recordingTimeLeft} />
             <SelectField 
               label="Religion" 
               options={['Christian', 'Muslim', 'Hindu', 'Traditional', 'None', 'Other']} 
@@ -1803,7 +1880,7 @@ export default function App() {
           <button
             onClick={() => setView('dashboard')}
             className={`
-              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
+              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group active:scale-[0.98]
               ${view === 'dashboard' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-text-muted hover:bg-bg hover:text-primary'}
             `}
           >
@@ -1814,7 +1891,7 @@ export default function App() {
           <button
             onClick={() => setView('profile')}
             className={`
-              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
+              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group active:scale-[0.98]
               ${view === 'profile' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-text-muted hover:bg-bg hover:text-primary'}
             `}
           >
@@ -1841,7 +1918,7 @@ export default function App() {
                     key={step.id}
                     onClick={() => setCurrentStepIndex(index)}
                     className={`
-                      w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group relative
+                      w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group relative active:scale-[0.98]
                       ${isActive ? 'bg-bg text-primary border border-line shadow-sm' : 'text-text-muted hover:bg-bg'}
                     `}
                   >
@@ -2029,16 +2106,19 @@ export default function App() {
         {view === 'dashboard' ? (
           <div className="flex-1 overflow-y-auto">
             <Dashboard 
-              reports={reports}
+              reports={allReports}
+              user={user}
               onNewReport={() => {
                 setFormData({});
                 setCurrentStepIndex(0);
                 setCompletedSteps(new Set());
                 setGeneratorMode('selection');
                 setView('generator');
+                setSelectedReport(null);
               }}
               onSelectReport={(report) => {
                 setSelectedReport(report);
+                setFormData(report.patientData || {});
                 setView('viewer');
               }}
               onDeleteReport={(id) => {
@@ -2052,6 +2132,7 @@ export default function App() {
                   }
                 });
               }}
+              onInviteCollaborator={handleInviteCollaborator}
             />
           </div>
         ) : view === 'profile' ? (
@@ -2102,16 +2183,29 @@ export default function App() {
                     <button 
                       onClick={async () => {
                         if (selectedReport.type === 'story') {
-                          const blob = await pdf(<ClinicalCaseStoryPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} />).toBlob();
+                          const blob = await pdf(<ClinicalCaseStoryPDF formData={selectedReport.patientData} storyData={selectedReport.reportData} title={selectedReport.title} />).toBlob();
                           triggerDownload(blob, `Case_Story_${selectedReport.patientData.fullName || 'Patient'}`);
                         } else {
                           alert("This is a clinical record. Generate a Case Story first to access AI-Assisted Compilation.");
                         }
                       }}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white font-bold text-[10px] hover:bg-accent transition-all shadow-lg shadow-primary/10"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white font-bold text-[10px] hover:bg-accent transition-all shadow-lg shadow-primary/10 active:scale-95"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span className="uppercase tracking-widest">AI Compilation</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setFormData(selectedReport.patientData);
+                        setCurrentStepIndex(0);
+                        setView('generator');
+                        setGeneratorMode('form');
+                      }}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span className="uppercase tracking-widest">Edit Case</span>
                     </button>
 
                     <button 
@@ -2122,7 +2216,7 @@ export default function App() {
                           alert("Generate a Case Story first to create a PowerPoint presentation.");
                         }
                       }}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-[10px] hover:bg-slate-200 transition-all active:scale-95"
                     >
                       <History className="w-3.5 h-3.5" />
                       <span className="uppercase tracking-widest">PowerPoint</span>

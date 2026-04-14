@@ -49,6 +49,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
+    function isCollaborator() {
+      return isAuthenticated() && ('collaborators' in resource.data) && (request.auth.token.email in resource.data.collaborators);
+    }
+
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
              data.uid is string &&
@@ -59,11 +63,12 @@ service cloud.firestore {
 
     function isValidReport(data) {
       return data.keys().hasAll(['userId', 'title', 'patientData', 'createdAt']) &&
-             data.userId == request.auth.uid &&
+             data.userId is string &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.type in ['original', 'story'] &&
              (!('hpcNarrative' in data) || (data.hpcNarrative is string && data.hpcNarrative.size() < 10000)) &&
-             data.patientData is map;
+             data.patientData is map &&
+             (!('collaborators' in data) || data.collaborators is list);
     }
 
     // ===============================================================
@@ -78,9 +83,9 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isDocOwner();
-      allow create: if isAuthenticated() && isValidReport(request.resource.data);
-      allow update: if isDocOwner() && isValidReport(request.resource.data) && 
+      allow read: if isDocOwner() || isCollaborator();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data) && request.resource.data.userId == request.auth.uid;
+      allow update: if (isDocOwner() || isCollaborator()) && isValidReport(request.resource.data) && 
                       request.resource.data.userId == resource.data.userId;
       allow delete: if isDocOwner();
     }

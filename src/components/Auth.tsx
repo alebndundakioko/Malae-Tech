@@ -192,8 +192,8 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1631217818217-058317d921cd?auto=format&fit=crop&q=80&w=1974" 
-            alt="Modern Healthcare" 
+            src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=2070" 
+            alt="African Medical Professional" 
             className="w-full h-full object-cover opacity-40 scale-105"
             referrerPolicy="no-referrer"
           />
