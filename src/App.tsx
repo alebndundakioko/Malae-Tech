@@ -50,7 +50,19 @@ import {
 // Firebase imports
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, doc, getDocFromServer } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  serverTimestamp, 
+  doc, 
+  getDocFromServer, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  where,
+  deleteDoc
+} from 'firebase/firestore';
+import { Report } from './types';
 
 // Component imports
 import { Auth } from './components/Auth';
@@ -155,7 +167,7 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
   const id = useId();
   return (
     <div className="flex flex-col gap-1 sm:gap-1.5 w-full group">
-      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.1em] group-focus-within:text-primary transition-colors">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
@@ -166,19 +178,19 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
-          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/30 text-sm sm:text-base text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200"
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-line bg-surface text-sm sm:text-base text-text-main placeholder:text-text-muted/30 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all shadow-sm hover:border-line/80"
         />
         <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 sm:gap-2">
           {isTranscribing && (
-            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-[#AE6965]/5 rounded-lg">
-              <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin text-[#AE6965]" />
-              <span className="text-[7px] sm:text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">Transcribing</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary/5 rounded-lg">
+              <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin text-primary" />
+              <span className="text-[7px] sm:text-[8px] font-bold text-primary uppercase tracking-tighter">Transcribing</span>
             </div>
           )}
           {onVoiceInput && !isTranscribing && (
             <div className="flex items-center gap-1.5 sm:gap-2">
               {isRecording && recordingTimeLeft !== undefined && (
-                <span className={`text-[9px] sm:text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                <span className={`text-[9px] sm:text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-text-muted'}`}>
                   0:{recordingTimeLeft.toString().padStart(2, '0')}
                 </span>
               )}
@@ -186,7 +198,7 @@ const InputField = ({ label, placeholder, type = "text", value, onChange, requir
                 type="button"
                 onClick={onVoiceInput}
                 aria-label={isRecording ? `Stop recording ${label}` : `Start recording ${label}`}
-                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
+                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-text-muted hover:text-primary hover:bg-primary/5'}`}
               >
                 {isRecording ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </button>
@@ -202,7 +214,7 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
   const id = useId();
   return (
     <div className="flex flex-col gap-1 sm:gap-1.5 w-full group">
-      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.1em] group-focus-within:text-primary transition-colors">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
@@ -213,19 +225,19 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
           onChange={(e) => onChange(e.target.value)}
           required={required}
           rows={4}
-          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/30 text-sm sm:text-base text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200 min-h-[100px] sm:min-h-[120px]"
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-line bg-surface text-sm sm:text-base text-text-main placeholder:text-text-muted/30 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all shadow-sm hover:border-line/80 min-h-[100px] sm:min-h-[120px]"
         />
         <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4 flex items-center gap-1.5 sm:gap-2">
           {isTranscribing && (
-            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-[#AE6965]/5 rounded-lg">
-              <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin text-[#AE6965]" />
-              <span className="text-[7px] sm:text-[8px] font-bold text-[#AE6965] uppercase tracking-tighter">Transcribing</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary/5 rounded-lg">
+              <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin text-primary" />
+              <span className="text-[7px] sm:text-[8px] font-bold text-primary uppercase tracking-tighter">Transcribing</span>
             </div>
           )}
           {onVoiceInput && !isTranscribing && (
             <div className="flex items-center gap-1.5 sm:gap-2">
               {isRecording && recordingTimeLeft !== undefined && (
-                <span className={`text-[9px] sm:text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                <span className={`text-[9px] sm:text-[10px] font-black tabular-nums ${recordingTimeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-text-muted'}`}>
                   0:{recordingTimeLeft.toString().padStart(2, '0')}
                 </span>
               )}
@@ -233,7 +245,7 @@ const TextAreaField = ({ label, placeholder, value, onChange, required, onVoiceI
                 type="button"
                 onClick={onVoiceInput}
                 aria-label={isRecording ? `Stop recording ${label}` : `Start recording ${label}`}
-                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-slate-400 hover:text-[#AE6965] hover:bg-[#AE6965]/5'}`}
+                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${isRecording ? 'bg-red-50 text-red-500 shadow-lg shadow-red-100' : 'text-text-muted hover:text-primary hover:bg-primary/5'}`}
               >
                 {isRecording ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </button>
@@ -249,7 +261,7 @@ const SelectField = ({ label, options, value, onChange, required }: any) => {
   const id = useId();
   return (
     <div className="flex flex-col gap-1 sm:gap-1.5 w-full group">
-      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] group-focus-within:text-[#AE6965] transition-colors">
+      <label htmlFor={id} className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-[0.1em] group-focus-within:text-primary transition-colors">
         {label} {required && <span className="text-red-500" aria-hidden="true">*</span>}
       </label>
       <div className="relative">
@@ -258,7 +270,7 @@ const SelectField = ({ label, options, value, onChange, required }: any) => {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
-          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/30 text-sm sm:text-base text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#AE6965]/5 focus:border-[#AE6965] transition-all shadow-sm hover:border-slate-200 appearance-none cursor-pointer pr-10 sm:pr-12"
+          className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-line bg-surface text-sm sm:text-base text-text-main focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all shadow-sm hover:border-line/80 appearance-none cursor-pointer pr-10 sm:pr-12"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '0.875rem' }}
         >
           <option value="">Select an option</option>
@@ -275,12 +287,12 @@ const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => {
   const id = useId();
   return (
     <div className="flex flex-col gap-1 sm:gap-1.5 w-full">
-      <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+      <span className="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-wider">
         {label}
       </span>
       <label 
         htmlFor={id}
-        className={`w-full border-2 border-dashed border-slate-100 rounded-xl sm:rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center gap-2 sm:gap-3 bg-slate-50/30 hover:bg-slate-50/50 transition-colors cursor-pointer group ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full border-2 border-dashed border-line rounded-xl sm:rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center gap-2 sm:gap-3 bg-surface/30 hover:bg-surface/50 transition-colors cursor-pointer group ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input 
           id={id}
@@ -293,12 +305,12 @@ const FileUpload = ({ label, subtitle, onFileSelect, isProcessing }: any) => {
           }}
           disabled={isProcessing}
         />
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#AE6965] transition-colors">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-surface shadow-sm flex items-center justify-center text-text-muted group-hover:text-primary transition-colors">
           {isProcessing ? <Loader size="sm" /> : <Upload className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />}
         </div>
         <div className="text-center">
-          <p className="text-xs sm:text-sm font-bold text-slate-700">{isProcessing ? 'Processing...' : label}</p>
-          <p className="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-tight">{subtitle}</p>
+          <p className="text-xs sm:text-sm font-bold text-text-main">{isProcessing ? 'Processing...' : label}</p>
+          <p className="text-[8px] sm:text-[10px] text-text-muted uppercase tracking-tight">{subtitle}</p>
         </div>
       </label>
     </div>
@@ -414,7 +426,7 @@ const pdfStyles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#AE6965',
+    backgroundColor: '#D4A5A5',
     marginRight: 6,
   },
   systemTitle: {
@@ -707,7 +719,7 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
     <Page size="A4" style={pdfStyles.page}>
       <View style={pdfStyles.coverPage}>
         <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>{getInitials(formData.fullName)}</Text>
-        <Text style={{ fontSize: 12, color: '#AE6965', marginBottom: 40, textTransform: 'uppercase', letterSpacing: 2 }}>{formData.specialty || 'General Clinical'} Case</Text>
+        <Text style={{ fontSize: 12, color: '#D4A5A5', marginBottom: 40, textTransform: 'uppercase', letterSpacing: 2 }}>{formData.specialty || 'General Clinical'} Case</Text>
         <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 60 }}>CASE STORY</Text>
         <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center', paddingHorizontal: 40 }}>TOPIC: {title?.toUpperCase() || storyData.impression?.toUpperCase() || formData.chiefComplaint?.toUpperCase() || 'CLINICAL CASE'}</Text>
       </View>
@@ -843,6 +855,7 @@ export default function App() {
     localStorage.setItem('malae_form_data', JSON.stringify(formData));
   }, [formData]);
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
+  const [reports, setReports] = useState<Report[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -887,6 +900,28 @@ export default function App() {
       setAuthLoading(false);
     });
 
+    let reportsUnsubscribe: (() => void) | undefined;
+
+    if (user) {
+      const q = query(
+        collection(db, 'reports'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+
+      reportsUnsubscribe = onSnapshot(q, (snapshot) => {
+        const reportsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Report[];
+        setReports(reportsData);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'reports');
+      });
+    } else {
+      setReports([]);
+    }
+
     const savedData = localStorage.getItem('malae_form_data');
     if (savedData) {
       try {
@@ -896,8 +931,11 @@ export default function App() {
       }
     }
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      unsubscribe();
+      if (reportsUnsubscribe) reportsUnsubscribe();
+    };
+  }, [user]);
 
   useEffect(() => {
     if (Object.keys(formData).length > 0) {
@@ -1336,6 +1374,14 @@ export default function App() {
     });
   };
 
+  const handleDeleteReport = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'reports', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `reports/${id}`);
+    }
+  };
+
   const handleSaveReport = async (storyData: any, type: 'original' | 'story' = 'story') => {
     if (!user) return;
     setIsSaving(true);
@@ -1374,7 +1420,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F2F3F0]">
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <Loader />
       </div>
     );
@@ -1521,7 +1567,7 @@ export default function App() {
 
       setGenerationStatus("Compiling story into high-level PDF...");
       const reportTitle = storyData.impression || formData.chiefComplaint || 'Clinical Case';
-      const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={storyData} title={reportTitle} />).toBlob();
+      const blob = await pdf(<ClinicalCaseStoryPDF formData={formData} storyData={storyData} title={reportTitle} />).toBlob();
       triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}`);
       setStoryReportStatus('completed');
       setTimeout(() => setStoryReportStatus('idle'), 3000);
@@ -1531,7 +1577,7 @@ export default function App() {
       
       // Generate PDF with fallback data even on top-level catch
       try {
-        const blob = await pdf(<SurgicalCaseWriteUpPDF formData={formData} storyData={fallbackData} />).toBlob();
+        const blob = await pdf(<ClinicalCaseStoryPDF formData={formData} storyData={fallbackData} />).toBlob();
         triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}_FALLBACK`);
         setStoryReportStatus('completed'); // Fallback is still a success of sorts
         setTimeout(() => setStoryReportStatus('idle'), 3000);
@@ -1607,9 +1653,9 @@ export default function App() {
                   setFormData((prev: any) => ({ ...prev, specialty: spec }));
                   handleNext();
                 }}
-                className={`p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2 group ${formData.specialty === spec ? 'border-[#AE6965] bg-[#AE6965]/5' : 'border-slate-50 bg-slate-50/30 hover:border-slate-200'}`}
+                className={`p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2 group ${formData.specialty === spec ? 'border-primary bg-primary/5' : 'border-line bg-surface hover:border-primary/30'}`}
               >
-                <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${formData.specialty === spec ? 'text-[#AE6965]' : 'text-slate-400 group-hover:text-slate-600'}`}>Department</span>
+                <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${formData.specialty === spec ? 'text-primary' : 'text-text-muted group-hover:text-text-main'}`}>Department</span>
                 <span className={`text-lg font-black transition-colors ${formData.specialty === spec ? 'text-slate-900' : 'text-slate-700'}`}>{spec}</span>
               </button>
             ))}
@@ -1689,8 +1735,8 @@ export default function App() {
             {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL'].map(system => (
               <div key={system} className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#AE6965]" />
-                  <span className="text-[10px] font-bold text-slate-700 tracking-widest">{system}</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="text-[10px] font-bold text-text-main tracking-widest">{system}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField label="Symptoms Present" value={formData[`${system}_present`]} onChange={(v: any) => updateField(`${system}_present`, v)} onVoiceInput={() => startVoiceInput(`${system}_present`)} isRecording={recordingField === `${system}_present`} isTranscribing={transcribingField === `${system}_present`} recordingTimeLeft={recordingTimeLeft} />
@@ -1740,53 +1786,50 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-bg flex flex-col md:flex-row font-sans text-text-main overflow-x-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-64 lg:w-72 bg-[#FDFCFB] border-r border-slate-100 flex-col h-screen sticky top-0 shrink-0">
-        <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#1A1A1A] flex items-center justify-center text-white shadow-sm">
-            <Stethoscope className="w-5 h-5" />
+      <aside className="hidden md:flex w-72 bg-surface border-r border-line flex-col h-screen sticky top-0 shrink-0">
+        <div className="p-10 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl pink-gradient flex items-center justify-center text-white shadow-lg shadow-primary/20">
+            <Stethoscope className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-2xl text-slate-900 leading-none uppercase tracking-widest">Malae</span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Clinical Workspace</span>
+            <span className="font-bold text-2xl text-text-main leading-none tracking-tight">Malae</span>
+            <span className="text-[9px] font-bold text-primary uppercase tracking-[0.3em] mt-1">Health Intelligence</span>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-4 flex flex-col gap-1 overflow-y-auto no-scrollbar">
-          <div className="px-4 py-3">
-            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">Navigation</span>
-          </div>
+        <nav className="flex-1 px-6 py-8 flex flex-col gap-2 overflow-y-auto no-scrollbar">
           <button
             onClick={() => setView('dashboard')}
             className={`
-              flex items-center gap-4 px-4 py-3 rounded-xl transition-all group
-              ${view === 'dashboard' ? 'bg-white text-[#AE6965] shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-slate-50'}
+              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
+              ${view === 'dashboard' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-text-muted hover:bg-bg hover:text-primary'}
             `}
           >
-            <LayoutDashboard className={`w-4 h-4 transition-colors ${view === 'dashboard' ? 'text-[#AE6965]' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="text-[11px] font-bold uppercase tracking-widest">My Cases</span>
+            <LayoutDashboard className="w-4 h-4" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Dashboard</span>
           </button>
 
           <button
             onClick={() => setView('profile')}
             className={`
-              flex items-center gap-4 px-4 py-3 rounded-xl transition-all group
-              ${view === 'profile' ? 'bg-white text-[#AE6965] shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-slate-50'}
+              flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
+              ${view === 'profile' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-text-muted hover:bg-bg hover:text-primary'}
             `}
           >
-            <UserIcon className={`w-4 h-4 transition-colors ${view === 'profile' ? 'text-[#AE6965]' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="text-[11px] font-bold uppercase tracking-widest">My Profile</span>
+            <UserIcon className="w-4 h-4" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Physician Profile</span>
           </button>
 
           {view === 'generator' && (
             <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="mt-6 space-y-1"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-12 space-y-2"
             >
-              <div className="px-4 py-3">
-                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">Case Progress</span>
+              <div className="px-5 py-2 border-b border-line mb-4">
+                <span className="text-[9px] font-bold text-text-muted uppercase tracking-[0.3em]">Case Progress</span>
               </div>
               {STEPS.map((step, index) => {
                 const isActive = currentStepIndex === index;
@@ -1799,16 +1842,16 @@ export default function App() {
                     onClick={() => setCurrentStepIndex(index)}
                     className={`
                       w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group relative
-                      ${isActive ? 'bg-white text-[#AE6965] shadow-sm border border-slate-100' : 'text-slate-500 hover:bg-slate-50'}
+                      ${isActive ? 'bg-bg text-primary border border-line shadow-sm' : 'text-text-muted hover:bg-bg'}
                     `}
                   >
                     <div className={`
                       w-6 h-6 rounded-lg flex items-center justify-center transition-all
-                      ${isActive ? 'bg-[#AE6965] text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                      ${isActive ? 'bg-primary text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-line text-text-muted'}
                     `}>
                       {isCompleted && !isActive ? <CheckCircle2 className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
                     </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-primary' : 'text-text-muted'}`}>
                       {step.label}
                     </span>
                   </button>
@@ -1818,19 +1861,19 @@ export default function App() {
           )}
         </nav>
 
-        <div className="p-6 border-t border-slate-50 space-y-4">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-50">
-            <div className="w-10 h-10 rounded-lg bg-[#AE6965] flex items-center justify-center text-white font-bold text-xs">
+        <div className="p-8 border-t border-line space-y-6">
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-bg border border-line">
+            <div className="w-10 h-10 rounded-xl pink-gradient flex items-center justify-center text-white font-bold text-lg">
               {user.displayName?.[0] || user.email?.[0].toUpperCase()}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[11px] font-bold text-slate-800 truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
-              <span className="text-[9px] text-slate-400 truncate font-medium">{user.email}</span>
+              <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
+              <span className="text-[9px] text-text-muted truncate font-medium">{user.email}</span>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all font-bold text-[10px] uppercase tracking-widest"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-50 transition-all font-bold text-[10px] uppercase tracking-widest"
           >
             <LogOut className="w-4 h-4" />
             SIGN OUT
@@ -1856,19 +1899,19 @@ export default function App() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 left-0 w-[85%] max-w-[300px] bg-white z-[70] flex flex-col shadow-2xl md:hidden rounded-r-3xl overflow-hidden"
             >
-              <div className="p-6 flex items-center justify-between border-b border-slate-50 bg-slate-50/50">
+              <div className="p-6 flex items-center justify-between border-b border-line bg-bg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#AE6965] flex items-center justify-center text-white shadow-lg shadow-[#AE6965]/20">
+                  <div className="w-10 h-10 rounded-xl pink-gradient flex items-center justify-center text-white shadow-lg shadow-primary/20">
                     <Stethoscope className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-black text-slate-900 tracking-tighter text-xl uppercase tracking-widest leading-none">Malae</span>
-                    <span className="text-[8px] font-black text-[#AE6965] uppercase tracking-[0.2em] mt-1">Clinical Workspace</span>
+                    <span className="font-bold text-text-main tracking-tight text-xl leading-none">Malae</span>
+                    <span className="text-[8px] font-bold text-primary uppercase tracking-[0.2em] mt-1">Health Intelligence</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsSidebarOpen(false)} 
-                  className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-100"
+                  className="p-2.5 text-text-muted hover:text-text-main hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-line"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1879,38 +1922,36 @@ export default function App() {
                   onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
                   className={`
                     flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
-                    ${view === 'dashboard' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
+                    ${view === 'dashboard' ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'text-text-muted hover:bg-bg'}
                   `}
                 >
                   <div className={`
                     w-9 h-9 rounded-xl flex items-center justify-center transition-colors
-                    ${view === 'dashboard' ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}
+                    ${view === 'dashboard' ? 'bg-white/20' : 'bg-bg text-text-muted'}
                   `}>
                     <LayoutDashboard className="w-4 h-4" />
                   </div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">My Cases</span>
+                  <span className="text-[11px] font-bold uppercase tracking-widest">Dashboard</span>
                 </button>
 
                 <button
                   onClick={() => { setView('profile'); setIsSidebarOpen(false); }}
                   className={`
                     flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
-                    ${view === 'profile' ? 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20' : 'text-slate-500 hover:bg-slate-50'}
+                    ${view === 'profile' ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'text-text-muted hover:bg-bg'}
                   `}
                 >
                   <div className={`
                     w-9 h-9 rounded-xl flex items-center justify-center transition-colors
-                    ${view === 'profile' ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}
+                    ${view === 'profile' ? 'bg-white/20' : 'bg-bg text-text-muted'}
                   `}>
                     <UserIcon className="w-4 h-4" />
                   </div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">My Profile</span>
-                </button>
-
-                {view === 'generator' && (
+                  <span className="text-[11px] font-bold uppercase tracking-widest">Physician Profile</span>
+                </button>                {view === 'generator' && (
                   <div className="mt-6 space-y-1">
-                    <div className="px-5 py-2">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Case Progress</span>
+                    <div className="px-5 py-2 border-b border-line mb-4">
+                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-[0.2em]">Case Progress</span>
                     </div>
                     {STEPS.map((step, index) => {
                       const isActive = currentStepIndex === index;
@@ -1926,16 +1967,16 @@ export default function App() {
                           }}
                           className={`
                             w-full flex items-center gap-4 px-5 py-3 rounded-xl transition-all group
-                            ${isActive ? 'bg-[#AE6965]/5 text-[#AE6965]' : 'text-slate-500 hover:bg-slate-50'}
+                            ${isActive ? 'bg-bg text-primary border border-line' : 'text-text-muted hover:bg-bg'}
                           `}
                         >
                           <div className={`
                             w-7 h-7 rounded-lg flex items-center justify-center transition-all
-                            ${isActive ? 'bg-[#AE6965] text-white shadow-md' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}
+                            ${isActive ? 'bg-primary text-white shadow-md' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-bg text-text-muted'}
                           `}>
                             {isCompleted && !isActive ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
                           </div>
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-[#AE6965]' : 'text-slate-500'}`}>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-primary' : 'text-text-muted'}`}>
                             {step.label}
                           </span>
                         </button>
@@ -1945,19 +1986,19 @@ export default function App() {
                 )}
               </nav>
 
-              <div className="p-6 border-t border-slate-50 space-y-4">
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
-                  <div className="w-9 h-9 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-black text-xs shadow-sm">
+              <div className="p-6 border-t border-line space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-bg border border-line">
+                  <div className="w-9 h-9 rounded-xl pink-gradient flex items-center justify-center text-white font-bold text-xs shadow-sm">
                     {user.displayName?.[0] || user.email?.[0].toUpperCase()}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black text-slate-800 truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
-                    <span className="text-[8px] text-slate-400 truncate font-medium">{user.email}</span>
+                    <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
+                    <span className="text-[9px] text-text-muted truncate font-medium">{user.email}</span>
                   </div>
                 </div>
                 <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-all font-black text-[10px] uppercase tracking-widest"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   SIGN OUT
@@ -1971,23 +2012,24 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
         {/* Mobile Header */}
-        <header className="md:hidden h-16 bg-white border-b border-slate-100 px-4 flex items-center justify-between sticky top-0 z-50">
+        <header className="md:hidden h-16 bg-surface border-b border-line px-4 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2 -ml-2 text-slate-400 hover:text-slate-900 transition-colors"
+              className="p-2 -ml-2 text-text-muted hover:text-primary transition-colors"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <span className="font-black text-slate-900 tracking-tighter text-lg uppercase tracking-widest">Malae</span>
+            <span className="font-bold text-text-main tracking-tight text-lg">Malae</span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#AE6965] flex items-center justify-center text-white font-black text-[10px]">
+          <div className="w-8 h-8 rounded-lg pink-gradient flex items-center justify-center text-white font-bold text-[10px]">
             {user.displayName?.[0] || user.email?.[0].toUpperCase()}
           </div>
         </header>
         {view === 'dashboard' ? (
           <div className="flex-1 overflow-y-auto">
             <Dashboard 
+              reports={reports}
               onNewReport={() => {
                 setFormData({});
                 setCurrentStepIndex(0);
@@ -1995,17 +2037,17 @@ export default function App() {
                 setGeneratorMode('selection');
                 setView('generator');
               }}
-              onViewReport={(report) => {
+              onSelectReport={(report) => {
                 setSelectedReport(report);
                 setView('viewer');
               }}
-              onConfirmDelete={(onConfirm) => {
+              onDeleteReport={(id) => {
                 setShowConfirmModal({
                   show: true,
                   title: 'Delete Record',
                   message: 'Are you sure you want to permanently delete this clinical record?',
                   onConfirm: () => {
-                    onConfirm();
+                    handleDeleteReport(id);
                     setShowConfirmModal(prev => ({ ...prev, show: false }));
                   }
                 });
@@ -2021,7 +2063,7 @@ export default function App() {
             <div className="max-w-4xl mx-auto">
               <button 
                 onClick={() => setView('dashboard')}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#AE6965] font-black text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors group"
+                className="flex items-center gap-2 text-text-muted hover:text-primary font-black text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 transition-colors group"
               >
                 <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span className="uppercase tracking-widest">Back to My Cases</span>
@@ -2038,7 +2080,7 @@ export default function App() {
                       </p>
                       <span className={`text-[8px] sm:text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.15em] border ${
                         selectedReport.type === 'story' 
-                          ? 'bg-[#AE6965]/5 text-[#AE6965] border-[#AE6965]/20' 
+                          ? 'bg-primary/5 text-primary border-primary/20' 
                           : 'bg-slate-50 text-slate-500 border-slate-200'
                       }`}>
                         {selectedReport.type === 'story' ? 'Case Story' : 'Case Details'}
@@ -2066,7 +2108,7 @@ export default function App() {
                           alert("This is a clinical record. Generate a Case Story first to access AI-Assisted Compilation.");
                         }
                       }}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#AE6965] text-white font-bold text-[10px] hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/10"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white font-bold text-[10px] hover:bg-accent transition-all shadow-lg shadow-primary/10"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span className="uppercase tracking-widest">AI Compilation</span>
@@ -2093,7 +2135,7 @@ export default function App() {
                     <>
                       <section>
                         <h2 className="text-base sm:text-xl font-black text-slate-900 mb-4 flex items-center gap-3">
-                          <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#AE6965] rounded-full" />
+                          <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-primary rounded-full" />
                           Case Summary
                         </h2>
                         <p className="text-slate-600 leading-relaxed text-sm sm:text-lg font-medium">{selectedReport.reportData.hpcNarrative}</p>
@@ -2121,7 +2163,7 @@ export default function App() {
                         <h2 className="text-base sm:text-xl font-black text-slate-900 mb-6">Possible Diagnoses</h2>
                         <div className="space-y-3 sm:space-y-4">
                           {selectedReport.reportData.differentials?.map((diff: any, i: number) => (
-                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 hover:border-[#AE6965]/30 transition-colors bg-white shadow-sm">
+                            <div key={i} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-line hover:border-primary/30 transition-colors bg-surface shadow-sm">
                               <h4 className="font-black text-sm sm:text-base text-slate-900 mb-2 tracking-tight">{i + 1}. {diff.diagnosis}</h4>
                               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">{diff.reasoning}</p>
                             </div>
@@ -2156,8 +2198,8 @@ export default function App() {
                         </div>
                       </section>
 
-                      <div className="p-6 sm:p-8 rounded-[2rem] bg-[#AE6965]/5 border border-[#AE6965]/10 text-center">
-                        <Sparkles className="w-8 h-8 text-[#AE6965] mx-auto mb-3" />
+                      <div className="p-6 sm:p-8 rounded-[2rem] bg-primary/5 border border-primary/10 text-center">
+                        <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
                         <h4 className="font-black text-slate-900 mb-2">Write a case story?</h4>
                         <p className="text-xs text-slate-500 mb-6 font-medium">Create a professional narrative summary from these details.</p>
                           <button 
@@ -2167,7 +2209,7 @@ export default function App() {
                               setCompletedSteps(new Set(STEPS.map(s => s.id))); // Mark all as done
                               setView('generator');
                             }}
-                            className="px-8 py-3 rounded-xl bg-[#AE6965] text-white text-xs font-black hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 uppercase tracking-widest"
+                            className="px-8 py-3 rounded-xl bg-primary text-white text-xs font-black hover:bg-accent transition-all shadow-lg shadow-primary/20 uppercase tracking-widest"
                           >
                             History write up with AI
                           </button>
@@ -2202,7 +2244,7 @@ export default function App() {
               <div className="flex items-center gap-3 sm:gap-6">
                 <div className="hidden sm:flex flex-col items-end">
                   <span className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">{auth.currentUser?.displayName || 'Healthcare Professional'}</span>
-                  <span className="text-[9px] font-bold text-[#AE6965] uppercase tracking-widest">Clinical Workspace</span>
+                  <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Clinical Workspace</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                   {(auth.currentUser?.displayName || 'H').charAt(0).toUpperCase()}
@@ -2223,55 +2265,55 @@ export default function App() {
                       className="flex flex-col gap-6 sm:gap-8 md:gap-10"
                     >
                       <div className="flex flex-col gap-4 text-center md:text-left">
-                        <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 leading-tight uppercase tracking-widest">Start New Case</h2>
-                        <p className="text-sm sm:text-base md:text-xl text-slate-400 font-medium">Choose your preferred method of clinical data entry.</p>
+                        <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-text-main leading-tight uppercase tracking-widest">Start New Case</h2>
+                        <p className="text-sm sm:text-base md:text-xl text-text-muted font-medium">Choose your preferred method of clinical data entry.</p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <button 
                           onClick={() => setGeneratorMode('form')}
-                          className="group p-10 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
+                          className="group p-10 rounded-2xl bg-surface border border-line shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
                         >
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
+                          <div className="w-20 h-20 rounded-xl bg-bg text-text-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-500">
                             <ClipboardList className="w-10 h-10" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-widest group-hover:text-[#AE6965] transition-colors">Direct Form</h3>
-                            <p className="text-xs text-slate-400 leading-relaxed font-medium">Enter case details manually using our structured clinical form.</p>
+                            <h3 className="text-lg font-bold text-text-main mb-3 uppercase tracking-widest group-hover:text-primary transition-colors">Direct Form</h3>
+                            <p className="text-xs text-text-muted leading-relaxed font-medium">Enter case details manually using our structured clinical form.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                          <div className="mt-auto flex items-center gap-2 text-primary font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                             <span className="uppercase tracking-widest">Proceed</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
 
                         <button 
                           onClick={() => setGeneratorMode('upload')}
-                          className="group p-10 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
+                          className="group p-10 rounded-2xl bg-surface border border-line shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
                         >
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
+                          <div className="w-20 h-20 rounded-xl bg-bg text-text-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-500">
                             <FileUp className="w-10 h-10" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-widest group-hover:text-[#AE6965] transition-colors">Document Upload</h3>
-                            <p className="text-xs text-slate-400 leading-relaxed font-medium">Upload a PDF or image of clinical notes to extract data automatically.</p>
+                            <h3 className="text-lg font-bold text-text-main mb-3 uppercase tracking-widest group-hover:text-primary transition-colors">Document Upload</h3>
+                            <p className="text-xs text-text-muted leading-relaxed font-medium">Upload a PDF or image of clinical notes to extract data automatically.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                          <div className="mt-auto flex items-center gap-2 text-primary font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                             <span className="uppercase tracking-widest">Upload File</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
 
                         <button 
                           onClick={() => setGeneratorMode('audio')}
-                          className="group p-10 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
+                          className="group p-10 rounded-2xl bg-surface border border-line shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center gap-8 relative overflow-hidden active:scale-[0.98]"
                         >
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-500">
+                          <div className="w-20 h-20 rounded-xl bg-bg text-text-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-500">
                             <Mic className="w-10 h-10" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-3 uppercase tracking-widest group-hover:text-[#AE6965] transition-colors">Audio Input</h3>
-                            <p className="text-xs text-slate-400 leading-relaxed font-medium">Dictate the case details and let AI transcribe and organize the data.</p>
+                            <h3 className="text-lg font-bold text-text-main mb-3 uppercase tracking-widest group-hover:text-primary transition-colors">Audio Input</h3>
+                            <p className="text-xs text-text-muted leading-relaxed font-medium">Dictate the case details and let AI transcribe and organize the data.</p>
                           </div>
-                          <div className="mt-auto flex items-center gap-2 text-[#AE6965] font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                          <div className="mt-auto flex items-center gap-2 text-primary font-bold text-[10px] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                             <span className="uppercase tracking-widest">Start Recording</span> <ChevronRight className="w-4 h-4" />
                           </div>
                         </button>
@@ -2287,18 +2329,18 @@ export default function App() {
                     >
                       <button 
                         onClick={() => setGeneratorMode('selection')}
-                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-[10px] sm:text-xs transition-colors self-start"
+                        className="flex items-center gap-2 text-text-muted hover:text-primary font-bold text-[10px] sm:text-xs transition-colors self-start"
                       >
                         <ChevronLeft className="w-3.5 h-3.5 sm:w-4 h-4" />
                         BACK TO OPTIONS
                       </button>
                       
-                      <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-100 text-center">
-                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-[#AE6965]/5 text-[#AE6965] flex items-center justify-center mx-auto mb-6 sm:mb-8">
+                      <div className="bg-surface rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-line text-center">
+                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-primary/5 text-primary flex items-center justify-center mx-auto mb-6 sm:mb-8">
                           <FileUp className="w-8 h-8 sm:w-12 sm:h-12" />
                         </div>
-                        <h2 className="text-xl sm:text-3xl font-black text-slate-900 mb-2 sm:mb-4">Upload Clinical Document</h2>
-                        <p className="text-xs sm:text-base text-slate-500 mb-8 sm:mb-10 leading-relaxed">Select a PDF or image file (clinical notes, lab results, etc.) to extract patient data.</p>
+                        <h2 className="text-xl sm:text-3xl font-black text-text-main mb-2 sm:mb-4">Upload Clinical Document</h2>
+                        <p className="text-xs sm:text-base text-text-muted mb-8 sm:mb-10 leading-relaxed">Select a PDF or image file (clinical notes, lab results, etc.) to extract patient data.</p>
                         
                         <FileUpload 
                           label={isProcessingFile ? "Processing Document..." : "Select Document"}
@@ -2318,20 +2360,20 @@ export default function App() {
                     >
                       <button 
                         onClick={() => setGeneratorMode('selection')}
-                        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] font-bold text-[10px] sm:text-xs transition-colors self-start"
+                        className="flex items-center gap-2 text-text-muted hover:text-primary font-bold text-[10px] sm:text-xs transition-colors self-start"
                       >
                         <ChevronLeft className="w-3.5 h-3.5 sm:w-4 h-4" />
                         BACK TO OPTIONS
                       </button>
                       
-                      <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-100 text-center">
-                        <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 transition-all duration-500 ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-2xl shadow-red-200' : 'bg-[#AE6965]/5 text-[#AE6965]'}`}>
+                      <div className="bg-surface rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-line text-center">
+                        <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 transition-all duration-500 ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-2xl shadow-red-200' : 'bg-primary/5 text-primary'}`}>
                           {isRecording ? <MicOff className="w-8 h-8 sm:w-12 sm:h-12" /> : <Mic className="w-8 h-8 sm:w-12 sm:h-12" />}
                         </div>
-                        <h2 className="text-xl sm:text-3xl font-black text-slate-900 mb-2 sm:mb-4">
+                        <h2 className="text-xl sm:text-3xl font-black text-text-main mb-2 sm:mb-4">
                           {isRecording ? 'Recording Case Details...' : 'Dictate Case Details'}
                         </h2>
-                        <p className="text-xs sm:text-base text-slate-500 mb-8 sm:mb-10 leading-relaxed">
+                        <p className="text-xs sm:text-base text-text-muted mb-8 sm:mb-10 leading-relaxed">
                           {isRecording ? 'Speak clearly. We are capturing your clinical dictation.' : 'Press the button below and start speaking your case presentation.'}
                         </p>
                         
@@ -2342,7 +2384,7 @@ export default function App() {
                             w-full py-4 sm:py-6 rounded-xl sm:rounded-[2rem] font-black text-sm sm:text-lg transition-all flex items-center justify-center gap-3 sm:gap-4
                             ${isRecording 
                               ? 'bg-red-500 text-white shadow-xl shadow-red-200 hover:bg-red-600' 
-                              : 'bg-[#AE6965] text-white shadow-xl shadow-[#AE6965]/20 hover:bg-[#8E5450]'}
+                              : 'bg-primary text-white shadow-xl shadow-primary/20 hover:bg-accent'}
                             ${isProcessingFile ? 'opacity-50 cursor-not-allowed' : ''}
                           `}
                         >
@@ -2383,33 +2425,33 @@ export default function App() {
                       <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between px-2">
                           <div className="flex flex-col gap-1">
-                            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-widest uppercase text-slate-900 leading-tight">{currentStep.title}</h2>
-                            <p className="text-xs sm:text-sm md:text-lg text-slate-400 font-medium">{currentStep.subtitle}</p>
+                            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-widest uppercase text-text-main leading-tight">{currentStep.title}</h2>
+                            <p className="text-xs sm:text-sm md:text-lg text-text-muted font-medium">{currentStep.subtitle}</p>
                           </div>
                           <div className="hidden md:flex flex-col items-end gap-1">
-                            <span className="text-[10px] font-bold text-[#AE6965] uppercase tracking-[0.2em]">Progress</span>
+                            <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Progress</span>
                             <div className="flex items-center gap-1.5">
                               {STEPS.map((s, i) => (
                                 <div 
                                   key={s.id} 
-                                  className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= currentStepIndex ? 'bg-[#AE6965] scale-110' : 'bg-slate-100'}`} 
+                                  className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= currentStepIndex ? 'bg-primary scale-110' : 'bg-line'}`} 
                                 />
                               ))}
                             </div>
                           </div>
                         </div>
                         
-                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden md:hidden">
+                        <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden md:hidden">
                           <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
-                            className="h-full bg-[#AE6965]"
+                            className="h-full bg-primary"
                           />
                         </div>
                       </div>
 
                       <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[40px] p-6 sm:p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#AE6965]/10 to-transparent" />
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
                         {renderStepContent(currentStep.id)}
                       </div>
                     </motion.div>
@@ -2452,7 +2494,7 @@ export default function App() {
                     <button 
                       onClick={handleCompileReport}
                       disabled={isGenerating}
-                      className="flex items-center gap-2 md:gap-3 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-slate-900 text-white text-[11px] sm:text-xs md:text-sm font-black hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                      className="flex items-center gap-2 md:gap-3 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-text-main text-white text-[11px] sm:text-xs md:text-sm font-black hover:bg-text-main/90 transition-all shadow-lg shadow-text-main/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                     >
                       {isGenerating ? (
                         <>
@@ -2469,7 +2511,7 @@ export default function App() {
                   ) : (
                     <button 
                       onClick={handleNext}
-                      className="flex items-center gap-2 md:gap-3 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-[#AE6965] text-white text-[11px] sm:text-xs md:text-sm font-black hover:bg-[#8E5450] transition-all shadow-lg shadow-[#AE6965]/20 group active:scale-95"
+                      className="flex items-center gap-2 md:gap-3 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-primary text-white text-[11px] sm:text-xs md:text-sm font-black hover:bg-accent transition-all shadow-lg shadow-primary/20 group active:scale-95"
                     >
                       <span className="uppercase tracking-widest">Next</span>
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -2489,14 +2531,14 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center gap-4"
+            className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center gap-4"
           >
-            <div className="w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-[#AE6965] animate-spin" />
+            <div className="w-16 h-16 rounded-full bg-surface shadow-xl flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
             <div className="text-center px-6">
-              <h3 className="text-xl font-black text-slate-800 tracking-tight">Generating Case Story</h3>
-              <p className="text-xs text-[#AE6965] font-bold uppercase tracking-[0.2em] mt-2">{generationStatus || "Synthesizing clinical data..."}</p>
+              <h3 className="text-xl font-black text-text-main tracking-tight">Generating Case Story</h3>
+              <p className="text-xs text-primary font-bold uppercase tracking-[0.2em] mt-2">{generationStatus || "Synthesizing clinical data..."}</p>
             </div>
           </motion.div>
         )}
@@ -2517,17 +2559,17 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl border border-slate-100"
+              className="relative w-full max-w-sm bg-surface rounded-[2rem] p-8 shadow-2xl border border-line"
             >
               <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-6 mx-auto">
                 <AlertCircle className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-black text-slate-900 text-center mb-2">{showConfirmModal.title}</h3>
-              <p className="text-slate-500 text-center text-sm mb-8">{showConfirmModal.message}</p>
+              <h3 className="text-xl font-black text-text-main text-center mb-2">{showConfirmModal.title}</h3>
+              <p className="text-text-muted text-center text-sm mb-8">{showConfirmModal.message}</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConfirmModal(prev => ({ ...prev, show: false }))}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all"
+                  className="flex-1 py-3 rounded-xl border border-line text-text-muted font-bold text-xs hover:bg-bg transition-all"
                 >
                   CANCEL
                 </button>
@@ -2557,12 +2599,12 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-surface rounded-3xl shadow-2xl overflow-hidden"
             >
               <div className="p-8 flex flex-col gap-6">
                 <div className="flex flex-col gap-2 text-center">
-                  <h3 className="text-2xl font-bold text-slate-800">Choose Report Type</h3>
-                  <p className="text-sm text-slate-400">Select how you would like your clinical data compiled.</p>
+                  <h3 className="text-2xl font-bold text-text-main">Choose Report Type</h3>
+                  <p className="text-sm text-text-muted">Select how you would like your clinical data compiled.</p>
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -2572,13 +2614,13 @@ export default function App() {
                     className={`flex items-center gap-4 p-4 rounded-2xl border transition-all group text-left ${
                       originalReportStatus === 'error' ? 'border-red-200 bg-red-50' : 
                       originalReportStatus === 'completed' ? 'border-emerald-200 bg-emerald-50' :
-                      'border-slate-100 hover:bg-slate-50'
+                      'border-line hover:bg-bg'
                     }`}
                   >
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                       originalReportStatus === 'error' ? 'bg-red-500 text-white' :
                       originalReportStatus === 'completed' ? 'bg-emerald-500 text-white' :
-                      'bg-slate-100 text-slate-400 group-hover:bg-[#AE6965] group-hover:text-white'
+                      'bg-bg text-text-muted group-hover:bg-primary group-hover:text-white'
                     }`}>
                       {originalReportStatus === 'generating' ? <Loader2 className="w-6 h-6 animate-spin" /> :
                        originalReportStatus === 'completed' ? <Check className="w-6 h-6" /> :
@@ -2589,18 +2631,18 @@ export default function App() {
                       <p className={`font-bold ${
                         originalReportStatus === 'error' ? 'text-red-700' :
                         originalReportStatus === 'completed' ? 'text-emerald-700' :
-                        'text-slate-700'
+                        'text-text-main'
                       }`}>
                         {originalReportStatus === 'generating' ? 'Generating...' : 
                          originalReportStatus === 'completed' ? 'Download Complete' :
                          originalReportStatus === 'error' ? 'Generation Failed' :
                          'Original Report'}
                       </p>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-tight">
+                      <p className="text-[10px] text-text-muted uppercase tracking-tight">
                         {originalReportStatus === 'error' ? 'Please try again' : 'Structured clinical data capture'}
                       </p>
                     </div>
-                    {originalReportStatus === 'idle' && <Download className="w-4 h-4 text-slate-300" />}
+                    {originalReportStatus === 'idle' && <Download className="w-4 h-4 text-text-muted/30" />}
                   </button>
 
                   <button 
@@ -2609,13 +2651,13 @@ export default function App() {
                     className={`flex items-center gap-4 p-4 rounded-2xl border transition-all group text-left ${
                       storyReportStatus === 'error' ? 'border-red-200 bg-red-50' : 
                       storyReportStatus === 'completed' ? 'border-emerald-200 bg-emerald-50' :
-                      'border-[#AE6965]/20 bg-[#AE6965]/5 hover:bg-[#AE6965]/10'
+                      'border-primary/20 bg-primary/5 hover:bg-primary/10'
                     }`}
                   >
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                       storyReportStatus === 'error' ? 'bg-red-500 text-white' :
                       storyReportStatus === 'completed' ? 'bg-emerald-500 text-white' :
-                      'bg-[#AE6965] text-white'
+                      'bg-primary text-white'
                     }`}>
                       {storyReportStatus === 'generating' ? <Loader size="sm" /> :
                        storyReportStatus === 'completed' ? <Check className="w-6 h-6" /> :
@@ -2626,7 +2668,7 @@ export default function App() {
                       <p className={`font-bold ${
                         storyReportStatus === 'error' ? 'text-red-700' :
                         storyReportStatus === 'completed' ? 'text-emerald-700' :
-                        'text-[#AE6965]'
+                        'text-primary'
                       }`}>
                         {storyReportStatus === 'generating' ? 'Writing...' : 
                          storyReportStatus === 'completed' ? 'Story Complete' :
@@ -2636,18 +2678,18 @@ export default function App() {
                       <p className={`text-[10px] uppercase tracking-tight ${
                         storyReportStatus === 'error' ? 'text-red-400' :
                         storyReportStatus === 'completed' ? 'text-emerald-400' :
-                        'text-[#AE6965]/60'
+                        'text-primary/60'
                       }`}>
                         {storyReportStatus === 'error' ? 'Service unavailable' : 'A professional summary of the case.'}
                       </p>
                     </div>
-                    {storyReportStatus === 'idle' && <Zap className="w-4 h-4 text-[#AE6965]" />}
+                    {storyReportStatus === 'idle' && <Zap className="w-4 h-4 text-primary" />}
                   </button>
                 </div>
 
                 <button 
                   onClick={() => setShowReportModal(false)}
-                  className="w-full py-3 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                  className="w-full py-3 text-xs font-bold text-text-muted hover:text-text-main transition-colors"
                 >
                   CANCEL
                 </button>

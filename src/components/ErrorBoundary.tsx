@@ -52,27 +52,27 @@ export class ErrorBoundary extends React.Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[#FAF5F5]/30 p-6">
-          <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl p-10 text-center">
+        <div className="min-h-screen flex items-center justify-center bg-bg p-6">
+          <div className="w-full max-w-md bg-surface rounded-[2.5rem] border border-line shadow-2xl p-10 text-center">
             <div className="w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mx-auto mb-8 text-red-500">
               <AlertCircle className="w-10 h-10" />
             </div>
             
-            <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">Something went wrong</h2>
-            <p className="text-slate-500 mb-6 leading-relaxed">
+            <h2 className="text-2xl font-black text-text-main mb-4 tracking-tight">Something went wrong</h2>
+            <p className="text-text-muted mb-6 leading-relaxed">
               {errorMessage}
             </p>
 
             {errorDetails && (
-              <div className="mb-8 p-4 bg-slate-50 rounded-2xl text-left">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Error Details</p>
-                <p className="text-xs font-mono text-slate-600 break-all">{errorDetails}</p>
+              <div className="mb-8 p-4 bg-bg rounded-2xl text-left">
+                <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">Error Details</p>
+                <p className="text-xs font-mono text-text-main break-all">{errorDetails}</p>
               </div>
             )}
 
             <button
               onClick={this.handleReset}
-              className="w-full bg-[#AE6965] hover:bg-[#8E5450] text-white font-bold py-4 rounded-2xl shadow-xl shadow-[#AE6965]/20 transition-all flex items-center justify-center gap-3 group"
+              className="w-full bg-primary hover:bg-accent text-white font-bold py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-3 group"
             >
               <RotateCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
               Refresh Application

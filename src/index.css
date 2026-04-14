@@ -1,34 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #8E5450; /* Terracotta Dark */
-  --color-secondary: #D4A5A2; /* Terracotta Light */
-  --color-accent: #AE6965; /* Terracotta Primary */
-  --color-surface: #FAF5F5; /* Terracotta Surface */
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-primary: #AE6965;    /* Richer, Premium Dusty Rose */
+  --color-accent: #4A4E69;     /* Professional Slate */
+  --color-surface: #FFFFFF;    /* Pure white for cards */
+  --color-bg: #FAF7F2;         /* Warm Linen for background */
+  --color-line: #E5E1DA;       /* Soft Taupe for borders */
+  --color-text-main: #22223B;  /* Deep Charcoal for serious readability */
+  --color-text-muted: #9A8C98; /* Muted Mauve */
 }
 
 @layer base {
   body {
-    @apply antialiased;
+    @apply bg-bg text-text-main font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
   }
 }
 
-/* Custom scrollbar for a cleaner look */
-::-webkit-scrollbar {
-  width: 6px;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #E2E8F0;
-  border-radius: 10px;
+.glass-card {
+  @apply bg-surface/80 backdrop-blur-md border border-line shadow-sm;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #CBD5E1;
+.pink-gradient {
+  background: linear-gradient(135deg, #AE6965 0%, #8E5451 100%);
+}
+
+.pink-glow {
+  box-shadow: 0 0 20px rgba(174, 105, 101, 0.15);
 }

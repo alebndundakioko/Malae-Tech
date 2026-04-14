@@ -95,71 +95,71 @@ export const Profile = ({ onBack }: ProfileProps) => {
     <div className="max-w-2xl mx-auto px-6 sm:px-10 py-10 sm:py-16">
       <button 
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-400 hover:text-[#AE6965] transition-colors mb-10 group"
+        className="flex items-center gap-2 text-text-muted hover:text-primary transition-colors mb-10 group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         <span className="text-[10px] font-bold uppercase tracking-widest">Back to Archive</span>
       </button>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="bg-[#FDFCFB] p-8 sm:p-12 border-b border-slate-50 relative overflow-hidden">
+      <div className="bg-surface rounded-2xl shadow-sm border border-line overflow-hidden">
+        <div className="bg-bg p-8 sm:p-12 border-b border-line relative overflow-hidden">
           <div className="flex items-center gap-6 relative z-10">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-text-main flex items-center justify-center text-white shadow-sm">
               <User className="w-8 h-8 sm:w-10 sm:h-10" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-widest text-slate-900">Clinical Profile</h1>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">Manage your professional identity</p>
+              <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-widest text-text-main">Clinical Profile</h1>
+              <p className="text-text-muted text-xs sm:text-sm font-medium mt-1">Manage your professional identity</p>
             </div>
           </div>
         </div>
 
         <form onSubmit={handleUpdate} className="p-8 sm:p-12 space-y-8 sm:space-y-10">
           <div className="space-y-3">
-            <label htmlFor="profile-email" className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Email Address</label>
+            <label htmlFor="profile-email" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Email Address</label>
             <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" aria-hidden="true" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" aria-hidden="true" />
               <input
                 id="profile-email"
                 type="email"
                 disabled
                 value={auth.currentUser?.email || ''}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed text-sm font-medium"
+                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-bg text-text-muted cursor-not-allowed text-sm font-medium"
               />
             </div>
-            <p className="text-[9px] text-slate-400 font-medium ml-1 flex items-center gap-1">
+            <p className="text-[9px] text-text-muted font-medium ml-1 flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
               Email cannot be changed for security reasons.
             </p>
           </div>
 
           <div className="space-y-3">
-            <label htmlFor="profile-display-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Full Name</label>
+            <label htmlFor="profile-display-name" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Full Name</label>
             <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
               <input
                 id="profile-display-name"
                 type="text"
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-slate-100 bg-white text-slate-700 focus:outline-none focus:border-[#AE6965] transition-all text-sm font-medium"
+                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
                 placeholder="Dr. Samantha"
               />
             </div>
           </div>
 
           <div className="space-y-3">
-            <label htmlFor="profile-hospital" className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Hospital / Institution</label>
+            <label htmlFor="profile-hospital" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Hospital / Institution</label>
             <div className="relative group">
-              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-[#AE6965] transition-colors" aria-hidden="true" />
+              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
               <input
                 id="profile-hospital"
                 type="text"
                 required
                 value={hospital}
                 onChange={(e) => setHospital(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-slate-100 bg-white text-slate-700 focus:outline-none focus:border-[#AE6965] transition-all text-sm font-medium"
+                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
                 placeholder="General Hospital"
               />
             </div>
@@ -190,7 +190,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-[#1A1A1A] hover:bg-slate-800 text-white font-bold py-4 sm:py-5 rounded-xl shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-70 group"
+            className="w-full bg-text-main hover:bg-slate-800 text-white font-bold py-4 sm:py-5 rounded-xl shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-70 group"
           >
             {saving ? (
               <Loader />

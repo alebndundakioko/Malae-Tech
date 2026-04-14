@@ -12,8 +12,8 @@ export const Loader = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
     <div className={`relative ${sizes[size]}`}>
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-        className="w-full h-full border-2 border-slate-100 border-t-[#AE6965] rounded-full"
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        className="w-full h-full border-[1px] border-primary/5 border-t-accent rounded-full"
       />
     </div>
   );
