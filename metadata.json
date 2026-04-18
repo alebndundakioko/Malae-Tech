@@ -1,5 +1,5 @@
 {
-  "name": "Malae Tech - Medical History Generator",
-  "description": "A professional medical history taking tool based on Hutchinson's Clinical Methods.",
+  "name": "Malae Tech - Clinical Workspace",
+  "description": "Intelligent PWA-powered clinical case generator and research workspace. Supports offline access and mobile installation.",
   "requestFramePermissions": ["microphone"]
 }

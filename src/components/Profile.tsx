@@ -10,9 +10,12 @@ import {
   Save, 
   CheckCircle2, 
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { Loader } from './Loader';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 interface ProfileProps {
   onBack: () => void;
@@ -25,6 +28,8 @@ export const Profile = ({ onBack }: ProfileProps) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const { isInstallable, installApp } = useInstallPrompt();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -202,6 +207,57 @@ export const Profile = ({ onBack }: ProfileProps) => {
             )}
           </button>
         </form>
+
+        <div className="p-8 sm:p-12 border-t border-line bg-slate-50/50">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-text-main leading-none">Mobile App Access</h3>
+              <p className="text-[10px] text-text-muted font-medium mt-1">Install clinical workspace on your device</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-xs text-text-muted leading-relaxed">
+              Malae Tech utilizes <span className="text-primary font-bold">Progressive Web Technology</span> to provide a native-level clinical experience. Installing the application ensures:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2 text-[10px] text-text-muted font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
+                <span><strong className="text-text-main">Full-Screen Workspace:</strong> Removes browser UI for focused history taking.</span>
+              </li>
+              <li className="flex items-start gap-2 text-[10px] text-text-muted font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
+                <span><strong className="text-text-main">Offline Capability:</strong> Access clinical archives without an active internet connection.</span>
+              </li>
+              <li className="flex items-start gap-2 text-[10px] text-text-muted font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
+                <span><strong className="text-text-main">Instant Launch:</strong> Dedicated icon on your home screen for rapid clinical access.</span>
+              </li>
+            </ul>
+
+            {isInstallable ? (
+              <button
+                onClick={installApp}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-primary text-white font-bold transition-all hover:bg-accent shadow-lg shadow-primary/20 active:scale-95 group"
+              >
+                <Download className="w-4 h-4 group-hover:bounce transition-transform" />
+                <span className="text-xs tracking-widest uppercase">Install Mobile App</span>
+              </button>
+            ) : (
+              <div className="p-4 rounded-xl border border-line bg-white/50 text-center">
+                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                  App already installed or not supported by this browser
+                </p>
+                <p className="text-[9px] text-text-muted mt-1 lowercase italic">
+                  (On iOS: Tap "Share" → "Add to Home Screen")
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

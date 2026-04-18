@@ -45,7 +45,10 @@ import {
   MicOff,
   FileUp,
   History,
-  Edit
+  Edit,
+  Baby,
+  Activity,
+  FlaskConical
 } from 'lucide-react';
 
 // Firebase imports
@@ -82,9 +85,13 @@ type StepId =
   | 'presenting_complaint' 
   | 'hpc_details' 
   | 'review_of_systems' 
+  | 'ob_gyn_hx'
   | 'past_medical_hx' 
   | 'past_surgical_hx' 
-  | 'family_social_hx';
+  | 'family_social_hx'
+  | 'examination'
+  | 'investigations'
+  | 'procedure_notes';
 
 interface Step {
   id: StepId;
@@ -140,6 +147,13 @@ const STEPS: Step[] = [
     subtitle: 'Checking other body systems.' 
   },
   { 
+    id: 'ob_gyn_hx', 
+    label: 'Ob/Gyn Hx', 
+    icon: Baby, 
+    title: 'Obstetrics & Gynaecology', 
+    subtitle: 'Reproductive history (if applicable).' 
+  },
+  { 
     id: 'past_medical_hx', 
     label: 'Past Medical Hx', 
     icon: ClipboardList, 
@@ -160,6 +174,27 @@ const STEPS: Step[] = [
     title: 'Socio-Familial Context', 
     subtitle: 'Family history and lifestyle.' 
   },
+  { 
+    id: 'examination', 
+    label: 'Examination', 
+    icon: Activity, 
+    title: 'Physical Examination', 
+    subtitle: 'Clinical findings on assessment.' 
+  },
+  { 
+    id: 'investigations', 
+    label: 'Investigations', 
+    icon: FlaskConical, 
+    title: 'Diagnostic Workup', 
+    subtitle: 'Lab results and imaging reports.' 
+  },
+  { 
+    id: 'procedure_notes', 
+    label: 'Procedure Notes', 
+    icon: Scissors, 
+    title: 'Surgical/Procedure', 
+    subtitle: 'Intraoperative and post-op notes.' 
+  }
 ];
 
 // --- Components ---
@@ -521,9 +556,9 @@ const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('.').toUpperCase();
 };
 
-const MedicalReportPDF = ({ formData }: { formData: any }) => (
+const MedicalReportPDF = ({ formData, steps }: { formData: any, steps: Step[] }) => (
   <Document>
-    {STEPS.map((step, index) => (
+    {steps.map((step, index) => (
       <Page key={step.id} size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.header}>
           <View>
@@ -764,6 +799,13 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
       <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Review of other systems</Text>
       <Text style={pdfStyles.paragraph}>{storyData.rosNarrative}</Text>
 
+      {storyData.obGynNarrative && (
+        <>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Obstetrics & Gynaecology History:</Text>
+          <Text style={pdfStyles.paragraph}>{storyData.obGynNarrative}</Text>
+        </>
+      )}
+
       <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Past Medical history:</Text>
       <Text style={pdfStyles.paragraph}>{storyData.pmhNarrative}</Text>
 
@@ -792,6 +834,20 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
 
       <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>On Examination</Text>
       <Text style={pdfStyles.paragraph}>{storyData.examinationNarrative}</Text>
+
+      {storyData.investigationsNarrative && (
+        <>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Investigations Summary;</Text>
+          <Text style={pdfStyles.paragraph}>{storyData.investigationsNarrative}</Text>
+        </>
+      )}
+
+      {storyData.procedureNarrative && (
+        <>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Procedure & Progress Notes;</Text>
+          <Text style={pdfStyles.paragraph}>{storyData.procedureNarrative}</Text>
+        </>
+      )}
 
       <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Impression;</Text>
       <Text style={pdfStyles.paragraph}>{storyData.impression}</Text>
@@ -849,8 +905,19 @@ export default function App() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<any>(() => {
     const saved = localStorage.getItem('malae_form_data');
-    return saved ? JSON.parse(saved) : {};
+    return saved ? JSON.parse(saved) : {
+      admissionDate: new Date().toISOString().split('T')[0],
+      specialty: 'Internal Medicine',
+      address: 'Kampala',
+    };
   });
+
+  const activeSteps = useMemo(() => {
+    return STEPS.filter(step => {
+      if (step.id === 'ob_gyn_hx') return formData.specialty === 'Obstetrics & Gynaecology';
+      return true;
+    });
+  }, [formData.specialty]);
 
   useEffect(() => {
     localStorage.setItem('malae_form_data', JSON.stringify(formData));
@@ -1521,7 +1588,7 @@ export default function App() {
       if (user) {
         await handleSaveReport(null, 'original');
       }
-      const blob = await pdf(<MedicalReportPDF formData={formData} />).toBlob();
+      const blob = await pdf(<MedicalReportPDF formData={formData} steps={activeSteps} />).toBlob();
       triggerDownload(blob, `Clinical_Report_${formData.fullName || 'Patient'}`);
       setOriginalReportStatus('completed');
       setTimeout(() => setOriginalReportStatus('idle'), 3000);
@@ -1538,10 +1605,13 @@ export default function App() {
     const fallbackData = {
       hpcNarrative: "The clinical narrative could not be generated at this time. Please review the raw data in the original report.",
       rosNarrative: "Review of systems analysis unavailable.",
+      obGynNarrative: "",
       pmhNarrative: "Medical history summary unavailable.",
       pshNarrative: "Surgical history summary unavailable.",
       fshNarrative: "Social history summary unavailable.",
       examinationNarrative: "Physical examination write-up unavailable.",
+      investigationsNarrative: "",
+      procedureNarrative: "",
       impression: "Clinical impression pending further analysis.",
       plan: ["Review clinical data manually", "Re-attempt report generation", "Consult senior staff"],
       differentials: [
@@ -1566,25 +1636,32 @@ export default function App() {
         
         Instructions:
         1. HPC Narrative: Construct a detailed, chronological narrative of the history of presenting complaint (HPC). Utilize professional syntax such as "presented with a [duration] history of...", "insidious vs. acute onset", "gradually progressive nature", and "pertinent negatives including...". Ensure the narrative flows logically from the primary complaint to associated symptoms and clinical progression.
-        2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal) and highlight both positive findings and significant negatives in a professional, concise manner.
-        3. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing chronic comorbidities (e.g., "known retroviral disease on HAART", "hypertensive on ACE inhibitors") and their potential impact on the current presentation.
-        4. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history, noting dates, procedures, and any relevant perioperative complications.
-        5. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions, lifestyle factors (tobacco/alcohol units), and socioeconomic context relevant to clinical recovery.
-        6. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include:
+        2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal, Musculoskeletal, Genitourinary, Neurological) and highlight both positive findings and significant negatives in a professional, concise manner.
+        3. Ob/Gyn History: If applicable, synthesize a narrative for Obstetrics and Gynaecological history, including LNMP, EDD, WOA, Parity, Gravida, and past reproductive history.
+        4. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing chronic comorbidities (e.g., "known retroviral disease on HAART", "hypertensive on ACE inhibitors") and their potential impact on the current presentation.
+        5. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history, noting dates, procedures, and any relevant perioperative complications.
+        6. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions, lifestyle factors (tobacco/alcohol units), and socioeconomic context relevant to clinical recovery.
+        7. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include:
            - General Examination: Nutritional status, pallor, jaundice, lymphadenopathy, edema.
-           - Vitals: Hemodynamic stability and physiological parameters.
-           - Local/Regional Examination: Detailed description using appropriate clinical descriptors.
-           - Systemic Examination: Focused cardiorespiratory, abdominal, and neurological assessments.
-        7. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification. Use "in view of [specific positive findings]" to support the diagnosis and "unlikely because of [specific negative findings or clinical inconsistencies]" to argue against it. Maintain a high level of diagnostic precision and prioritize by clinical likelihood.
-        8. Case Discussion: Provide an exhaustive academic discourse. This section must be deeply analytical and evidence-based. Include the following sub-sections:
-           - Definition and Pathophysiology: Discuss the molecular, cellular, or anatomical basis of the condition.
-           - Pathophysiological Mechanisms: Detail the disease progression, etiology, and typical sequelae.
-           - Clinical Features and Presentation: Contrast the typical presentation with this specific patient's findings.
-           - Investigations and Diagnostic Workup: Discuss the gold standard investigations, relevant imaging (e.g., USG, CT, MRI), and laboratory markers based on current clinical guidelines.
-           - Management and Treatment Approach: Detail the management options, including specific techniques if applicable and care protocols.
-        9. Impression: Provide a concise, multi-axial clinical impression (e.g., "A [age]/[sex] patient with [comorbidities] presenting with clinical features highly suggestive of [primary diagnosis]").
-        10. Plan: Formulate a 5-10 point evidence-based clinical management plan, ranging from immediate stabilization and further investigations to definitive intervention and follow-up.
-        11. References: Provide 4-5 high-impact academic references (e.g., NEJM, Lancet, specialized journals) in standard Vancouver or AMA format.
+           - Vitals: BP, PR, RR, SPO2 and physiological stability.
+           - Abdominal/Vaginal Examination: Detailed findings if relevant.
+           - Systemic Examination: Focused cardiorespiratory, respiratory, and neurological assessments.
+        8. Investigations Summary: Synthesize laboratory and imaging findings into a professional summary, highlighting critical values and clinical significance.
+        9. Procedure/Progress Notes: If applicable, summarize intraoperative findings, post-operative instructions, and clinical progress.
+        10. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification. Use "in view of [specific positive findings]" to support the diagnosis and "unlikely because of [specific negative findings or clinical inconsistencies]" to argue against it. Maintain a high level of diagnostic precision and prioritize by clinical likelihood.
+        11. Case Discussion: Provide an exhaustive academic discourse. This section must be deeply analytical and evidence-based. Include the following sub-sections:
+            - Introduction: Brief overview of the case.
+            - Definition and Classification: Academic definition and relevant classifications.
+            - Risk Factors and Etiology: Discuss predisposing factors and causes.
+            - Pathophysiology: Discuss the molecular, cellular, or anatomical basis of the condition.
+            - Clinical Features and Presentation: Contrast typical presentation with this patient's findings.
+            - Diagnosis and Investigations: Discuss gold standard investigations and diagnostic workup.
+            - Management and Treatment Approach: Detail management options and care protocols.
+            - Complications: Discuss potential immediate and long-term complications.
+            - Conclusion: Summary of the case and clinical takeaways.
+        12. Impression: Provide a concise, multi-axial clinical impression (e.g., "A [age]/[sex] patient with [comorbidities] presenting with clinical features highly suggestive of [primary diagnosis]").
+        13. Plan: Formulate a 5-10 point evidence-based clinical management plan, ranging from immediate stabilization and further investigations to definitive intervention and follow-up.
+        14. References: Provide 4-5 high-impact academic references (e.g., NEJM, Lancet, specialized journals) in standard Vancouver or AMA format.
         
         Handling Missing Data & Edge Cases:
         - If specific clinical details are absent from the input, DO NOT hallucinate. Use professional language like "Not documented at presentation," "Further clinical correlation required," or "Records regarding [system] were unavailable."
@@ -1594,10 +1671,13 @@ export default function App() {
         {
           "hpcNarrative": "...",
           "rosNarrative": "...",
+          "obGynNarrative": "...",
           "pmhNarrative": "...",
           "pshNarrative": "...",
           "fshNarrative": "...",
           "examinationNarrative": "...",
+          "investigationsNarrative": "...",
+          "procedureNarrative": "...",
           "differentials": [
             { "diagnosis": "...", "reasoning": "..." }
           ],
@@ -1809,7 +1889,7 @@ export default function App() {
       case 'review_of_systems':
         return (
           <div className="flex flex-col gap-8">
-            {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL'].map(system => (
+            {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL', 'MUSCULOSKELETAL', 'GENITOURINARY', 'NEUROLOGICAL'].map(system => (
               <div key={system} className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -1821,6 +1901,22 @@ export default function App() {
                 </div>
               </div>
             ))}
+          </div>
+        );
+      case 'ob_gyn_hx':
+        return (
+          <div className="flex flex-col gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <InputField label="LNMP" type="date" value={formData.lnmp} onChange={(v: any) => updateField('lnmp', v)} />
+              <InputField label="EDD" type="date" value={formData.edd} onChange={(v: any) => updateField('edd', v)} />
+              <InputField label="WOA" placeholder="e.g., 12W5D" value={formData.woa} onChange={(v: any) => updateField('woa', v)} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputField label="Gravida" placeholder="e.g., G3" value={formData.gravida} onChange={(v: any) => updateField('gravida', v)} />
+              <InputField label="Parity" placeholder="e.g., P1+1" value={formData.parity} onChange={(v: any) => updateField('parity', v)} />
+            </div>
+            <TextAreaField label="Past Obstetrics History" placeholder="Details of previous pregnancies..." value={formData.pastObHisto} onChange={(v: any) => updateField('pastObHisto', v)} onVoiceInput={() => startVoiceInput('pastObHisto')} isRecording={recordingField === 'pastObHisto'} isTranscribing={transcribingField === 'pastObHisto'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Gynaecological History" placeholder="Menarche, cycles, contraception, etc." value={formData.gynHisto} onChange={(v: any) => updateField('gynHisto', v)} onVoiceInput={() => startVoiceInput('gynHisto')} isRecording={recordingField === 'gynHisto'} isTranscribing={transcribingField === 'gynHisto'} recordingTimeLeft={recordingTimeLeft} />
           </div>
         );
       case 'past_medical_hx':
@@ -1855,6 +1951,36 @@ export default function App() {
               <InputField label="Current Marital Status" value={formData.maritalStatus} onChange={(v: any) => updateField('maritalStatus', v)} onVoiceInput={() => startVoiceInput('maritalStatus')} isRecording={recordingField === 'maritalStatus'} isTranscribing={transcribingField === 'maritalStatus'} recordingTimeLeft={recordingTimeLeft} />
               <InputField label="Household Dependents" value={formData.dependents} onChange={(v: any) => updateField('dependents', v)} onVoiceInput={() => startVoiceInput('dependents')} isRecording={recordingField === 'dependents'} isTranscribing={transcribingField === 'dependents'} recordingTimeLeft={recordingTimeLeft} />
             </div>
+          </div>
+        );
+      case 'examination':
+        return (
+          <div className="flex flex-col gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputField label="BP" placeholder="120/80" value={formData.bp} onChange={(v: any) => updateField('bp', v)} />
+              <InputField label="Pulse Rate" placeholder="72bpm" value={formData.pr} onChange={(v: any) => updateField('pr', v)} />
+              <InputField label="Respiratory Rate" placeholder="18bpm" value={formData.rr} onChange={(v: any) => updateField('rr', v)} />
+              <InputField label="SPO2" placeholder="98%" value={formData.spo2} onChange={(v: any) => updateField('spo2', v)} />
+            </div>
+            <TextAreaField label="General Examination" placeholder="Condition, pallor, jaundice, edema..." value={formData.generalExam} onChange={(v: any) => updateField('generalExam', v)} onVoiceInput={() => startVoiceInput('generalExam')} isRecording={recordingField === 'generalExam'} isTranscribing={transcribingField === 'generalExam'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Abdominal Examination" placeholder="Fullness, tenderness, masses, FH..." value={formData.abdominalExam} onChange={(v: any) => updateField('abdominalExam', v)} onVoiceInput={() => startVoiceInput('abdominalExam')} isRecording={recordingField === 'abdominalExam'} isTranscribing={transcribingField === 'abdominalExam'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Vaginal Examination" placeholder="Vulva, vagina, cervix, OS..." value={formData.vaginalExam} onChange={(v: any) => updateField('vaginalExam', v)} onVoiceInput={() => startVoiceInput('vaginalExam')} isRecording={recordingField === 'vaginalExam'} isTranscribing={transcribingField === 'vaginalExam'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Systemic Examination" placeholder="Cardiovascular, Respiratory, CNS..." value={formData.systemicExam} onChange={(v: any) => updateField('systemicExam', v)} onVoiceInput={() => startVoiceInput('systemicExam')} isRecording={recordingField === 'systemicExam'} isTranscribing={transcribingField === 'systemicExam'} recordingTimeLeft={recordingTimeLeft} />
+          </div>
+        );
+      case 'investigations':
+        return (
+          <div className="flex flex-col gap-8">
+            <TextAreaField label="Laboratory Results" placeholder="FBC, RFTs, LFTs, HIV, Hep B..." value={formData.labResults} onChange={(v: any) => updateField('labResults', v)} onVoiceInput={() => startVoiceInput('labResults')} isRecording={recordingField === 'labResults'} isTranscribing={transcribingField === 'labResults'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Imaging Reports" placeholder="USS, X-ray, CT, MRI..." value={formData.imagingReports} onChange={(v: any) => updateField('imagingReports', v)} onVoiceInput={() => startVoiceInput('imagingReports')} isRecording={recordingField === 'imagingReports'} isTranscribing={transcribingField === 'imagingReports'} recordingTimeLeft={recordingTimeLeft} />
+          </div>
+        );
+      case 'procedure_notes':
+        return (
+          <div className="flex flex-col gap-8">
+            <TextAreaField label="Intraoperative Notes" placeholder="Procedure details, findings, EBL..." value={formData.intraopNotes} onChange={(v: any) => updateField('intraopNotes', v)} onVoiceInput={() => startVoiceInput('intraopNotes')} isRecording={recordingField === 'intraopNotes'} isTranscribing={transcribingField === 'intraopNotes'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Post-Operative Instructions" placeholder="Monitoring, fluids, medications..." value={formData.postopInstructions} onChange={(v: any) => updateField('postopInstructions', v)} onVoiceInput={() => startVoiceInput('postopInstructions')} isRecording={recordingField === 'postopInstructions'} isTranscribing={transcribingField === 'postopInstructions'} recordingTimeLeft={recordingTimeLeft} />
+            <TextAreaField label="Follow-up / Progress Notes" placeholder="Daily reviews, improvement, discharge plan..." value={formData.progressNotes} onChange={(v: any) => updateField('progressNotes', v)} onVoiceInput={() => startVoiceInput('progressNotes')} isRecording={recordingField === 'progressNotes'} isTranscribing={transcribingField === 'progressNotes'} recordingTimeLeft={recordingTimeLeft} />
           </div>
         );
       default:
@@ -1908,7 +2034,7 @@ export default function App() {
               <div className="px-5 py-2 border-b border-line mb-4">
                 <span className="text-[9px] font-bold text-text-muted uppercase tracking-[0.3em]">Case Progress</span>
               </div>
-              {STEPS.map((step, index) => {
+              {activeSteps.map((step, index) => {
                 const isActive = currentStepIndex === index;
                 const isCompleted = completedSteps.has(step.id);
                 const Icon = step.icon;
@@ -2030,7 +2156,7 @@ export default function App() {
                     <div className="px-5 py-2 border-b border-line mb-4">
                       <span className="text-[8px] font-bold text-text-muted uppercase tracking-[0.2em]">Case Progress</span>
                     </div>
-                    {STEPS.map((step, index) => {
+                    {activeSteps.map((step, index) => {
                       const isActive = currentStepIndex === index;
                       const isCompleted = completedSteps.has(step.id);
                       const Icon = step.icon;
@@ -2171,7 +2297,7 @@ export default function App() {
                   <div className="flex flex-wrap items-center gap-3">
                     <button 
                       onClick={async () => {
-                        const blob = await pdf(<MedicalReportPDF formData={selectedReport.patientData} />).toBlob();
+                        const blob = await pdf(<MedicalReportPDF formData={selectedReport.patientData} steps={activeSteps} />).toBlob();
                         triggerDownload(blob, `Clinical_Report_${selectedReport.patientData.fullName || 'Patient'}`);
                       }}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-[10px] hover:bg-slate-200 transition-all"
@@ -2300,7 +2426,7 @@ export default function App() {
                             onClick={() => {
                               setFormData(selectedReport.patientData);
                               setCurrentStepIndex(0);
-                              setCompletedSteps(new Set(STEPS.map(s => s.id))); // Mark all as done
+                              setCompletedSteps(new Set(activeSteps.map(s => s.id))); // Mark all as done
                               setView('generator');
                             }}
                             className="px-8 py-3 rounded-xl bg-primary text-white text-xs font-black hover:bg-accent transition-all shadow-lg shadow-primary/20 uppercase tracking-widest"
@@ -2525,7 +2651,7 @@ export default function App() {
                           <div className="hidden md:flex flex-col items-end gap-1">
                             <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Progress</span>
                             <div className="flex items-center gap-1.5">
-                              {STEPS.map((s, i) => (
+                              {activeSteps.map((s, i) => (
                                 <div 
                                   key={s.id} 
                                   className={`w-2 h-2 rounded-full transition-all duration-500 ${i <= currentStepIndex ? 'bg-primary scale-110' : 'bg-line'}`} 
@@ -2538,7 +2664,7 @@ export default function App() {
                         <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden md:hidden">
                           <motion.div 
                             initial={{ width: 0 }}
-                            animate={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
+                            animate={{ width: `${((currentStepIndex + 1) / activeSteps.length) * 100}%` }}
                             className="h-full bg-primary"
                           />
                         </div>
