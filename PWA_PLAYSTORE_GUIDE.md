@@ -17,15 +17,33 @@ This guide outlines the simplest path to publishing the **Malae Tech Clinical Wo
 
 ## 🚀 Phase 2: Initialization & Build
 
-1. **Initialize Android Project**:
-   Inside your project directory, run:
-   ```bash
-   bubblewrap init --manifest=https://ais-dev-uyd6ehinkvjd3dd3ytwd53-33678728397.europe-west1.run.app/manifest.webmanifest
-   ```
-   *   **Package ID**: Use `tech.malae.app`
-   *   **Host**: Use the URL where your app is hosted.
+1.  **Build your project**:
+    This generates the `dist` folder with the manifest file:
+    ```bash
+    npm install
+    npm run build
+    ```
+    *(If `npm run build` fails with "missing script", run this instead: `npx vite build`)*
 
-2. **Generate Signing Key**:
+2.  **Initialize Android Project**:
+    Inside your project directory, run:
+    ```bash
+    bubblewrap init --manifest dist/manifest.webmanifest
+    ```
+    
+    **⚠️ Troubleshooting "cli ERROR Invalid URL"**:
+    If you see `Invalid URL`, it means Bubblewrap expects an absolute path or a URL. 
+    **Try this instead**:
+    ```bash
+    bubblewrap init --manifest ./dist/manifest.webmanifest
+    ```
+    *(Note the `./` at the beginning)*
+
+    *   **Package ID**: Use `com.malaetech.app` (or your preferred unique ID).
+    *   **Host**: Use your intended production domain (e.g., `malaetech.web.app` or `malaetech.com`).
+    *   **Display Mode**: Ensure it is set to `standalone`.
+
+3.  **Generate Signing Key**:
    Run the build command for the first time:
    ```bash
    bubblewrap build
@@ -50,7 +68,7 @@ Trusted Web Activities require a "digital handshake" to remove the browser URL b
      "relation": ["delegate_permission/common.handle_all_urls"],
      "target": {
        "namespace": "android_app",
-       "package_name": "tech.malae.app",
+       "package_name": "com.malaetech.app",
        "sha256_cert_fingerprints": ["YOUR_COPIED_SHA256_FINGERPRINT"]
      }
    }

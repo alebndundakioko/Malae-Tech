@@ -12,7 +12,9 @@ import {
   AlertCircle,
   ArrowLeft,
   Smartphone,
-  Download
+  Download,
+  Trash2,
+  ShieldAlert
 } from 'lucide-react';
 import { Loader } from './Loader';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
@@ -256,6 +258,36 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="p-8 sm:p-12 border-t border-line bg-red-50/30">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-red-900 leading-none">Privacy & Data</h3>
+              <p className="text-[10px] text-red-700/70 font-medium mt-1">Manage your account and medical data</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-xs text-red-800/80 leading-relaxed">
+              In accordance with medical data privacy regulations, you have the right to request the complete deletion of your account and all associated clinical data.
+            </p>
+            
+            <a
+              href={`mailto:support@malae.tech?subject=Account%20and%20Data%20Deletion%20Request&body=I%20would%20like%20to%20request%20the%20complete%20deletion%20of%20my%20account%20(${auth.currentUser?.email})%20and%20all%20associated%20clinical%20records%20from%20Malae%20Tech.`}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 border-red-200 bg-white text-red-600 font-bold transition-all hover:bg-red-50 hover:border-red-300 active:scale-95 group"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="text-xs tracking-widest uppercase">Request Data Deletion</span>
+            </a>
+            
+            <p className="text-[9px] text-red-700/60 italic text-center">
+              Please note: Professional clinical data once deleted cannot be recovered. Requests are typically processed within 30 days.
+            </p>
           </div>
         </div>
       </div>

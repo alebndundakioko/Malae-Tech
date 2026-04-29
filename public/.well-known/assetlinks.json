@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "tech.malae.app",
+      "package_name": "com.malaetech.app",
       "sha256_cert_fingerprints": [
-        "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+        "4B:D6:64:EE:B4:EC:3B:B2:45:D6:31:86:47:C3:7B:71:D9:52:11:BA:F6:B9:DD:EC:46:27:BC:3F:F0:A5:25:81"
       ]
     }
   }
