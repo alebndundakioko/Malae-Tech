@@ -18,29 +18,27 @@ This guide outlines the simplest path to publishing the **Malae Tech Clinical Wo
 ## 🚀 Phase 2: Initialization & Build
 
 1.  **Build your project**:
-    This generates the `dist` folder with the manifest file:
+    This generates the `dist` folder. Run this command in your terminal:
     ```bash
-    npm install
-    npm run build
+    npx vite build
     ```
-    *(If `npm run build` fails with "missing script", run this instead: `npx vite build`)*
-
+    
 2.  **Initialize Android Project**:
-    Inside your project directory, run:
+    Run this command:
     ```bash
     bubblewrap init --manifest dist/manifest.webmanifest
     ```
     
     **⚠️ Troubleshooting "cli ERROR Invalid URL"**:
-    If you see `Invalid URL`, it means Bubblewrap expects an absolute path or a URL. 
-    **Try this instead**:
+    If you see `Invalid URL`, it means Bubblewrap expects a URL or a clear local file path.
+    **Try this**:
     ```bash
     bubblewrap init --manifest ./dist/manifest.webmanifest
     ```
-    *(Note the `./` at the beginning)*
+    *(If that still fails, use the **absolute path** to the manifest file, e.g., `C:\Users\...\dist\manifest.webmanifest`)*
 
     *   **Package ID**: Use `com.malaetech.app` (or your preferred unique ID).
-    *   **Host**: Use your intended production domain (e.g., `malaetech.web.app` or `malaetech.com`).
+    *   **Host**: Use your intended production domain (e.g., `malaetech.com`).
     *   **Display Mode**: Ensure it is set to `standalone`.
 
 3.  **Generate Signing Key**:

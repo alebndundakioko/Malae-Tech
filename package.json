@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
+    "pwa:build": "vite build && node -e \"const fs = require('fs'); if (fs.existsSync('dist/manifest.webmanifest')) fs.copyFileSync('dist/manifest.webmanifest', 'dist/manifest.json')\"",
     "preview": "vite preview",
-    "pwa:build": "npm run build && node -e \"require('fs').copyFileSync('dist/manifest.webmanifest', 'dist/manifest.json')\"",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "cap:sync": "npx vite build && npx cap sync",
