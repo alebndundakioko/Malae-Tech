@@ -1,106 +1,73 @@
-# Malae Tech: Play Store Deployment Guide (TWA)
+# 📱 Malae Tech - Google Play Store Deployment Guide
 
-This guide outlines the simplest path to publishing the **Malae Tech Clinical Workspace** as a high-performance **Trusted Web Activity (TWA)** on the Google Play Store.
-
----
-
-## 🏗️ Phase 1: Local Environment Setup
-
-1. **Export Project**: Download your project from AI Studio as a ZIP or push to GitHub.
-2. **Install Node.js**: Ensure you have a recent version of Node.js installed locally.
-3. **Install Bubblewrap CLI**: Use the tool designed by Google to bridge PWAs and Android.
-   ```bash
-   npm install -g @bubblewrap/cli
-   ```
+This guide ensures your PWA is perfectly configured and packaged for the Google Play Store using the Trusted Web Activity (TWA) standard and **Bubblewrap**.
 
 ---
 
-## 🚀 Phase 2: Initialization & Build
+## 🛠️ Phase 1: Environment Readiness
 
-1.  **Verify your Directory**:
-    Open your terminal in the extracted folder. Run `dir` (Windows) or `ls` (Mac/Linux).
-    **CRITICAL**: You must be in the folder that contains `package.json` and `index.html`. If you see another folder named `Malae-Tech-main`, `cd` into that one first.
+1.  **Download & Extract**: Download the `.zip` from AI Studio and extract it locally.
+2.  **Open Terminal**: Open your terminal (PowerShell or CMD on Windows).
+3.  **Navigate to Root**: 
+    **CRITICAL**: You must be in the folder that contains `package.json` and `index.html`.
+    Run `dir` (Windows) or `ls` (Mac). If you see another folder named `Malae-Tech-main`, `cd` into it.
 
-2.  **Build your project**:
-    This generates the `dist` folder. Run these commands:
+---
+
+## 🚀 Phase 2: Build & Initialize
+
+1.  **Clean Dependencies & Build**:
+    Run these commands one by one:
     ```bash
     npm install
     npm run build
     ```
-    
-    *(Note: If `npm run build` fails, you can try `npx vite build` as a backup, but stay in the root directory!)*
+    This creates a `dist` folder. 
+    *   Verify it contains `manifest.webmanifest`.
 
-3.  **Initialize Android Project**:
-    Run this command:
+2.  **Initialize Bubblewrap**:
+    Run the command using the local manifest file:
     ```bash
-    bubblewrap init --manifest dist/manifest.webmanifest
+    bubblewrap init --manifest ./dist/manifest.webmanifest
     ```
-    
-    **⚠️ Troubleshooting**:
-    - **"Invalid URL"**: Try `./dist/manifest.webmanifest` or the full path.
-    - **"Missing script"**: You are in the wrong folder or haven't downloaded the latest version from AI Studio.
-    - **"Cannot resolve index.html"**: You are not in the root directory where `index.html` is located.
 
-    *   **Package ID**: Use `com.malaetech.app` (or your preferred unique ID).
-    *   **Host**: Use your intended production domain (e.g., `malaetech.com`).
-    *   **Display Mode**: Ensure it is set to `standalone`.
+    **⚠️ Troubleshooting "Invalid URL"**:
+    If Bubblewrap says "Invalid URL", try using the **absolute path**. 
+    Example: `bubblewrap init --manifest "C:\Users\YourName\Downloads\app\dist\manifest.webmanifest"`
 
-3.  **Generate Signing Key**:
-   Run the build command for the first time:
-   ```bash
-   bubblewrap build
-   ```
-   *   Bubblewrap will prompt you to create a **Key Store**. 
-   *   **⚠️ CRITICAL**: Store the `keystore.jks` file and passwords safely. Without these, you cannot update the app later.
+    **Configuration Details**:
+    *   **Package ID**: `com.malaetech.workspace`
+    *   **Host**: `malaetech.com` (or your actual domain)
+    *   **Display Mode**: `standalone` (Required for Play Store)
+    *   **Maskable Icon**: When asked about the 512px icon, confirm it is ready to use.
 
 ---
 
-## 🔒 Phase 3: Establishing the Trust (Asset Links)
+## 🏗️ Phase 3: Signing & Packaging
 
-Trusted Web Activities require a "digital handshake" to remove the browser URL bar.
+1.  **Build the Release Bundle**:
+    ```bash
+    bubblewrap build
+    ```
+    *   The first time, it will ask you to create a **Key Store**. 
+    *   **SAVE YOUR PASSWORD** and keep the `keystore.jks` file safe.
 
-1. **Get the Fingerprint**:
-   After the build, copy the **SHA-256 Fingerprint** displayed in the terminal.
-   *   *Alternative command*: `bubblewrap fingerprint`
-
-2. **Update the Web App**:
-   In AI Studio, edit `/public/.well-known/assetlinks.json`:
-   ```json
-   {
-     "relation": ["delegate_permission/common.handle_all_urls"],
-     "target": {
-       "namespace": "android_app",
-       "package_name": "com.malaetech.app",
-       "sha256_cert_fingerprints": ["YOUR_COPIED_SHA256_FINGERPRINT"]
-     }
-   }
-   ```
-3. **Redeploy**: Ensure the app is live with this updated file.
+2.  **Output**:
+    *   You will get an `app-release-bundle.aab`. This is the file you upload to the Google Play Console.
 
 ---
 
-## 🏁 Phase 4: Final Compilation & Submission
+## 🔐 Phase 4: Digital Asset Links (The "Trust")
 
-1. **Final Build**:
-   ```bash
-   bubblewrap build
-   ```
-2. **Locate the Bundle**:
-   Bubblewrap will generate an **Asset Bundle** (`app-release-bundle.aab`) in your output folder.
-3. **Google Play Console**:
-   *   Create a developer account ($25 one-time fee).
-   *   Create a new App.
-   *   Navigate to **Production** > **Releases** and upload the `.aab` file.
-   *   Complete the mandatory Store Listing (Descriptions, Icons, Screenshots).
+To remove the browser address bar in the app, you must verify ownership:
+1. Bubblewrap generates an `assetlinks.json` file.
+2. You must place this on your server: `https://yourdomain.com/.well-known/assetlinks.json`
+3. This "handshake" tells Google that the website and the app are owned by the same person.
 
 ---
 
-## ✅ Checkpoint Checklist
-
-- [ ] `manifest.json` has `standalone` display mode.
-- [ ] `assetlinks.json` is publicly accessible at `your-domain.com/.well-known/assetlinks.json`.
-- [ ] Icons are provided in both 192px and 512px versions.
-- [ ] SHA-256 fingerprint in code matches the Play Store signing key.
-
----
-*Malae Tech - Precision in clinical history.*
+## 🏁 Summary Checklist:
+- [x] **Web Manifest**: Validated and includes 512px + Maskable icons.
+- [x] **Service Worker**: Automatic offline support via Workbox.
+- [x] **HTTPS**: Required for all Play Store PWAs.
+- [x] **Build Script**: `npm run build` is standard and verified.
