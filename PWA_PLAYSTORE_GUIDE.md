@@ -17,25 +17,29 @@ This guide outlines the simplest path to publishing the **Malae Tech Clinical Wo
 
 ## 🚀 Phase 2: Initialization & Build
 
-1.  **Build your project**:
-    This generates the `dist` folder. Run this command in your terminal:
+1.  **Verify your Directory**:
+    Open your terminal in the extracted folder. Run `dir` (Windows) or `ls` (Mac/Linux).
+    **CRITICAL**: You must be in the folder that contains `package.json` and `index.html`. If you see another folder named `Malae-Tech-main`, `cd` into that one first.
+
+2.  **Build your project**:
+    This generates the `dist` folder. Run these commands:
     ```bash
-    npx vite build
+    npm install
+    npm run build
     ```
     
-2.  **Initialize Android Project**:
+    *(Note: If `npm run build` fails, you can try `npx vite build` as a backup, but stay in the root directory!)*
+
+3.  **Initialize Android Project**:
     Run this command:
     ```bash
     bubblewrap init --manifest dist/manifest.webmanifest
     ```
     
-    **⚠️ Troubleshooting "cli ERROR Invalid URL"**:
-    If you see `Invalid URL`, it means Bubblewrap expects a URL or a clear local file path.
-    **Try this**:
-    ```bash
-    bubblewrap init --manifest ./dist/manifest.webmanifest
-    ```
-    *(If that still fails, use the **absolute path** to the manifest file, e.g., `C:\Users\...\dist\manifest.webmanifest`)*
+    **⚠️ Troubleshooting**:
+    - **"Invalid URL"**: Try `./dist/manifest.webmanifest` or the full path.
+    - **"Missing script"**: You are in the wrong folder or haven't downloaded the latest version from AI Studio.
+    - **"Cannot resolve index.html"**: You are not in the root directory where `index.html` is located.
 
     *   **Package ID**: Use `com.malaetech.app` (or your preferred unique ID).
     *   **Host**: Use your intended production domain (e.g., `malaetech.com`).
