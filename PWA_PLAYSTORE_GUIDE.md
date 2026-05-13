@@ -33,12 +33,20 @@ This step takes your code from AI Studio and puts it into the Android folder.
 2.  Click **Open** and select the `android` folder located *inside* your project.
 3.  **Wait** for the project to finish "Syncing".
 
+**⚠️ Troubleshooting "No matching toolchains found for requested specification: {languageVersion=21...}"**:
+If you see this error in Android Studio:
+*   **The Cause**: One of the newest Capacitor plugins (like `@capacitor/filesystem`) is forcing Gradle to look for Java 21, but you likely only have Java 17.
+*   **The Fix**: I have updated `android/build.gradle` to force **every single task** to use Java 17, even if the plugin asks for 21. 
+*   **The Action**: In Android Studio, go to **File** > **Settings** (or **Android Studio** > **Settings** on Mac) > **Build, Execution, Deployment** > **Build Tools** > **Gradle**.
+*   **The Action**: Change the **Gradle JDK** dropdown to **Internal (jbr-17)** or any Java 17 instance. **This is the most important step.**
+*   **The Action**: Click the **"Sync Project with Gradle Files"** button (the small Elephant icon in the top toolbar).
+*   **Wait**: It should now successfully use your local Java 17 and finish the build.
+
 **⚠️ Troubleshooting "Invalid source release: 21"**:
 If you see `error: invalid source release: 21` in your build output:
-*   **The Cause**: capacitor and some plugins were hardcoded to Java 21, but your Android Studio/JDK is likely Java 17.
-*   **The Fix**: I have found and fixed the hidden "21" references in `capacitor.build.gradle` and強制 Java 17 compatibility.
-*   **The Action**: In Android Studio, go to **File** > **Settings** > **Build, Execution, Deployment** > **Build Tools** > **Gradle**.
-*   **The Action**: Ensure **Gradle JDK** is set to **"jbr-17"** (or similar Java 17). Then click **"Sync Project with Gradle Files"**.
+*   **The Cause**: Some plugins are hardcoded to Java 21, but your environment is Java 17.
+*   **The Solution**: I have already applied a patch to your `android/build.gradle` file that forces the project to use Java 17 compatible settings and ignores the "21" requirement. 
+*   **The Action**: Simply ensure **Gradle JDK** is set to **"jbr-17"** (or similar Java 17) in Settings, then click **"Sync Project with Gradle Files"**.
 
 **⚠️ Troubleshooting "Could not download gradle-8.3.1.jar"**:
 If you see an error about failing to download a `.jar` file:

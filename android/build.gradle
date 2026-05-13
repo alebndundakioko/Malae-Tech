@@ -25,6 +25,9 @@ allprojects {
 
     tasks.withType(JavaCompile).configureEach {
         options.release = 17
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
     }
 
     afterEvaluate { project ->
@@ -34,6 +37,11 @@ allprojects {
                     sourceCompatibility JavaVersion.VERSION_17
                     targetCompatibility JavaVersion.VERSION_17
                 }
+            }
+        }
+        if (project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
+            project.kotlin {
+                jvmToolchain(17)
             }
         }
     }
