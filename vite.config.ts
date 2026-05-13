@@ -16,6 +16,7 @@ export default defineConfig(({mode}) => {
           name: 'Malae Tech - Clinical Workspace',
           short_name: 'Malae',
           description: 'Intelligent Clinical Case Generator and Research Workspace',
+          id: '/',
           theme_color: '#AE6965',
           background_color: '#ffffff',
           display: 'standalone',
@@ -24,19 +25,13 @@ export default defineConfig(({mode}) => {
           start_url: '/',
           icons: [
             {
-              src: 'https://www.gstatic.com/images/branding/product/2x/hospital_64dp.png',
-              sizes: '128x128',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: 'https://www.gstatic.com/images/branding/product/2x/hospital_64dp.png',
+              src: 'https://cdn-icons-png.flaticon.com/512/3063/3063176.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'https://www.gstatic.com/images/branding/product/2x/hospital_64dp.png',
+              src: 'https://cdn-icons-png.flaticon.com/512/3063/3063176.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable'
