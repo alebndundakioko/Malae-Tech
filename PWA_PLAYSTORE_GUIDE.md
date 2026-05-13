@@ -48,6 +48,13 @@ If you see `error: invalid source release: 21` in your build output:
 *   **The Solution**: I have already applied a patch to your `android/build.gradle` file that forces the project to use Java 17 compatible settings and ignores the "21" requirement. 
 *   **The Action**: Simply ensure **Gradle JDK** is set to **"jbr-17"** (or similar Java 17) in Settings, then click **"Sync Project with Gradle Files"**.
 
+## 🚀 Final Google Play Store Checklist
+Before you upload to the Play Console, make sure you've done these:
+1.  **Change Package Name**: If you don't want `com.malaetech.app`, search and replace it in the entire `android/` folder and `capacitor.config.ts`.
+2.  **App Icons**: Replace the icons in `android/app/src/main/res/mipmap-*` with your own. You can use Android Studio's **Image Asset** tool (Right-click `app` folder > New > Image Asset).
+3.  **App Signing**: In Android Studio, go to **Build** > **Generate Signed Bundle / APK** to create the `.aab` file for Google Play.
+4.  **Version Code**: Every time you upload a NEW version to Google Play, you MUST increase the `versionCode` (e.g., from 1 to 2) in `android/app/build.gradle`.
+
 **⚠️ Troubleshooting "Could not download gradle-8.3.1.jar"**:
 If you see an error about failing to download a `.jar` file:
 1.  **I have added extra timeout settings** to your `android/gradle.properties` file.
