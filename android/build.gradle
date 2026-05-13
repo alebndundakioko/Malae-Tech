@@ -30,6 +30,13 @@ allprojects {
         }
     }
 
+    // Force Kotlin to JVM 17 for this project
+    if (project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
+        project.kotlin {
+            jvmToolchain(17)
+        }
+    }
+
     afterEvaluate { project ->
         if (project.hasProperty('android')) {
             project.android {

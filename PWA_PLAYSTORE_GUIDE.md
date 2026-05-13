@@ -48,6 +48,23 @@ If you see `error: invalid source release: 21` in your build output:
 *   **The Solution**: I have already applied a patch to your `android/build.gradle` file that forces the project to use Java 17 compatible settings and ignores the "21" requirement. 
 *   **The Action**: Simply ensure **Gradle JDK** is set to **"jbr-17"** (or similar Java 17) in Settings, then click **"Sync Project with Gradle Files"**.
 
+## 🔐 Key Store & App Signing (Google Play)
+If you are getting the "Path" wrong or can't find your key:
+1.  **Where is it?**: The keystore is a file (usually `my-key.jks`) on your computer. It is NOT part of the zip file you download.
+2.  **The "Correct" Path**: In the Android Studio Signing window, **always use the "Choose existing..." button** instead of typing the path manually. This ensures the format is correct (especially on Windows).
+3.  **Lost the password/alias?**: If this is your first time, click **"Create new..."** in the signing window to make a brand new one. **SAVE THIS FILE AND PASSWORD**—if you lose them, you can never update your app on Google Play again.
+
+**⚠️ Troubleshooting "Android resource compilation failed" (Broken Images)**:
+If you see errors like `ic_launcher_round.png: Image not loaded` or `Android resource compilation failed`:
+*   **The Fix**: I have already added a "cruncherEnabled = false" patch to your `android/app/build.gradle` which stops Android Studio from being too picky about image formats.
+*   **The Action**: In Android Studio, go to **Build** > **Clean Project**, then **Build** > **Rebuild Project**. 
+*   **The Nuclear Option (If still failing)**: If it *still* says `Image not loaded` or `Resource compilation failed`:
+    1. Right-click the `app` folder in the left sidebar.
+    2. Select **New** > **Image Asset**.
+    3. For "Path", select ANY valid image file on your computer.
+    4. Click **Next** > **Finish**.
+    This will regenerate the icon files properly and overwrite the ones causing the error.
+
 ## 🚀 Final Google Play Store Checklist
 Before you upload to the Play Console, make sure you've done these:
 1.  **Change Package Name**: If you don't want `com.malaetech.app`, search and replace it in the entire `android/` folder and `capacitor.config.ts`.
