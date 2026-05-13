@@ -192,10 +192,9 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=2070" 
+            src="/auth_bg.png" 
             alt="African Medical Professional" 
             className="w-full h-full object-cover opacity-40 scale-105"
-            referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-text-main via-text-main/80 to-transparent mix-blend-multiply" />
           <div className="absolute inset-0 bg-gradient-to-t from-text-main via-transparent to-transparent opacity-60" />

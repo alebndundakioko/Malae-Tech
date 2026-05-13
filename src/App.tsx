@@ -54,6 +54,9 @@ import {
 // Firebase imports
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { 
   collection, 
   addDoc, 
@@ -1495,7 +1498,8 @@ export default function App() {
     const planItems = storyData.plan?.map((p: string) => ({ text: p, options: { bullet: true } })) || [];
     slide5.addText(planItems, { x: 0.5, y: 2.5, w: 9, h: 3, fontSize: 14 });
 
-    pres.writeFile({ fileName: `Clinical_Case_${getInitials(formData.fullName)}.pptx` });
+    const blob = await pres.write({ outputType: "blob" }) as Blob;
+    triggerDownload(blob, `Clinical_Case_${getInitials(formData.fullName)}`, 'pptx');
   };
 
   const handleLogout = async () => {
@@ -1745,8 +1749,39 @@ export default function App() {
     }
   };
 
-  const triggerDownload = (blob: Blob, baseName: string) => {
-    const fileName = `${baseName}_${new Date().getTime()}.pdf`;
+  const triggerDownload = async (blob: Blob, baseName: string, extension: string = 'pdf') => {
+    const fileName = `${baseName}_${new Date().getTime()}.${extension}`;
+    
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = async () => {
+          const base64data = reader.result as string;
+          
+          // Write to temporary directory
+          const result = await Filesystem.writeFile({
+            path: fileName,
+            data: base64data,
+            directory: Directory.Cache
+          });
+
+          // Share the file
+          await Share.share({
+            title: `Share Clinical ${extension.toUpperCase()}`,
+            text: 'Malae Tech Clinical Documentation',
+            url: result.uri,
+            dialogTitle: 'Share or Save Report'
+          });
+        };
+      } catch (error) {
+        console.error("Native share error:", error);
+        alert("Could not open file externally. Ensure storage permissions are granted.");
+      }
+      return;
+    }
+
+    // Web Fallback
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

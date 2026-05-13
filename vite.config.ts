@@ -25,13 +25,13 @@ export default defineConfig(({mode}) => {
           start_url: '/',
           icons: [
             {
-              src: 'https://cdn-icons-png.flaticon.com/512/3063/3063176.png',
+              src: '/icon.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'https://cdn-icons-png.flaticon.com/512/3063/3063176.png',
+              src: '/icon.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable'
