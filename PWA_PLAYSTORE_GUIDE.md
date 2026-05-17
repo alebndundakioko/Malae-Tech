@@ -48,6 +48,17 @@ If you see `error: invalid source release: 21` in your build output:
 *   **The Solution**: I have already applied a patch to your `android/build.gradle` file that forces the project to use Java 17 compatible settings and ignores the "21" requirement. 
 *   **The Action**: Simply ensure **Gradle JDK** is set to **"jbr-17"** (or similar Java 17) in Settings, then click **"Sync Project with Gradle Files"**.
 
+## 🛠️ Commands for PowerShell (New Unzipped Project)
+Run these commands in order inside your project folder:
+1. `npm install` (Installs all libraries)
+2. `npm run build` (Builds your website)
+3. `npx cap sync android` (Updates your Android app with the latest code)
+
+## 🔐 Key Store Location
+*   **Recommended**: Keep your `.jks` file in a dedicated folder on your computer (e.g., `C:\Users\YourName\Documents\Keys\`). 
+*   **Project Folder**: If you put it in the project, put it in `android/app/`. 
+*   **NEVER**: Put it in `src/main/java`.
+
 ## 🔐 Key Store & App Signing (Google Play)
 If you are getting the "Path" wrong or can't find your key:
 1.  **Where is it?**: The keystore is a file (usually `my-key.jks`) on your computer. It is NOT part of the zip file you download.
@@ -64,6 +75,61 @@ If you see errors like `ic_launcher_round.png: Image not loaded` or `Android res
     3. For "Path", select ANY valid image file on your computer.
     4. Click **Next** > **Finish**.
     This will regenerate the icon files properly and overwrite the ones causing the error.
+
+## 🖥️ Manual Fixes (No Download Required)
+If you don't want to download a new zip, you can apply these fixes manually using **Notepad** (or any text editor):
+
+### Fix 1: The "Java 21 / Toolchain" Error
+1. Open `android / build.gradle` in Notepad.
+2. Find the `allprojects { ... }` block.
+3. Replace the entire `allprojects` block with the "Correct" one I provided in the chat (it's the one with `jvmToolchain(17)` and `afterEvaluate`).
+4. **SAVE** the file.
+
+### Fix 2: The "VANILLA_ICE_CREAM" or "Requires SDK 36" Error
+1. Open `android / variables.gradle` in Notepad.
+2. Change the following lines exactly:
+   ```gradle
+   compileSdkVersion = 35
+   targetSdkVersion = 35
+   androidxActivityVersion = '1.9.2'
+   androidxAppCompatVersion = '1.7.0'
+   androidxCoreVersion = '1.13.1'
+   androidxFragmentVersion = '1.8.2'
+   coreSplashScreenVersion = '1.0.1'
+   androidxWebkitVersion = '1.12.1'
+   ```
+3. **SAVE** the file.
+
+### Fix 3: The "Requires Android Gradle Plugin 8.6+" Error
+If you see errors about "requires AGP 8.6.0" or "uses AGP 8.3.1":
+*   **The Fix**: This happens when libraries are too new. The Fix 2 above (downgrading to `1.9.2`, `1.13.1`, etc.) fixes this.
+*   **The Action**: Ensure your `variables.gradle` matches the versions in Fix 2.
+
+### Fix 4: The "Broken Images" Error
+1. Open `android / app / build.gradle` in Notepad.
+2. Find the `aaptOptions` section.
+3. Add `cruncherEnabled = false` inside it.
+4. **SAVE** the file.
+
+### Fix 5: The "Duplicate class kotlin.collections" Error
+1. Open `android / app / build.gradle` (the one inside the `app` folder).
+2. Go to the very bottom of the file.
+3. Paste this code block:
+   ```gradle
+   configurations.all {
+       resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+           def requested = details.requested
+           if (requested.group == 'org.jetbrains.kotlin') {
+               if (requested.name == 'kotlin-stdlib-jdk7' || requested.name == 'kotlin-stdlib-jdk8') {
+                   details.useTarget "org.jetbrains.kotlin:kotlin-stdlib:${requested.version}"
+               }
+           }
+       }
+   }
+   ```
+4. **SAVE** the file.
+
+**AFTER DOING ANY OF THESE**: In Android Studio, you must click the **Sync Elephant icon** (Sync Project with Gradle Files) at the top right.
 
 ## 🚀 Final Google Play Store Checklist
 Before you upload to the Play Console, make sure you've done these:

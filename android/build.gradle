@@ -24,10 +24,7 @@ allprojects {
     }
 
     tasks.withType(JavaCompile).configureEach {
-        options.release = 17
-        javaCompiler = javaToolchains.compilerFor {
-            languageVersion = JavaLanguageVersion.of(17)
-        }
+        options.release.set(17)
     }
 
     // Force Kotlin to JVM 17 for this project
@@ -43,6 +40,12 @@ allprojects {
                 compileOptions {
                     sourceCompatibility JavaVersion.VERSION_17
                     targetCompatibility JavaVersion.VERSION_17
+                }
+                // Force Kotlin target for all modules/plugins
+                if (project.hasProperty('kotlinOptions')) {
+                    kotlinOptions {
+                        jvmTarget = '17'
+                    }
                 }
             }
         }

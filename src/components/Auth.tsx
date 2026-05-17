@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mail, 
@@ -145,7 +145,11 @@ export const Auth = ({ onSuccess }: AuthProps) => {
     setLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
+    // Add custom parameters to help with popup behavior if needed
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
+      console.log("Starting Google Sign-In...");
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
@@ -153,30 +157,50 @@ export const Auth = ({ onSuccess }: AuthProps) => {
         throw new Error("No email associated with this Google account.");
       }
 
-      // Create/Update user document
+      console.log("Google Sign-In successful, user:", user.uid);
+
+      // Check if user document exists first to avoid overwriting metadata
+      const userRef = doc(db, 'users', user.uid);
       const path = `users/${user.uid}`;
+      
       try {
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || '',
-          createdAt: serverTimestamp()
-        }, { merge: true });
+        const userSnap = await getDocFromServer(userRef);
+        
+        if (!userSnap.exists()) {
+          console.log("Creating new user profile...");
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || '',
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp()
+          });
+        } else {
+          console.log("Updating existing user profile...");
+          await setDoc(userRef, {
+            lastLogin: serverTimestamp(),
+            // Don't overwrite existing displayName if Google's is empty
+            ...(user.displayName ? { displayName: user.displayName } : {})
+          }, { merge: true });
+        }
       } catch (error) {
+        console.error("Firestore error during Google sign-in profile sync:", error);
         handleFirestoreError(error, OperationType.WRITE, path);
       }
       
       onSuccess();
     } catch (err: any) {
-      console.error("Google Sign-In error:", err);
+      console.error("Google Sign-In error details:", err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError("Sign-in cancelled. The popup was closed before completion.");
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError("Google sign-in is not enabled. Please enable it in the Firebase Console.");
+        setError("Google sign-in is not enabled. Please enable it in the Firebase Console (Authentication > Sign-in method).");
       } else if (err.code === 'auth/popup-blocked') {
-        setError("Sign-in popup was blocked by your browser. Please allow popups for this site.");
+        setError("Sign-in popup was blocked by your browser. Please allow popups for Malae Tech to sign in.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("This domain is not authorized for Google Sign-In. Please add it to the authorized domains in Firebase Console.");
       } else if (err.message?.includes('Missing or insufficient permissions')) {
-        setError("Database access denied. Please check Firestore security rules.");
+        setError("Database access denied. Please contact support or check security rules.");
       } else {
         setError(err.message || "Google Sign-In failed. Please try again.");
       }

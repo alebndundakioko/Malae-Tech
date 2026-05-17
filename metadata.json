@@ -1,5 +1,6 @@
 {
   "name": "Malae Tech - Clinical Workspace",
   "description": "Intelligent PWA-powered clinical case generator and research workspace. Supports offline access and mobile installation.",
-  "requestFramePermissions": ["microphone"]
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

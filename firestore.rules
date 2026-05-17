@@ -54,11 +54,10 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+      return data.keys().hasAll(['uid', 'email']) &&
              data.uid is string &&
              data.email is string &&
-             data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
-             (!('hospital' in data) || (data.hospital is string && data.hospital.size() < 200));
+             data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
     function isValidReport(data) {

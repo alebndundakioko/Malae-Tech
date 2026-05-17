@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useId, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Document, 
   Page, 
@@ -14,12 +14,11 @@ import {
   pdf, 
   Font 
 } from '@react-pdf/renderer';
-import { GoogleGenAI } from "@google/genai";
 import { 
   User as UserIcon, 
   Zap, 
   Clock, 
-  Stethoscope, 
+  Stethoscope as StethoscopeIcon, 
   ClipboardList, 
   Scissors, 
   Users, 
@@ -37,6 +36,7 @@ import {
   Save,
   LogOut,
   LayoutDashboard,
+  Plus,
   AlertCircle,
   Check,
   Calendar,
@@ -48,7 +48,12 @@ import {
   Edit,
   Baby,
   Activity,
-  FlaskConical
+  FlaskConical,
+  Syringe,
+  HeartPulse,
+  Microscope,
+  CircleDot,
+  Bone
 } from 'lucide-react';
 
 // Firebase imports
@@ -106,97 +111,102 @@ interface Step {
 
 // --- Constants ---
 
-const SPECIALTIES = [
-  'Internal Medicine',
-  'Surgical',
-  'Paediatrics',
-  'Obstetrics & Gynaecology'
+const SPECIALTY_MAP = [
+  { id: 'Internal Medicine', label: 'Internal Medicine', icon: StethoscopeIcon, color: 'from-blue-500 to-indigo-600', description: 'General medical care and diagnosis.' },
+  { id: 'Surgical', label: 'Surgical', icon: Syringe, color: 'from-rose-500 to-pink-600', description: 'Pre-op, intra-op, and postoperative care.' },
+  { id: 'Paediatrics', label: 'Paediatrics', icon: Baby, color: 'from-amber-400 to-orange-500', description: 'Clinical care for children and adolescents.' },
+  { id: 'Obstetrics & Gynaecology', label: 'Obstetrics & Gynaecology', icon: Microscope, color: 'from-emerald-500 to-teal-600', description: 'Reproductive health and childbirth.' },
+  { id: 'Emergency Medicine', icon: Activity, color: 'from-red-500 to-orange-600', label: 'Emergency', description: 'Acute and urgent clinical presentations.' },
+  { id: 'Psychiatry', icon: HeartPulse, color: 'from-purple-500 to-indigo-600', label: 'Psychiatry', description: 'Mental health assessment and care.' },
+  { id: 'Orthopaedics', icon: Bone, color: 'from-slate-500 to-slate-700', label: 'Orthopaedics', description: 'Musculoskeletal and trauma cases.' }
 ];
+
+const SPECIALTIES = SPECIALTY_MAP.map(s => s.id);
 
 const STEPS: Step[] = [
   { 
     id: 'specialty', 
     label: 'Specialty', 
-    icon: Stethoscope, 
-    title: 'Clinical Specialty', 
-    subtitle: 'Select the clinical department for this case.' 
+    icon: LayoutDashboard, 
+    title: 'Department Choice', 
+    subtitle: 'Select the clinical specialty for this case.' 
   },
   { 
     id: 'demographics', 
-    label: 'Demographics', 
+    label: 'Profile', 
     icon: UserIcon, 
-    title: 'Patient Demographics', 
-    subtitle: 'Basic patient information.' 
+    title: 'Patient Profile', 
+    subtitle: 'Essential demographics and identity.' 
   },
   { 
     id: 'presenting_complaint', 
-    label: 'Presenting Complaint', 
+    label: 'Reason', 
     icon: Zap, 
     title: 'Presenting Complaint', 
-    subtitle: 'What brings the patient in today?' 
+    subtitle: 'The primary reason for clinical encounter.' 
   },
   { 
     id: 'hpc_details', 
-    label: 'HPC Details', 
-    icon: Clock, 
-    title: 'History of Presenting Complaint', 
-    subtitle: 'Timeline of the current issue.' 
+    label: 'HPI', 
+    icon: History, 
+    title: 'History of Present Illness', 
+    subtitle: 'Nitty-gritty details and timeline.' 
   },
   { 
     id: 'review_of_systems', 
-    label: 'Review of Systems', 
-    icon: Stethoscope, 
+    label: 'ROS', 
+    icon: Activity, 
     title: 'Systemic Review', 
-    subtitle: 'Checking other body systems.' 
+    subtitle: 'Checking other body systems for symptoms.' 
   },
   { 
     id: 'ob_gyn_hx', 
-    label: 'Ob/Gyn Hx', 
+    label: 'Ob/Gyn', 
     icon: Baby, 
     title: 'Obstetrics & Gynaecology', 
-    subtitle: 'Reproductive history (if applicable).' 
+    subtitle: 'Reproductive history and status.' 
   },
   { 
     id: 'past_medical_hx', 
-    label: 'Past Medical Hx', 
+    label: 'Medical', 
     icon: ClipboardList, 
     title: 'Medical Background', 
-    subtitle: 'Medical history and current medications.' 
+    subtitle: 'Chronic conditions and medications.' 
   },
   { 
     id: 'past_surgical_hx', 
-    label: 'Past Surgical Hx', 
-    icon: Scissors, 
+    label: 'Surgical', 
+    icon: Syringe, 
     title: 'Surgical History', 
-    subtitle: 'Past surgeries and injuries.' 
+    subtitle: 'Past operations and interventions.' 
   },
   { 
     id: 'family_social_hx', 
-    label: 'Family/Social Hx', 
+    label: 'Social', 
     icon: Users, 
-    title: 'Socio-Familial Context', 
-    subtitle: 'Family history and lifestyle.' 
+    title: 'Socio-Familial context', 
+    subtitle: 'Family history, lifestyle, and support.' 
   },
   { 
     id: 'examination', 
-    label: 'Examination', 
-    icon: Activity, 
+    label: 'Exam', 
+    icon: HeartPulse, 
     title: 'Physical Examination', 
-    subtitle: 'Clinical findings on assessment.' 
+    subtitle: 'Vital signs and systemic findings.' 
   },
   { 
     id: 'investigations', 
-    label: 'Investigations', 
+    label: 'Labs', 
     icon: FlaskConical, 
     title: 'Diagnostic Workup', 
-    subtitle: 'Lab results and imaging reports.' 
+    subtitle: 'Laboratory tests and imaging studies.' 
   },
   { 
     id: 'procedure_notes', 
-    label: 'Procedure Notes', 
-    icon: Scissors, 
-    title: 'Surgical/Procedure', 
-    subtitle: 'Intraoperative and post-op notes.' 
+    label: 'Notes', 
+    icon: Syringe, 
+    title: 'Clinical Procedure', 
+    subtitle: 'Intra-op details and instructions.' 
   }
 ];
 
@@ -898,6 +908,23 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
 
 // --- Main App ---
 
+// --- Helpers ---
+
+const callGemini = async (contents: any[], config: any = {}, model: string = "gemini-3-flash-preview") => {
+  const response = await fetch("/api/gemini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, contents, config })
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to communicate with AI server");
+  }
+  
+  return await response.json();
+};
+
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -928,7 +955,6 @@ export default function App() {
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
   const [reports, setReports] = useState<Report[]>([]);
   const [collaboratorReports, setCollaboratorReports] = useState<Report[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingField, setRecordingField] = useState<string | null>(null);
@@ -1159,18 +1185,12 @@ export default function App() {
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-          const model = "gemini-3-flash-preview";
-          
-          const response = await ai.models.generateContent({
-            model,
-            contents: [{
-              parts: [
-                { text: "Transcribe this clinical audio accurately. Return only the transcription text. If the audio is silent or unintelligible, return an empty string." },
-                { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
-              ]
-            }]
-          });
+          const response = await callGemini([{
+            parts: [
+              { text: "Transcribe this clinical audio accurately. Return only the transcription text. If the audio is silent or unintelligible, return an empty string." },
+              { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
+            ]
+          }]);
 
           const transcription = response.text;
           if (transcription && transcription.trim()) {
@@ -1203,36 +1223,42 @@ export default function App() {
         const base64Data = (reader.result as string).split(',')[1];
         const mimeType = file.type;
         
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = "gemini-3-flash-preview";
-        
         const prompt = `
-          Extract clinical data from this ${file.type.includes('pdf') ? 'PDF' : 'image'} and map it to the following JSON structure. 
+          Extract clinical data from this ${file.type.includes('pdf') ? 'PDF document' : 'medical image'} and map it to the following JSON structure. 
           The case is in the specialty of ${formData.specialty || 'General Medicine'}.
-          If a field is not found, leave it blank.
+          Be extremely thorough and precise. Extract every piece of clinical information available.
           
           Structure:
           {
+            "admissionDate": "YYYY-MM-DD",
             "fullName": "...",
             "age": "...",
             "sex": "...",
+            "occupation": "...",
+            "address": "...",
             "chiefComplaint": "...",
-            "hpi": "...",
-            "pmh": "...",
-            "surgeries": "...",
+            "duration": "...",
+            "onset": "...",
+            "progression": "...",
+            "associatedSymptoms": "...",
+            "negativeFindings": "...",
+            "chronicConditions": "...",
+            "medications": "...",
             "allergies": "...",
-            "vitals": "..."
+            "vitals": "...",
+            "physicalExam": "...",
+            "investigations": "...",
+            "managementPlan": "..."
           }
         `;
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            { text: prompt },
-            { inlineData: { data: base64Data, mimeType } }
+        const response = await callGemini(
+          [
+            { parts: [{ text: prompt }] },
+            { parts: [{ inlineData: { data: base64Data, mimeType } }] }
           ],
-          config: { responseMimeType: "application/json" }
-        });
+          { responseMimeType: "application/json" }
+        );
 
         const extractedData = JSON.parse(response.text);
         setFormData((prev: any) => ({ ...prev, ...extractedData }));
@@ -1253,9 +1279,6 @@ export default function App() {
       reader.onloadend = async () => {
         const base64Data = (reader.result as string).split(',')[1];
         const mimeType = file.type;
-        
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = "gemini-3-flash-preview";
         
         const prompt = `
           Extract all clinical data from this ${file.type.includes('pdf') ? 'PDF' : 'image'} and map it to the following JSON structure. 
@@ -1310,14 +1333,13 @@ export default function App() {
           }
         `;
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            { text: prompt },
-            { inlineData: { data: base64Data, mimeType } }
+        const response = await callGemini(
+          [
+            { parts: [{ text: prompt }] },
+            { parts: [{ inlineData: { data: base64Data, mimeType } }] }
           ],
-          config: { responseMimeType: "application/json" }
-        });
+          { responseMimeType: "application/json" }
+        );
 
         const extractedData = JSON.parse(response.text);
         setFormData((prev: any) => ({ ...prev, ...extractedData }));
@@ -1338,8 +1360,6 @@ export default function App() {
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
         const base64Audio = (reader.result as string).split(',')[1];
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = "gemini-3-flash-preview";
         
         const prompt = `
           Transcribe this clinical case presentation and extract all relevant data into the following JSON structure. 
@@ -1394,14 +1414,13 @@ export default function App() {
           }
         `;
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            { text: prompt },
-            { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
+        const response = await callGemini(
+          [
+            { parts: [{ text: prompt }] },
+            { parts: [{ inlineData: { data: base64Audio, mimeType: 'audio/webm' } }] }
           ],
-          config: { responseMimeType: "application/json" }
-        });
+          { responseMimeType: "application/json" }
+        );
 
         const extractedData = JSON.parse(response.text);
         setFormData((prev: any) => ({ ...prev, ...extractedData }));
@@ -1628,80 +1647,48 @@ export default function App() {
     };
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3-flash-preview";
-      
       const prompt = `
-        You are a Senior Consultant specializing in ${formData.specialty || 'General Medicine'} at a tertiary academic hospital. Based on the following patient data, synthesize a high-level, cohesive academic clinical case write-up.
-        Strictly adhere to formal medical writing standards, utilizing precise clinical nomenclature and a rigorous academic tone consistent with peer-reviewed case reports in ${formData.specialty || 'this field'}.
+          You are a Senior Consultant specializing in ${formData.specialty || 'General Medicine'} and a medical educator.
+          Based on the following patient data, synthesize a high-level, cohesive academic clinical case write-up.
+          Strictly adhere to formal medical writing standards, utilizing precise clinical nomenclature and a rigorous evidence-based academic tone.
+          The output must be suitable for a medical journal publication or a senior clinical meeting.
 
-        Patient Data:
-        ${JSON.stringify(formData, null, 2)}
-        
-        Instructions:
-        1. HPC Narrative: Construct a detailed, chronological narrative of the history of presenting complaint (HPC). Utilize professional syntax such as "presented with a [duration] history of...", "insidious vs. acute onset", "gradually progressive nature", and "pertinent negatives including...". Ensure the narrative flows logically from the primary complaint to associated symptoms and clinical progression.
-        2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal, Musculoskeletal, Genitourinary, Neurological) and highlight both positive findings and significant negatives in a professional, concise manner.
-        3. Ob/Gyn History: If applicable, synthesize a narrative for Obstetrics and Gynaecological history, including LNMP, EDD, WOA, Parity, Gravida, and past reproductive history.
-        4. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing chronic comorbidities (e.g., "known retroviral disease on HAART", "hypertensive on ACE inhibitors") and their potential impact on the current presentation.
-        5. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history, noting dates, procedures, and any relevant perioperative complications.
-        6. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions, lifestyle factors (tobacco/alcohol units), and socioeconomic context relevant to clinical recovery.
-        7. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include:
-           - General Examination: Nutritional status, pallor, jaundice, lymphadenopathy, edema.
-           - Vitals: BP, PR, RR, SPO2 and physiological stability.
-           - Abdominal/Vaginal Examination: Detailed findings if relevant.
-           - Systemic Examination: Focused cardiorespiratory, respiratory, and neurological assessments.
-        8. Investigations Summary: Synthesize laboratory and imaging findings into a professional summary, highlighting critical values and clinical significance.
-        9. Procedure/Progress Notes: If applicable, summarize intraoperative findings, post-operative instructions, and clinical progress.
-        10. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification. Use "in view of [specific positive findings]" to support the diagnosis and "unlikely because of [specific negative findings or clinical inconsistencies]" to argue against it. Maintain a high level of diagnostic precision and prioritize by clinical likelihood.
-        11. Case Discussion: Provide an exhaustive academic discourse. This section must be deeply analytical and evidence-based. Include the following sub-sections:
-            - Introduction: Brief overview of the case.
-            - Definition and Classification: Academic definition and relevant classifications.
-            - Risk Factors and Etiology: Discuss predisposing factors and causes.
-            - Pathophysiology: Discuss the molecular, cellular, or anatomical basis of the condition.
-            - Clinical Features and Presentation: Contrast typical presentation with this patient's findings.
-            - Diagnosis and Investigations: Discuss gold standard investigations and diagnostic workup.
-            - Management and Treatment Approach: Detail management options and care protocols.
-            - Complications: Discuss potential immediate and long-term complications.
-            - Conclusion: Summary of the case and clinical takeaways.
-        12. Impression: Provide a concise, multi-axial clinical impression (e.g., "A [age]/[sex] patient with [comorbidities] presenting with clinical features highly suggestive of [primary diagnosis]").
-        13. Plan: Formulate a 5-10 point evidence-based clinical management plan, ranging from immediate stabilization and further investigations to definitive intervention and follow-up.
-        14. References: Provide 4-5 high-impact academic references (e.g., NEJM, Lancet, specialized journals) in standard Vancouver or AMA format.
-        
-        Handling Missing Data & Edge Cases:
-        - If specific clinical details are absent from the input, DO NOT hallucinate. Use professional language like "Not documented at presentation," "Further clinical correlation required," or "Records regarding [system] were unavailable."
-        - If examination findings are sparse, the "Examination Narrative" should reflect this, and the "Plan" MUST prioritize "Comprehensive physical and systemic examination" as the first step.
-        
-        Return the response in JSON format with the following structure:
-        {
-          "hpcNarrative": "...",
-          "rosNarrative": "...",
-          "obGynNarrative": "...",
-          "pmhNarrative": "...",
-          "pshNarrative": "...",
-          "fshNarrative": "...",
-          "examinationNarrative": "...",
-          "investigationsNarrative": "...",
-          "procedureNarrative": "...",
-          "differentials": [
-            { "diagnosis": "...", "reasoning": "..." }
-          ],
-          "impression": "...",
-          "plan": ["..."],
-          "caseDiscussionSections": [
-            { "title": "...", "content": "..." }
-          ],
-          "references": ["..."]
-        }
-      `;
+          Patient Data:
+          ${JSON.stringify(formData, null, 2)}
+          
+          Instructions:
+          1. HPC Narrative: Construct a detailed, chronological narrative of the history of presenting complaint (HPC). Utilize professional syntax such as "presented with a [duration] history of...", "insidious vs. acute onset", "gradually progressive nature", and "pertinent negatives including...". Ensure the narrative flows logically and captures the clinical severity.
+          2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal, Musculoskeletal, Genitourinary, Neurological).
+          3. Ob/Gyn History: If applicable (female patient or maternal case), synthesize a narrative for Obstetrics and Gynaecological history.
+          4. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing comorbidities and pharmacological management.
+          5. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history.
+          6. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions and social determinants of health.
+          7. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include Vitals, General Examination, and Systemic Examination findings with high precision.
+          8. Investigations Summary: Synthesize laboratory and imaging findings, highlighting critical anomalies and diagnostic significance.
+          9. Procedure/Progress Notes: If available, summarize recent interventions and clinical trends.
+          10. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification based on the clinical features presented.
+          11. Case Discussion: Provide an exhaustive, scholarly discourse (1000+ words equivalent). This is the core academic section.
+              - It must be deeply analytical and grounded in current medical literature.
+              - Discuss pathophysiology, contemporary diagnostic criteria, and global management standards.
+              - Compare the patient's presentation with textbook descriptions.
+          12. Impression: Provide a concise, multi-axial clinical impression.
+          13. Plan: Formulate a 5-10 point evidence-based clinical management plan.
+          14. References: Provide 4-5 high-impact academic references in standard Vancouver format.
+          
+          Handling Missing Data:
+          - DO NOT hallucinate. Use professional language like "Not documented at presentation" or "Further clinical correlation required".
+          
+          Return the response in STRICT JSON format with the following keys:
+          hpcNarrative, rosNarrative, obGynNarrative, pmhNarrative, pshNarrative, fshNarrative, examinationNarrative, investigationsNarrative, procedureNarrative, differentials (array of objects with diagnosis and reasoning), impression, plan (array of strings), caseDiscussionSections (array of objects with title and content), references (array of strings).
+        `;
 
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: { 
+      const response = await callGemini(
+        [{ parts: [{ text: prompt }] }],
+        { 
           responseMimeType: "application/json",
           temperature: 0.7,
         }
-      });
+      );
 
       let storyData;
       try {
@@ -1837,18 +1824,29 @@ export default function App() {
     switch (stepId) {
       case 'specialty':
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {SPECIALTIES.map((spec) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {SPECIALTY_MAP.map((spec) => (
               <button
-                key={spec}
+                key={spec.id}
                 onClick={() => {
-                  setFormData((prev: any) => ({ ...prev, specialty: spec }));
+                  setFormData((prev: any) => ({ ...prev, specialty: spec.id }));
                   handleNext();
                 }}
-                className={`p-6 rounded-2xl border-2 transition-all text-left flex flex-col gap-2 group ${formData.specialty === spec ? 'border-primary bg-primary/5' : 'border-line bg-surface hover:border-primary/30'}`}
+                className={`p-5 sm:p-7 rounded-2xl sm:rounded-3xl border-2 transition-all text-left flex flex-col gap-3 sm:gap-4 group relative overflow-hidden ${formData.specialty === spec.id ? 'border-primary bg-primary/5' : 'border-line bg-surface hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1'}`}
               >
-                <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${formData.specialty === spec ? 'text-primary' : 'text-text-muted group-hover:text-text-main'}`}>Department</span>
-                <span className={`text-lg font-black transition-colors ${formData.specialty === spec ? 'text-slate-900' : 'text-slate-700'}`}>{spec}</span>
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center bg-gradient-to-br ${spec.color} text-white shadow-lg transition-transform group-hover:scale-110`}>
+                  <spec.icon className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${formData.specialty === spec.id ? 'text-primary' : 'text-text-muted group-hover:text-text-main'}`}>Department</span>
+                  <span className={`text-xl sm:text-2xl font-black transition-colors ${formData.specialty === spec.id ? 'text-slate-900' : 'text-slate-700'}`}>{spec.label}</span>
+                  <p className="text-[10px] sm:text-[11px] text-text-muted font-medium line-clamp-2 mt-1">{spec.description}</p>
+                </div>
+                {formData.specialty === spec.id && (
+                  <div className="absolute top-4 right-4">
+                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -2025,11 +2023,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg flex flex-col md:flex-row font-sans text-text-main overflow-x-hidden">
-      {/* Sidebar - Desktop */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-72 bg-surface border-r border-line flex-col h-screen sticky top-0 shrink-0">
         <div className="p-10 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl pink-gradient flex items-center justify-center text-white shadow-lg shadow-primary/20">
-            <Stethoscope className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl pink-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
+            <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-2xl text-text-main leading-none tracking-tight">Malae</span>
@@ -2102,7 +2100,7 @@ export default function App() {
         <div className="p-8 border-t border-line space-y-6">
           <div className="flex items-center gap-3 p-4 rounded-2xl bg-bg border border-line">
             <div className="w-10 h-10 rounded-xl pink-gradient flex items-center justify-center text-white font-bold text-lg">
-              {user.displayName?.[0] || user.email?.[0].toUpperCase()}
+              {user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'P'}
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
@@ -2119,151 +2117,56 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] md:hidden"
-            />
-            <motion.aside 
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-[85%] max-w-[300px] bg-white z-[70] flex flex-col shadow-2xl md:hidden rounded-r-3xl overflow-hidden"
-            >
-              <div className="p-6 flex items-center justify-between border-b border-line bg-bg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl pink-gradient flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                    <Stethoscope className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-text-main tracking-tight text-xl leading-none">Malae</span>
-                    <span className="text-[8px] font-bold text-primary uppercase tracking-[0.2em] mt-1">Health Intelligence</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsSidebarOpen(false)} 
-                  className="p-2.5 text-text-muted hover:text-text-main hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-line"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <nav className="flex-1 px-4 py-8 flex flex-col gap-2 overflow-y-auto no-scrollbar">
-                <button
-                  onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
-                  className={`
-                    flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
-                    ${view === 'dashboard' ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'text-text-muted hover:bg-bg'}
-                  `}
-                >
-                  <div className={`
-                    w-9 h-9 rounded-xl flex items-center justify-center transition-colors
-                    ${view === 'dashboard' ? 'bg-white/20' : 'bg-bg text-text-muted'}
-                  `}>
-                    <LayoutDashboard className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest">Dashboard</span>
-                </button>
-
-                <button
-                  onClick={() => { setView('profile'); setIsSidebarOpen(false); }}
-                  className={`
-                    flex items-center gap-4 px-5 py-4 rounded-2xl transition-all group
-                    ${view === 'profile' ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'text-text-muted hover:bg-bg'}
-                  `}
-                >
-                  <div className={`
-                    w-9 h-9 rounded-xl flex items-center justify-center transition-colors
-                    ${view === 'profile' ? 'bg-white/20' : 'bg-bg text-text-muted'}
-                  `}>
-                    <UserIcon className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest">Physician Profile</span>
-                </button>                {view === 'generator' && (
-                  <div className="mt-6 space-y-1">
-                    <div className="px-5 py-2 border-b border-line mb-4">
-                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-[0.2em]">Case Progress</span>
-                    </div>
-                    {activeSteps.map((step, index) => {
-                      const isActive = currentStepIndex === index;
-                      const isCompleted = completedSteps.has(step.id);
-                      const Icon = step.icon;
-
-                      return (
-                        <button
-                          key={step.id}
-                          onClick={() => {
-                            setCurrentStepIndex(index);
-                            setIsSidebarOpen(false);
-                          }}
-                          className={`
-                            w-full flex items-center gap-4 px-5 py-3 rounded-xl transition-all group
-                            ${isActive ? 'bg-bg text-primary border border-line' : 'text-text-muted hover:bg-bg'}
-                          `}
-                        >
-                          <div className={`
-                            w-7 h-7 rounded-lg flex items-center justify-center transition-all
-                            ${isActive ? 'bg-primary text-white shadow-md' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-bg text-text-muted'}
-                          `}>
-                            {isCompleted && !isActive ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
-                          </div>
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-primary' : 'text-text-muted'}`}>
-                            {step.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </nav>
-
-              <div className="p-6 border-t border-line space-y-4">
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-bg border border-line">
-                  <div className="w-9 h-9 rounded-xl pink-gradient flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                    {user.displayName?.[0] || user.email?.[0].toUpperCase()}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
-                    <span className="text-[9px] text-text-muted truncate font-medium">{user.email}</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  SIGN OUT
-                </button>
-              </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden relative">
         {/* Mobile Header */}
-        <header className="md:hidden h-16 bg-surface border-b border-line px-4 flex items-center justify-between sticky top-0 z-50">
+        <header className="md:hidden h-16 bg-surface border-b border-line px-6 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 -ml-2 text-text-muted hover:text-primary transition-colors"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
+            <div className="w-8 h-8 rounded-lg pink-gradient flex items-center justify-center shadow-sm overflow-hidden">
+              <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </div>
             <span className="font-bold text-text-main tracking-tight text-lg">Malae</span>
           </div>
-          <div className="w-8 h-8 rounded-lg pink-gradient flex items-center justify-center text-white font-bold text-[10px]">
-            {user.displayName?.[0] || user.email?.[0].toUpperCase()}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-text-muted hover:text-red-500 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </header>
+
+        {/* Mobile Step Navigator (Only in Generator) */}
+        {view === 'generator' && (
+          <div className="md:hidden bg-surface border-b border-line shadow-sm overflow-x-auto no-scrollbar py-3 px-4 flex items-center gap-2 sticky top-16 z-40">
+            {activeSteps.map((step, index) => {
+              const isActive = currentStepIndex === index;
+              const isCompleted = completedSteps.has(step.id);
+              const Icon = step.icon;
+
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => setCurrentStepIndex(index)}
+                  className={`
+                    flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all whitespace-nowrap shrink-0 border
+                    ${isActive 
+                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20' 
+                      : isCompleted 
+                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                        : 'bg-bg border-line text-text-muted'}
+                  `}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{step.label}</span>
+                  {isCompleted && !isActive && <CheckCircle2 className="w-3 h-3 ml-0.5" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {view === 'dashboard' ? (
           <div className="flex-1 overflow-y-auto">
             <Dashboard 
@@ -2480,12 +2383,6 @@ export default function App() {
             {/* Header */}
             <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 sm:px-10 py-4 sm:py-6 flex items-center justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
-                <button 
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="md:hidden p-2.5 -ml-1 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all active:scale-95"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
                 <div className="flex flex-col">
                   <h2 className="text-lg sm:text-2xl font-black text-slate-900 uppercase tracking-widest">
                     Case Story Generator
@@ -2626,10 +2523,10 @@ export default function App() {
                           {isRecording ? <MicOff className="w-8 h-8 sm:w-12 sm:h-12" /> : <Mic className="w-8 h-8 sm:w-12 sm:h-12" />}
                         </div>
                         <h2 className="text-xl sm:text-3xl font-black text-text-main mb-2 sm:mb-4">
-                          {isRecording ? 'Recording Case Details...' : 'Dictate Case Details'}
+                          {isRecording ? 'Capturing Case & Commands...' : 'Dictate Case & Commands'}
                         </h2>
-                        <p className="text-xs sm:text-base text-text-muted mb-8 sm:mb-10 leading-relaxed">
-                          {isRecording ? 'Speak clearly. We are capturing your clinical dictation.' : 'Press the button below and start speaking your case presentation.'}
+                        <p className="text-xs sm:text-base text-text-muted mb-8 sm:mb-10 leading-relaxed max-w-md mx-auto">
+                          {isRecording ? 'Speak clearly. Use voice commands like "Save" or "Generate" to control the flow.' : 'Our AI extracts clinical data and follows your voice commands automatically.'}
                         </p>
                         
                         <button 
@@ -2777,6 +2674,47 @@ export default function App() {
             </footer>
           </>
         )}
+        {/* Persistent Bottom Nav - Mobile */}
+        <nav className="md:hidden h-[72px] bg-white border-t border-line flex items-center justify-around px-2 pb-safe z-50 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.05)]">
+          <button
+            onClick={() => setView('dashboard')}
+            className={`flex flex-col items-center justify-center gap-1.5 w-16 transition-all ${view === 'dashboard' ? 'text-primary' : 'text-text-muted'}`}
+          >
+            <div className={`p-2 rounded-xl transition-all ${view === 'dashboard' ? 'bg-primary/10 shadow-inner' : ''}`}>
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-tight">Home</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (view !== 'generator') {
+                setFormData({});
+                setCurrentStepIndex(0);
+                setCompletedSteps(new Set());
+                setGeneratorMode('selection');
+                setView('generator');
+                setSelectedReport(null);
+              }
+            }}
+            className={`flex flex-col items-center justify-center gap-1.5 relative -top-4 transition-all`}
+          >
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-transform active:scale-95 ${view === 'generator' ? 'bg-primary text-white shadow-primary/30 rotate-45' : 'bg-slate-900 text-white shadow-slate-300'}`}>
+              <Plus className={`w-6 h-6 ${view === 'generator' ? '-rotate-45' : ''}`} />
+            </div>
+            <span className={`text-[9px] font-bold uppercase tracking-tight -mt-3 ${view === 'generator' ? 'text-primary' : 'text-text-muted'}`}>Create</span>
+          </button>
+
+          <button
+            onClick={() => setView('profile')}
+            className={`flex flex-col items-center justify-center gap-1.5 w-16 transition-all ${view === 'profile' ? 'text-primary' : 'text-text-muted'}`}
+          >
+            <div className={`p-2 rounded-xl transition-all ${view === 'profile' ? 'bg-primary/10 shadow-inner' : ''}`}>
+              <UserIcon className="w-5 h-5" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-tight">Profile</span>
+          </button>
+        </nav>
       </main>
 
       {/* Loading Overlay */}
