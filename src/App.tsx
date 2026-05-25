@@ -89,17 +89,11 @@ import pptxgen from "pptxgenjs";
 
 type StepId = 
   | 'specialty'
-  | 'demographics' 
-  | 'presenting_complaint' 
-  | 'hpc_details' 
-  | 'review_of_systems' 
-  | 'ob_gyn_hx'
-  | 'past_medical_hx' 
-  | 'past_surgical_hx' 
-  | 'family_social_hx'
-  | 'examination'
-  | 'investigations'
-  | 'procedure_notes';
+  | 'input_history'
+  | 'physical_exam'
+  | 'compiled_report'
+  | 'generate_output'
+  | 'ai_suggestions';
 
 interface Step {
   id: StepId;
@@ -112,13 +106,10 @@ interface Step {
 // --- Constants ---
 
 const SPECIALTY_MAP = [
-  { id: 'Internal Medicine', label: 'Internal Medicine', icon: StethoscopeIcon, color: 'from-blue-500 to-indigo-600', description: 'General medical care and diagnosis.' },
-  { id: 'Surgical', label: 'Surgical', icon: Syringe, color: 'from-rose-500 to-pink-600', description: 'Pre-op, intra-op, and postoperative care.' },
-  { id: 'Paediatrics', label: 'Paediatrics', icon: Baby, color: 'from-amber-400 to-orange-500', description: 'Clinical care for children and adolescents.' },
-  { id: 'Obstetrics & Gynaecology', label: 'Obstetrics & Gynaecology', icon: Microscope, color: 'from-emerald-500 to-teal-600', description: 'Reproductive health and childbirth.' },
-  { id: 'Emergency Medicine', icon: Activity, color: 'from-red-500 to-orange-600', label: 'Emergency', description: 'Acute and urgent clinical presentations.' },
-  { id: 'Psychiatry', icon: HeartPulse, color: 'from-purple-500 to-indigo-600', label: 'Psychiatry', description: 'Mental health assessment and care.' },
-  { id: 'Orthopaedics', icon: Bone, color: 'from-slate-500 to-slate-700', label: 'Orthopaedics', description: 'Musculoskeletal and trauma cases.' }
+  { id: 'Internal Medicine', label: 'Internal Medicine', icon: StethoscopeIcon, color: 'from-blue-500 to-indigo-600', description: 'Internal Medicine and systemic clinical care.' },
+  { id: 'Pediatrics', label: 'Pediatrics', icon: Baby, color: 'from-amber-400 to-orange-500', description: 'Paediatrics and adolescent clinical medicine.' },
+  { id: 'Obstetrics & Gynecology', label: 'Obstetrics & Gynecology', icon: Microscope, color: 'from-emerald-500 to-teal-600', description: 'Reproductive health, maternal medicine, and childbirth.' },
+  { id: 'Surgery', label: 'Surgery', icon: Syringe, color: 'from-rose-500 to-pink-600', description: 'Pre-op, intraprocedure, and postoperative surgical cases.' }
 ];
 
 const SPECIALTIES = SPECIALTY_MAP.map(s => s.id);
@@ -128,85 +119,43 @@ const STEPS: Step[] = [
     id: 'specialty', 
     label: 'Specialty', 
     icon: LayoutDashboard, 
-    title: 'Department Choice', 
-    subtitle: 'Select the clinical specialty for this case.' 
+    title: 'Select Specialty', 
+    subtitle: 'Step 0: Select the clinical department for this case.' 
   },
   { 
-    id: 'demographics', 
-    label: 'Profile', 
-    icon: UserIcon, 
-    title: 'Patient Profile', 
-    subtitle: 'Essential demographics and identity.' 
-  },
-  { 
-    id: 'presenting_complaint', 
-    label: 'Reason', 
-    icon: Zap, 
-    title: 'Presenting Complaint', 
-    subtitle: 'The primary reason for clinical encounter.' 
-  },
-  { 
-    id: 'hpc_details', 
-    label: 'HPI', 
-    icon: History, 
-    title: 'History of Present Illness', 
-    subtitle: 'Nitty-gritty details and timeline.' 
-  },
-  { 
-    id: 'review_of_systems', 
-    label: 'ROS', 
-    icon: Activity, 
-    title: 'Systemic Review', 
-    subtitle: 'Checking other body systems for symptoms.' 
-  },
-  { 
-    id: 'ob_gyn_hx', 
-    label: 'Ob/Gyn', 
-    icon: Baby, 
-    title: 'Obstetrics & Gynaecology', 
-    subtitle: 'Reproductive history and status.' 
-  },
-  { 
-    id: 'past_medical_hx', 
-    label: 'Medical', 
+    id: 'input_history', 
+    label: 'Input History', 
     icon: ClipboardList, 
-    title: 'Medical Background', 
-    subtitle: 'Chronic conditions and medications.' 
+    title: 'Input Patient History', 
+    subtitle: 'Step 1: Upload notes, dictate audio, or type clinical history.' 
   },
   { 
-    id: 'past_surgical_hx', 
-    label: 'Surgical', 
-    icon: Syringe, 
-    title: 'Surgical History', 
-    subtitle: 'Past operations and interventions.' 
-  },
-  { 
-    id: 'family_social_hx', 
-    label: 'Social', 
-    icon: Users, 
-    title: 'Socio-Familial context', 
-    subtitle: 'Family history, lifestyle, and support.' 
-  },
-  { 
-    id: 'examination', 
-    label: 'Exam', 
-    icon: HeartPulse, 
+    id: 'physical_exam', 
+    label: 'Physical Exam', 
+    icon: StethoscopeIcon, 
     title: 'Physical Examination', 
-    subtitle: 'Vital signs and systemic findings.' 
+    subtitle: 'Step 2: Add optional focused examination findings.' 
   },
   { 
-    id: 'investigations', 
-    label: 'Labs', 
-    icon: FlaskConical, 
-    title: 'Diagnostic Workup', 
-    subtitle: 'Laboratory tests and imaging studies.' 
+    id: 'compiled_report', 
+    label: 'Compiled Report', 
+    icon: CheckCircle2, 
+    title: 'Compiled Case Report', 
+    subtitle: 'Step 3: Check raw clinical data vs structured compilation.' 
   },
   { 
-    id: 'procedure_notes', 
-    label: 'Notes', 
-    icon: Syringe, 
-    title: 'Clinical Procedure', 
-    subtitle: 'Intra-op details and instructions.' 
+    id: 'generate_output', 
+    label: 'Generate Output', 
+    icon: FileText, 
+    title: 'Generate Clinical Outputs', 
+    subtitle: 'Step 4: Download PowerPoint, Word summaries, or listen to audio syntheses.' 
+  },
+  { 
+    id: 'ai_suggestions', 
+    label: 'AI Suggestions', 
+    icon: Sparkles, 
+    title: 'AI Clinical Suggestions', 
+    subtitle: 'Step 5: Review machine-recommended diagnostics and investigations.' 
   }
 ];
 
@@ -564,6 +513,95 @@ const pdfStyles = StyleSheet.create({
 
 // --- PDF Document Components ---
 
+const getCaseWriteUpPrompt = (formData: any) => {
+  const patientName = formData.fullName || 'Unidentified Patient';
+  const patientAge = formData.age || 'Adult';
+  const patientSex = formData.sex || 'Unknown';
+  const specialty = formData.specialty || 'General Medicine';
+
+  const fshDetailsCombined = `
+    - Family Hereditary Conditions: ${formData.fsh_hereditary || 'Not specified'}
+    - Home Sanitation & Clean Water Access: ${formData.fsh_sanitation || 'Not specified'}
+    - Parents' Employment & Financial Support: ${formData.fsh_employment || 'Not specified'}
+    - General Family & Social narrative: ${formData.familySocialHistory || 'No additional details.'}
+  `.trim();
+
+  const physicalDetailsCombined = `
+    - Vital Signs Parameters:
+      * Blood Pressure: ${formData.vitals_bp || 'Not measured'}
+      * Pulse Rate: ${formData.vitals_pulse || 'Not measured'} bpm
+      * Body Temperature: ${formData.vitals_temp || 'Not measured'} °C
+      * Respiratory Rate: ${formData.vitals_rr || 'Not measured'} /min
+      * Oxygen Saturation (SpO2): ${formData.vitals_spo2 || 'Not measured'}
+    - General Exam (Pallor, Lymphs, Hydration, Icterus, Oedema): ${formData.phys_general_exam || 'Not specified'}
+    - Respiratory System Examination: ${formData.phys_respiratory || 'Not specified'}
+    - Central Nervous System (CNS) Neurological Examination: ${formData.phys_cns || 'Not specified'}
+    - Cardiovascular System (CVS) Examination: ${formData.phys_cvs || 'Not specified'}
+    - Gastrointestinal or Abdominal Examination: ${formData.phys_abdomen || 'Not specified'}
+    - Comprehensive/Additional physical examination details: ${formData.physicalExam || 'No additional details.'}
+  `.trim();
+
+  return `
+    You are an elite Senior Clinical Consultant and a medical educator at a leading Commonwealth teaching hospital (such as Mengo Hospital or Mulago Hospital).
+    Your task is to synthesize an exceptionally high-quality, comprehensive, and detailed academic clinical case write-up based on the raw records provided.
+    
+    CRITICAL TONE & ANTI-AI PHRASING MANDATES:
+    - Write in a highly objective, concise, and dense academic medical clinician tone.
+    - Avoid ALL generic AI intro/outro filler phrasing, transitioning remarks, or repetitive summary blocks.
+    - DO NOT use unscientific or "AI-slop" words such as: "multifaceted", "interplay", "synergy", "testament", "tapestry", "delve", "pinnacle", "vital", "crucial", "holistic", "importance", "key", "notably", "furthermore", "essential", "dynamic", "comprehensively", "understand the significance", "it is highly important to note".
+    - Adopt realistic clinical shorthands where appropriate (e.g. "G3P2 SVD term", "NAD", "PR 80 bpm", "SpO2 98% on RA").
+    - Do NOT structure sections with generic narrative fluff. Start sentences directly with clinical observations (e.g. "A 2-year old male presented with..." instead of "This interesting clinical case highlights the story of a 2-year-old...").
+
+    PATIENT DEMOGRAPHICS:
+    - Name/Initials: ${patientName}
+    - Age: ${patientAge}
+    - Sex: ${patientSex}
+    - Specialty: ${specialty}
+    - Ward/Bed space: ${formData.ward || 'General ward'} / ${formData.bed || 'No bed assignment'}
+    - Registration No: ${formData.registrationNo || 'Not documented'}
+
+    RAW PRESENTING COMPLAINT & CLINICAL NOTES:
+    - Chief Complaint: ${formData.chiefComplaint || 'Not specified'} (Duration: ${formData.duration || 'Not specified'})
+    - History of Presenting Complaint (HPC): ${formData.historyInput || 'No HPC history recorded yet.'}
+    - Review of Systems (ROS): ${formData.reviewOfSystems || 'No specific ROS details recorded.'}
+    - Past Medical History (PMH): ${formData.pastMedicalHistory || 'No PMH details recorded.'}
+    - Chronic conditions/Medications/Allergies: ${formData.medications || 'None'} / ${formData.allergies || 'None'}
+    - Past Surgical History (PSH): ${formData.pastSurgicalHistory || 'No PSH details recorded.'}
+    - Family & Social History (FSH): ${fshDetailsCombined}
+    - Physical Examination Findings: ${physicalDetailsCombined}
+
+    DETAILED RESPONSE SECTION INSTRUCTIONS:
+    1. hpcNarrative: Draft a rigorous, chronological narrative of the history of presenting complaint (HPC). Specify onset, progression, character, aggravating/alleviating factors, and pertinent negatives with elite clinical precision.
+    2. rosNarrative: Synthesize a thorough Review of Systems (ROS). Group findings systematically by clinical systems.
+    
+    3. SPECIALTY-SPECIFIC NARRATIVE MANIFEST:
+       - If Specialty is 'Obstetrics & Gynecology':
+         * Set "pediatricNarrative" to null.
+         * Populate "obGynNarrative" with deep details: Gravida, Parity, LMP, EDD, complications, antenatal visits, menses cycle, flows, contraception, and screening histories.
+       - If Specialty is 'Pediatrics':
+         * Set "obGynNarrative" to null.
+         * Populate "pediatricNarrative" with exhaustive details: Antenatal (maternal health, infections, ANC profile), Natal (delivery mode, birth weight, APGAR, resuscitation), Neonatal course, Nutritional history (weaning, feeding types), Immunization status (Uganda National Expanded Programme on Immunisation - UNEPI schedule compliance), and Growth/Developmental milestones.
+       - If Specialty is 'Surgery' or 'Internal Medicine':
+         * Set BOTH "obGynNarrative" and "pediatricNarrative" to null.
+
+    4. pmhNarrative: Summarize Past Medical History (PMH) including comorbidities, previous hospitalizations, and long-term pharmacotherapy.
+    5. pshNarrative: Detail Past Surgical History (PSH) indicating prior procedures, indications, dates, and post-operative courses.
+    6. fshNarrative: Detail Family & Social History (FSH) outlining environmental exposure, sanitation, water access, and hereditary predispositions.
+    7. examinationNarrative: Provide a structured write-up of physical examination findings, reporting systemic clinical signs, vitals, and specific system maneuvers.
+    8. differentials: Detail 3 to 5 differential diagnoses. For EACH, provide concrete pathophysiology justifications showing why it is ruled in and how it differs from other differentials.
+    9. impression: State the consolidated working clinical impression/diagnosis.
+    10. plan: Provide a 5-10 point complete diagnostic, therapeutic, and emergency safety netting plan.
+    11. priorityInvestigations: Supply a specific 4-7 point list of focused lab tests (e.g. CBC, blood culture, LFTs, CRP, specific imaging) matching standard clinical protocols for this case and specialty.
+    12. managementSuggestions: Provide a specific 4-7 point list of therapeutic suggestions (e.g. specific drug dosages, supportive procedures, dietary guidelines) matching the regional context (Uganda/low-resource context where Mengo Hospital is located).
+    13. wardRoundPresentation: Draft the formal morning ward round script (2-3 paragraphs of high density text, outlining summary of presentation, exam findings, assessment, and direct active question).
+    14. caseDiscussionSections: Create an exhaustive, textbook-grade academic case discussion containing 3 distinct sections (each with a Title and Content). Discuss deep Pathophysiology, contemporary clinical guidelines (e.g., Westley Croup Score, GINA, WHO, or relevant guidelines), regional/tropical medicine nuances, and textbook vs. patient presentation contrast.
+    15. references: Include 3-5 high-impact academic journal references in Vancouver format.
+
+    Return the response in STRICT JSON format with the following keys:
+    hpcNarrative, rosNarrative, obGynNarrative, pediatricNarrative, pmhNarrative, pshNarrative, fshNarrative, examinationNarrative, investigationsNarrative, procedureNarrative, differentials (array of objects with diagnosis and reasoning), impression, plan (array of strings), priorityInvestigations (array of strings), managementSuggestions (array of strings), wardRoundPresentation, caseDiscussionSections (array of objects with title and content), references (array of strings).
+  `;
+};
+
 const getInitials = (name: string) => {
   if (!name) return 'N/A';
   return name.split(' ').map(n => n[0]).join('.').toUpperCase();
@@ -597,151 +635,15 @@ const MedicalReportPDF = ({ formData, steps }: { formData: any, steps: Step[] })
             </View>
           )}
 
-          {step.id === 'demographics' && (
-            <View style={pdfStyles.grid}>
-              {[
-                { label: 'Date of Admission', value: formData.admissionDate },
-                { label: 'Patient Initials', value: getInitials(formData.fullName) },
-                { label: 'Age (years)', value: formData.age },
-                { label: 'Sex', value: formData.sex },
-                { label: 'Tribe/Ethnicity', value: formData.ethnicity },
-                { label: 'Address/Location', value: formData.address },
-                { label: 'Religion', value: formData.religion },
-                { label: 'Occupation', value: formData.occupation },
-                { label: 'Next of Kin (Initials)', value: formData.nextOfKin },
-                { label: 'Relationship', value: formData.relationship },
-              ].map((field, i) => (
-                <View key={i} style={pdfStyles.gridItem}>
-                  <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
-                  <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {step.id === 'presenting_complaint' && (
+          {step.id === 'input_history' && (
             <View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Chief Complaint</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.chiefComplaint || 'N/A'}</Text>
-              </View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Duration</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.duration || 'N/A'}</Text>
-              </View>
-            </View>
-          )}
-
-          {step.id === 'hpc_details' && (
-            <View style={pdfStyles.grid}>
-              {[
-                { label: 'Onset', value: formData.onset },
-                { label: 'Progression', value: formData.progression },
-                { label: 'Character', value: formData.character },
-                { label: 'Severity', value: formData.severity },
-                { label: 'Location', value: formData.location },
-                { label: 'Radiation', value: formData.radiation },
-              ].map((field, i) => (
-                <View key={i} style={pdfStyles.gridItem}>
-                  <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
-                  <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
-                </View>
-              ))}
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Associated Symptoms (Present)</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.associatedSymptoms || 'N/A'}</Text>
-              </View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Important Negative Findings</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.negativeFindings || 'N/A'}</Text>
-              </View>
-              {[
-                { label: 'Aggravating Factors', value: formData.aggravating },
-                { label: 'Relieving Factors', value: formData.relieving },
-                { label: 'Previous Treatment', value: formData.prevTreatment },
-                { label: 'Response to Treatment', value: formData.respTreatment },
-              ].map((field, i) => (
-                <View key={i} style={pdfStyles.gridItem}>
-                  <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
-                  <Text style={pdfStyles.fieldValue}>{field.value || 'N/A'}</Text>
-                </View>
-              ))}
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Impact on Daily Activities</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.impact || 'N/A'}</Text>
-              </View>
-            </View>
-          )}
-
-          {step.id === 'review_of_systems' && (
-            <View>
-              {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL'].map(system => (
-                <View key={system} style={pdfStyles.systemSection}>
-                  <View style={pdfStyles.systemHeader}>
-                    <View style={pdfStyles.systemDot} />
-                    <Text style={pdfStyles.systemTitle}>{system}</Text>
-                  </View>
-                  <View style={pdfStyles.grid}>
-                    <View style={pdfStyles.gridItem}>
-                      <Text style={pdfStyles.fieldLabel}>Symptoms Present</Text>
-                      <Text style={pdfStyles.fieldValue}>{formData[`${system}_present`] || 'N/A'}</Text>
-                    </View>
-                    <View style={pdfStyles.gridItem}>
-                      <Text style={pdfStyles.fieldLabel}>Symptoms Denied</Text>
-                      <Text style={pdfStyles.fieldValue}>{formData[`${system}_denied`] || 'N/A'}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {step.id === 'past_medical_hx' && (
-            <View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Chronic Medical Conditions</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.chronicConditions || 'N/A'}</Text>
-              </View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Current Pharmacotherapy</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.medications || 'N/A'}</Text>
-              </View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Allergies & Hypersensitivities</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.allergies || 'N/A'}</Text>
-              </View>
-            </View>
-          )}
-
-          {step.id === 'past_surgical_hx' && (
-            <View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Previous Surgeries</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.surgeries || 'N/A'}</Text>
-              </View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Major Trauma/Fractures</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.trauma || 'N/A'}</Text>
-              </View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Blood Transfusion History</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.transfusions || 'N/A'}</Text>
-              </View>
-            </View>
-          )}
-
-          {step.id === 'family_social_hx' && (
-            <View>
-              <View style={pdfStyles.fullWidth}>
-                <Text style={pdfStyles.fieldLabel}>Familial Health Patterns</Text>
-                <Text style={pdfStyles.fieldValue}>{formData.familyHistory || 'N/A'}</Text>
-              </View>
               <View style={pdfStyles.grid}>
                 {[
-                  { label: 'Alcohol Consumption', value: formData.alcohol },
-                  { label: 'Tobacco Consumption', value: formData.tobacco },
-                  { label: 'Current Marital Status', value: formData.maritalStatus },
-                  { label: 'Household Dependents', value: formData.dependents },
+                  { label: 'Patient Initials', value: getInitials(formData.fullName) },
+                  { label: 'Age (years)', value: formData.age },
+                  { label: 'Sex', value: formData.sex },
+                  { label: 'Address/Location', value: formData.address || 'Kampala' },
+                  { label: 'Date of Admission', value: formData.admissionDate || new Date().toISOString().split('T')[0] },
                 ].map((field, i) => (
                   <View key={i} style={pdfStyles.gridItem}>
                     <Text style={pdfStyles.fieldLabel}>{field.label}</Text>
@@ -749,13 +651,53 @@ const MedicalReportPDF = ({ formData, steps }: { formData: any, steps: Step[] })
                   </View>
                 ))}
               </View>
+              
+              <View style={[pdfStyles.fullWidth, { marginTop: 20 }]}>
+                <Text style={pdfStyles.fieldLabel}>Clinical Presentation & History</Text>
+                <Text style={pdfStyles.fieldValue}>{formData.historyInput || 'No history recorded yet.'}</Text>
+              </View>
+            </View>
+          )}
+
+          {step.id === 'physical_exam' && (
+            <View style={pdfStyles.fullWidth}>
+              <Text style={pdfStyles.fieldLabel}>Physical Examination Findings</Text>
+              <Text style={pdfStyles.fieldValue}>{formData.physicalExam || 'Examination skipped or no findings recorded.'}</Text>
+            </View>
+          )}
+
+          {step.id === 'compiled_report' && (
+            <View style={pdfStyles.fullWidth}>
+              <Text style={pdfStyles.fieldLabel}>Synthesized Case Story</Text>
+              <Text style={pdfStyles.fieldValue}>{formData.storyData?.summary || 'No compiled story available yet.'}</Text>
+            </View>
+          )}
+
+          {step.id === 'ai_suggestions' && (
+            <View style={pdfStyles.grid}>
+              <View style={pdfStyles.fullWidth}>
+                <Text style={pdfStyles.fieldLabel}>Differential Diagnoses</Text>
+                <Text style={pdfStyles.fieldValue}>
+                  {formData.storyData?.differentials 
+                    ? formData.storyData.differentials.map((d: any, idx: number) => `${idx + 1}. ${d.diagnosis}: ${d.reasoning}`).join('\n\n')
+                    : 'No differential diagnoses generated yet.'}
+                </Text>
+              </View>
+              <View style={[pdfStyles.fullWidth, { marginTop: 15 }]}>
+                <Text style={pdfStyles.fieldLabel}>Priority Investigations Plan</Text>
+                <Text style={pdfStyles.fieldValue}>
+                  {formData.storyData?.plan 
+                    ? formData.storyData.plan.map((p: string, idx: number) => `${idx + 1}. ${p}`).join('\n')
+                    : 'No medical investigation plans generated yet.'}
+                </Text>
+              </View>
             </View>
           )}
         </View>
 
         <View style={pdfStyles.footer}>
           <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
-          <Text style={pdfStyles.footerText}>Page {index + 1} of {STEPS.length}</Text>
+          <Text style={pdfStyles.footerText}>Page {index + 1} of {steps.length}</Text>
         </View>
       </Page>
     ))}
@@ -767,140 +709,158 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
     {/* Page 1: Cover Page */}
     <Page size="A4" style={pdfStyles.page}>
       <View style={pdfStyles.coverPage}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>{getInitials(formData.fullName)}</Text>
-        <Text style={{ fontSize: 12, color: '#D4A5A5', marginBottom: 40, textTransform: 'uppercase', letterSpacing: 2 }}>{formData.specialty || 'General Clinical'} Case</Text>
-        <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 60 }}>CASE STORY</Text>
-        <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center', paddingHorizontal: 40 }}>TOPIC: {title?.toUpperCase() || storyData.impression?.toUpperCase() || formData.chiefComplaint?.toUpperCase() || 'CLINICAL CASE'}</Text>
+        <Text style={{ fontSize: 13, color: '#475569', fontWeight: 'bold', marginBottom: 5, letterSpacing: 2, textTransform: 'uppercase' }}>UCU SCHOOL OF MEDICINE / MENGO HOSPITAL</Text>
+        <Text style={{ fontSize: 9, color: '#94A3B8', marginBottom: 25, letterSpacing: 1, textTransform: 'uppercase' }}>Academic Clinical Case Workspace</Text>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#1E293B' }}>{getInitials(formData.fullName)}</Text>
+        <Text style={{ fontSize: 11, color: '#D4A5A5', marginBottom: 35, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 'bold' }}>{formData.specialty || 'General Clinical'} Case Write-Up</Text>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 40, color: '#0F172A', letterSpacing: 1 }}>CLINICAL CASE WRITE-UP</Text>
+        <Text style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center', paddingHorizontal: 40, color: '#1E293B', lineHeight: 1.4 }}>
+          TOPIC: {title?.toUpperCase() || storyData.impression?.toUpperCase() || formData.chiefComplaint?.toUpperCase() || 'CLINICAL CASE'}
+        </Text>
       </View>
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>Malae Medical Workspace</Text>
-        <Text style={pdfStyles.footerText}>Page 1</Text>
+        <Text style={pdfStyles.footerText}>Malae Medical Workspace - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
 
     {/* Page 2: Demographics & History */}
-    <Page size="A4" style={pdfStyles.page}>
-      <View style={{ marginBottom: 20 }}>
-        {[
-          { label: 'Date of admission', value: formData.admissionDate },
-          { label: 'Patient Initials', value: getInitials(formData.fullName) },
-          { label: 'Age', value: formData.age ? `${formData.age}yrs` : '' },
-          { label: 'Sex', value: formData.sex },
-          { label: 'Tribe', value: formData.ethnicity },
-          { label: 'Address', value: formData.address },
-          { label: 'Religion', value: formData.religion },
-          { label: 'Occupation', value: formData.occupation },
-          { label: 'Next of Kin', value: formData.nextOfKin },
-          { label: 'Relationship', value: formData.relationship },
-        ].map((field, i) => (
-          <Text key={i} style={{ fontSize: 10, marginBottom: 4 }}>
-            <Text style={{ fontWeight: 'bold' }}>{field.label}; </Text>
-            {field.value || 'N/A'}
-          </Text>
-        ))}
+    <Page size="A4" style={pdfStyles.page} wrap>
+      <View style={{ marginBottom: 15, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 6, border: '1px solid #E2E8F0' }}>
+        <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 6, color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 }}>Clinical Demographics Matrix</Text>
+        <View style={{ flexWrap: 'wrap', flexDirection: 'row' }}>
+          {[
+            { label: 'Institution', value: 'UCU School of Medicine / Mengo Hospital' },
+            { label: 'Attending Clinician', value: 'Samantha Ainembabazi, MBChB Candidate' },
+            { label: 'Registration No', value: formData.registrationNo },
+            { label: 'Ward / Bedspace', value: formData.ward ? `${formData.ward}${formData.bed ? ` / ${formData.bed}` : ''}` : formData.bed },
+            { label: 'Date of Admission', value: formData.admissionDate },
+            { label: 'Date of Discharge', value: formData.dischargeDate || 'Ongoing / Pending' },
+            { label: 'Patient Name/Initials', value: getInitials(formData.fullName) },
+            { label: 'Age / Sex', value: `${formData.age ? `${formData.age} yrs` : 'N/A'} / ${formData.sex || 'N/A'}` },
+            { label: 'Tribe (Ethnicity)', value: formData.ethnicity },
+            { label: 'Residential Address', value: formData.address },
+            { label: 'Religion / Occ.', value: `${formData.religion || 'N/A'} / ${formData.occupation || 'N/A'}` },
+            { label: 'Next of Kin', value: formData.nextOfKin ? `${formData.nextOfKin}${formData.relationship ? ` (${formData.relationship})` : ''}` : 'N/A' },
+          ].map((field, i) => (
+            <View key={i} style={{ width: '50%', marginBottom: 4 }}>
+              <Text style={{ fontSize: 8 }}>
+                <Text style={{ fontWeight: 'bold', color: '#334155' }}>{field.label}: </Text>
+                <Text style={{ color: '#64748B' }}>{field.value || 'N/A'}</Text>
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Presenting complaint;</Text>
-      <View style={{ flexDirection: 'row', marginBottom: 15 }}>
-        <Text style={{ fontSize: 10, marginRight: 5 }}>✓</Text>
-        <Text style={{ fontSize: 10 }}>{formData.chiefComplaint} x {formData.duration}</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Presenting Complaint;</Text>
+      <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
+        <Text style={{ fontSize: 10, marginRight: 5, color: '#1E293B' }}>✓</Text>
+        <Text style={{ fontSize: 9, color: '#334155', fontWeight: 'bold' }}>{formData.chiefComplaint} x {formData.duration}</Text>
       </View>
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 5 }}>History of presenting complaint</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 5, color: '#1E293B' }}>History of Presenting Complaint</Text>
       <Text style={pdfStyles.paragraph}>{storyData.hpcNarrative}</Text>
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Review of other systems</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Review of Other Systems</Text>
       <Text style={pdfStyles.paragraph}>{storyData.rosNarrative}</Text>
 
-      {storyData.obGynNarrative && (
+      {storyData.obGynNarrative ? (
         <>
-          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Obstetrics & Gynaecology History:</Text>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Obstetrics & Gynaecology History</Text>
           <Text style={pdfStyles.paragraph}>{storyData.obGynNarrative}</Text>
         </>
-      )}
+      ) : null}
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Past Medical history:</Text>
+      {storyData.pediatricNarrative ? (
+        <>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Antenatal, Natal, Developmental & Immunization History (Pediatrics)</Text>
+          <Text style={pdfStyles.paragraph}>{storyData.pediatricNarrative}</Text>
+        </>
+      ) : null}
+
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Past Medical History</Text>
       <Text style={pdfStyles.paragraph}>{storyData.pmhNarrative}</Text>
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Past surgical history:</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Past Surgical History</Text>
       <Text style={pdfStyles.paragraph}>{storyData.pshNarrative}</Text>
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Family Social History:</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#1E293B' }}>Family & Social History</Text>
       <Text style={pdfStyles.paragraph}>{storyData.fshNarrative}</Text>
 
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
-        <Text style={pdfStyles.footerText}>Page 2</Text>
+        <Text style={pdfStyles.footerText}>UCU / Mengo Hospital - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
 
     {/* Page 3: Differentials & Examination */}
-    <Page size="A4" style={pdfStyles.page}>
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>Differential diagnoses</Text>
+    <Page size="A4" style={pdfStyles.page} wrap>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#1E293B' }}>Differential Diagnoses</Text>
       {storyData.differentials?.map((diff: any, i: number) => (
-        <View key={i} style={{ marginBottom: 10 }}>
-          <Text style={{ fontSize: 10, lineHeight: 1.4 }}>
-            <Text style={{ fontWeight: 'bold' }}>{i + 1}. {diff.diagnosis}</Text> {diff.reasoning}
+        <View key={i} style={{ marginBottom: 8 }}>
+          <Text style={{ fontSize: 9, lineHeight: 1.4, color: '#334155' }}>
+            <Text style={{ fontWeight: 'bold', color: '#1E293B' }}>{i + 1}. {diff.diagnosis}:</Text> {diff.reasoning}
           </Text>
         </View>
       ))}
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>On Examination</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 8, color: '#1E293B' }}>On Examination</Text>
       <Text style={pdfStyles.paragraph}>{storyData.examinationNarrative}</Text>
 
-      {storyData.investigationsNarrative && (
+      {storyData.investigationsNarrative ? (
         <>
-          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Investigations Summary;</Text>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 12, marginBottom: 5, color: '#1E293B' }}>Investigations Summary;</Text>
           <Text style={pdfStyles.paragraph}>{storyData.investigationsNarrative}</Text>
         </>
-      )}
+      ) : null}
 
-      {storyData.procedureNarrative && (
+      {storyData.procedureNarrative ? (
         <>
-          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Procedure & Progress Notes;</Text>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 12, marginBottom: 5, color: '#1E293B' }}>Procedure & Progress Notes;</Text>
           <Text style={pdfStyles.paragraph}>{storyData.procedureNarrative}</Text>
         </>
-      )}
+      ) : null}
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Impression;</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 12, marginBottom: 5, color: '#1E293B' }}>Clinical Impression;</Text>
       <Text style={pdfStyles.paragraph}>{storyData.impression}</Text>
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Plan</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 12, marginBottom: 5, color: '#1E293B' }}>Clinical Management & Therapeutic Plan</Text>
       {storyData.plan?.map((item: string, i: number) => (
         <View key={i} style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 10 }}>
-          <Text style={{ fontSize: 10, width: 15 }}>{i + 1}.</Text>
-          <Text style={{ fontSize: 10, flex: 1 }}>{item}</Text>
+          <Text style={{ fontSize: 9, width: 15, color: '#1E293B', fontWeight: 'bold' }}>{i + 1}.</Text>
+          <Text style={{ fontSize: 9, flex: 1, color: '#334155' }}>{item}</Text>
         </View>
       ))}
 
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
-        <Text style={pdfStyles.footerText}>Page 3</Text>
+        <Text style={pdfStyles.footerText}>UCU / Mengo Hospital - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
 
     {/* Page 4: Case Discussion */}
-    <Page size="A4" style={pdfStyles.page}>
-      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' }}>CASE DISCUSSION</Text>
+    <Page size="A4" style={pdfStyles.page} wrap>
+      <Text style={{ fontSize: 13, fontWeight: 'bold', marginBottom: 12, textAlign: 'center', color: '#1E293B', letterSpacing: 0.5 }}>SCHOLARLY CASE DISCUSSION</Text>
       
       {storyData.caseDiscussionSections?.map((section: any, i: number) => (
-        <View key={i} style={{ marginBottom: 15 }}>
-          <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 5 }}>{section.title}</Text>
+        <View key={i} style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 4, color: '#1E293B' }}>{section.title}</Text>
           <Text style={pdfStyles.paragraph}>{section.content}</Text>
         </View>
       )) || <Text style={pdfStyles.paragraph}>{storyData.caseDiscussion}</Text>}
 
-      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>References</Text>
+      <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 15, marginBottom: 8, color: '#1E293B' }}>References (Vancouver Format)</Text>
       {storyData.references?.map((ref: string, i: number) => (
-        <View key={i} style={{ flexDirection: 'row', marginBottom: 5 }}>
-          <Text style={{ fontSize: 9, width: 15 }}>{i + 1}.</Text>
-          <Text style={{ fontSize: 9, flex: 1 }}>{ref}</Text>
+        <View key={i} style={{ flexDirection: 'row', marginBottom: 4 }}>
+          <Text style={{ fontSize: 8, width: 15, color: '#64748B' }}>{i + 1}.</Text>
+          <Text style={{ fontSize: 8, flex: 1, color: '#475569' }}>{ref}</Text>
         </View>
       ))}
 
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>Confidential Medical Record</Text>
-        <Text style={pdfStyles.footerText}>Page 4</Text>
+        <Text style={pdfStyles.footerText}>UCU / Mengo Hospital - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
   </Document>
@@ -930,7 +890,10 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<'dashboard' | 'generator' | 'viewer' | 'profile'>('dashboard');
   const [generatorMode, setGeneratorMode] = useState<'selection' | 'form' | 'upload' | 'audio'>('selection');
+  const [historyTab, setHistoryTab] = useState<'voice' | 'direct' | 'doc'>('voice');
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [directSection, setDirectSection] = useState<'demographics' | 'complaint' | 'hpc' | 'ped_prenatal' | 'ped_dev_immune' | 'ped_nutrition' | 'obg_current_obstetric' | 'obg_past_obstetric' | 'obg_gynae' | 'review' | 'medical' | 'surgical' | 'family_social' | 'physical_exam'>('demographics');
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<any>(() => {
@@ -943,11 +906,8 @@ export default function App() {
   });
 
   const activeSteps = useMemo(() => {
-    return STEPS.filter(step => {
-      if (step.id === 'ob_gyn_hx') return formData.specialty === 'Obstetrics & Gynaecology';
-      return true;
-    });
-  }, [formData.specialty]);
+    return STEPS;
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('malae_form_data', JSON.stringify(formData));
@@ -956,9 +916,62 @@ export default function App() {
   const [reports, setReports] = useState<Report[]>([]);
   const [collaboratorReports, setCollaboratorReports] = useState<Report[]>([]);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [syncedStoryData, setSyncedStoryData] = useState<any>(null);
+  const [customSuggestionText, setCustomSuggestionText] = useState("");
+
+  const handleToggleSuggestionInPlan = (suggestion: string) => {
+    if (!syncedStoryData) return;
+    const currentPlan = syncedStoryData.plan || [];
+    const isSelected = currentPlan.some((p: string) => p.trim().toLowerCase() === suggestion.trim().toLowerCase());
+    const newPlan = isSelected 
+      ? currentPlan.filter((p: string) => p.trim().toLowerCase() !== suggestion.trim().toLowerCase())
+      : [...currentPlan, suggestion];
+    
+    setSyncedStoryData({
+      ...syncedStoryData,
+      plan: newPlan
+    });
+  };
+
+  const handleAddCustomSuggestion = () => {
+    if (!customSuggestionText.trim() || !syncedStoryData) return;
+    const cleanText = customSuggestionText.trim();
+    const newSuggestions = [...(syncedStoryData.managementSuggestions || []), cleanText];
+    const newPlan = [...(syncedStoryData.plan || []), cleanText];
+    setSyncedStoryData({
+      ...syncedStoryData,
+      managementSuggestions: newSuggestions,
+      plan: newPlan
+    });
+    setCustomSuggestionText("");
+  };
+
+  const handleUpdateSuggestionText = (index: number, newText: string) => {
+    if (!syncedStoryData) return;
+    const originalSug = (syncedStoryData.managementSuggestions || [])[index];
+    const newSuggestions = [...(syncedStoryData.managementSuggestions || [])];
+    newSuggestions[index] = newText;
+    
+    // Also update in plan if present
+    let newPlan = [...(syncedStoryData.plan || [])];
+    const planIndex = newPlan.findIndex((p: string) => p.trim().toLowerCase() === originalSug.trim().toLowerCase());
+    if (planIndex !== -1) {
+      newPlan[planIndex] = newText;
+    }
+    
+    setSyncedStoryData({
+      ...syncedStoryData,
+      managementSuggestions: newSuggestions,
+      plan: newPlan
+    });
+  };
+
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioSpeed, setAudioSpeed] = useState(1);
+  const [showSkipExamModal, setShowSkipExamModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingField, setRecordingField] = useState<string | null>(null);
-  const [recordingTimeLeft, setRecordingTimeLeft] = useState(30);
+  const [recordingTimeLeft, setRecordingTimeLeft] = useState(120);
   const [transcribingField, setTranscribingField] = useState<string | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1057,6 +1070,45 @@ export default function App() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (authLoading) return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const urlReportId = params.get('reportId');
+    if (urlReportId) {
+      const docRef = doc(db, 'reports', urlReportId);
+      getDocFromServer(docRef).then(async (snap) => {
+        if (snap.exists()) {
+          const reportData = { id: snap.id, ...snap.data() } as any;
+          setSelectedReport(reportData);
+          setFormData(reportData.patientData || {});
+          setSyncedStoryData(reportData.reportData || null);
+          setView('viewer');
+          
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          if (user && user.email) {
+            const colls = reportData.collaborators || [];
+            if (reportData.userId !== user.uid && !colls.includes(user.email)) {
+              try {
+                await updateDoc(docRef, {
+                  collaborators: [...colls, user.email]
+                });
+                console.log("Successfully added user as collaborator to clinical case:", urlReportId);
+              } catch (e) {
+                console.error("Auto-add collaborator failed:", e);
+              }
+            }
+          }
+        } else {
+          alert("The shared clinical case could not be located on the server.");
+        }
+      }).catch((err) => {
+        console.error("Error fetching shared report:", err);
+      });
+    }
+  }, [user, authLoading]);
+
   const allReports = useMemo(() => {
     const combined = [...reports, ...collaboratorReports];
     // Remove duplicates by ID
@@ -1146,7 +1198,7 @@ export default function App() {
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingField(field);
-      setRecordingTimeLeft(30);
+      setRecordingTimeLeft(120);
 
       // Start timer
       recordingIntervalRef.current = setInterval(() => {
@@ -1261,7 +1313,36 @@ export default function App() {
         );
 
         const extractedData = JSON.parse(response.text);
-        setFormData((prev: any) => ({ ...prev, ...extractedData }));
+        
+        let combinedHistory = '';
+        if (extractedData.chiefComplaint) {
+          combinedHistory += `CHIEF COMPLAINT:\n${extractedData.chiefComplaint} (Duration: ${extractedData.duration || 'N/A'})\n\n`;
+        }
+        if (extractedData.onset || extractedData.progression) {
+          combinedHistory += `HPI CHARACTERISTICS:\n- Onset: ${extractedData.onset || 'N/A'}\n- Progression: ${extractedData.progression || 'N/A'}\n`;
+        }
+        if (extractedData.associatedSymptoms) {
+          combinedHistory += `- Associated symptoms: ${extractedData.associatedSymptoms}\n`;
+        }
+        if (extractedData.chronicConditions || extractedData.medications) {
+          combinedHistory += `\nPAST MEDICAL BACKGROUND:\n- Conditions: ${extractedData.chronicConditions || 'None documented'}\n- Medications: ${extractedData.medications || 'None documented'}\n`;
+        }
+        if (extractedData.allergies) {
+          combinedHistory += `- Allergies: ${extractedData.allergies}\n`;
+        }
+
+        setFormData((prev: any) => {
+          const mainHistory = prev.historyInput || '';
+          const newlyCombined = combinedHistory.trim();
+          const updatedHistory = mainHistory ? `${mainHistory}\n\n=== FILE EXTRACTION ===\n${newlyCombined}` : newlyCombined;
+          
+          return {
+            ...prev,
+            ...extractedData,
+            historyInput: updatedHistory,
+            physicalExam: extractedData.physicalExam || extractedData.vitals || prev.physicalExam || ''
+          };
+        });
         setIsProcessingFile(false);
       };
     } catch (err) {
@@ -1582,8 +1663,8 @@ export default function App() {
     }
   };
 
-  const currentStep = STEPS[currentStepIndex];
-  const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
+  const currentStep = activeSteps[currentStepIndex];
+  const progress = ((currentStepIndex + 1) / activeSteps.length) * 100;
 
   if (authLoading) {
     return (
@@ -1623,12 +1704,12 @@ export default function App() {
 
   const downloadStoryReport = async () => {
     setStoryReportStatus('generating');
-    setGenerationStatus("AI is analyzing clinical data and writing case story...");
     
     const fallbackData = {
       hpcNarrative: "The clinical narrative could not be generated at this time. Please review the raw data in the original report.",
       rosNarrative: "Review of systems analysis unavailable.",
       obGynNarrative: "",
+      pediatricNarrative: "",
       pmhNarrative: "Medical history summary unavailable.",
       pshNarrative: "Surgical history summary unavailable.",
       fshNarrative: "Social history summary unavailable.",
@@ -1643,44 +1724,30 @@ export default function App() {
       caseDiscussionSections: [
         { title: "System Notice", content: "The academic case discussion is currently unavailable due to a processing error. This may occur if the clinical data provided is insufficient for deep synthesis." }
       ],
-      references: ["Malae Clinical Intelligence System Documentation"]
+      references: ["Malae Clinical Intelligence System Documentation"],
+      priorityInvestigations: ["Complete Blood Count (CBC)", "Diagnostic Imaging"],
+      managementSuggestions: ["Supportive Clinical Monitoring"],
+      wardRoundPresentation: "Admission briefing pending review."
     };
 
-    try {
-      const prompt = `
-          You are a Senior Consultant specializing in ${formData.specialty || 'General Medicine'} and a medical educator.
-          Based on the following patient data, synthesize a high-level, cohesive academic clinical case write-up.
-          Strictly adhere to formal medical writing standards, utilizing precise clinical nomenclature and a rigorous evidence-based academic tone.
-          The output must be suitable for a medical journal publication or a senior clinical meeting.
+    if (syncedStoryData) {
+      try {
+        setGenerationStatus("Compiling story into high-level PDF...");
+        const reportTitle = syncedStoryData.impression || formData.chiefComplaint || 'Clinical Case';
+        const blob = await pdf(<ClinicalCaseStoryPDF formData={formData} storyData={syncedStoryData} title={reportTitle} />).toBlob();
+        const specialtyClean = (formData.specialty || 'Clinical').replace(/[^a-zA-Z0-9]/g, '_');
+        triggerDownload(blob, `${specialtyClean}_Case_Write_Up_${formData.fullName || 'Patient'}`);
+        setStoryReportStatus('completed');
+        setTimeout(() => setStoryReportStatus('idle'), 3000);
+        return;
+      } catch (err) {
+        console.error("PDF compiling from synced story failed, falling back to clean retrieval", err);
+      }
+    }
 
-          Patient Data:
-          ${JSON.stringify(formData, null, 2)}
-          
-          Instructions:
-          1. HPC Narrative: Construct a detailed, chronological narrative of the history of presenting complaint (HPC). Utilize professional syntax such as "presented with a [duration] history of...", "insidious vs. acute onset", "gradually progressive nature", and "pertinent negatives including...". Ensure the narrative flows logically and captures the clinical severity.
-          2. ROS Narrative: Synthesize a cohesive summary of the Review of Systems (ROS). Group findings by system (e.g., Constitutional, Cardiorespiratory, Gastrointestinal, Musculoskeletal, Genitourinary, Neurological).
-          3. Ob/Gyn History: If applicable (female patient or maternal case), synthesize a narrative for Obstetrics and Gynaecological history.
-          4. PMH Narrative: Summarize relevant Past Medical History (PMH), emphasizing comorbidities and pharmacological management.
-          5. PSH Narrative: Detail the Past Surgical History (PSH) and trauma history.
-          6. FSH Narrative: Summarize Family and Social History (FSH), focusing on hereditary predispositions and social determinants of health.
-          7. Examination Narrative: Provide a professional, structured write-up of physical examination findings. Include Vitals, General Examination, and Systemic Examination findings with high precision.
-          8. Investigations Summary: Synthesize laboratory and imaging findings, highlighting critical anomalies and diagnostic significance.
-          9. Procedure/Progress Notes: If available, summarize recent interventions and clinical trends.
-          10. Differential Diagnoses: Synthesize 5-10 differential diagnoses. For each, provide a rigorous clinical justification based on the clinical features presented.
-          11. Case Discussion: Provide an exhaustive, scholarly discourse (1000+ words equivalent). This is the core academic section.
-              - It must be deeply analytical and grounded in current medical literature.
-              - Discuss pathophysiology, contemporary diagnostic criteria, and global management standards.
-              - Compare the patient's presentation with textbook descriptions.
-          12. Impression: Provide a concise, multi-axial clinical impression.
-          13. Plan: Formulate a 5-10 point evidence-based clinical management plan.
-          14. References: Provide 4-5 high-impact academic references in standard Vancouver format.
-          
-          Handling Missing Data:
-          - DO NOT hallucinate. Use professional language like "Not documented at presentation" or "Further clinical correlation required".
-          
-          Return the response in STRICT JSON format with the following keys:
-          hpcNarrative, rosNarrative, obGynNarrative, pmhNarrative, pshNarrative, fshNarrative, examinationNarrative, investigationsNarrative, procedureNarrative, differentials (array of objects with diagnosis and reasoning), impression, plan (array of strings), caseDiscussionSections (array of objects with title and content), references (array of strings).
-        `;
+    setGenerationStatus("AI is analyzing clinical data and writing case story...");
+    try {
+      const prompt = getCaseWriteUpPrompt(formData);
 
       const response = await callGemini(
         [{ parts: [{ text: prompt }] }],
@@ -1716,7 +1783,8 @@ export default function App() {
       setGenerationStatus("Compiling story into high-level PDF...");
       const reportTitle = storyData.impression || formData.chiefComplaint || 'Clinical Case';
       const blob = await pdf(<ClinicalCaseStoryPDF formData={formData} storyData={storyData} title={reportTitle} />).toBlob();
-      triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}`);
+      const specialtyClean = (formData.specialty || 'Clinical').replace(/[^a-zA-Z0-9]/g, '_');
+      triggerDownload(blob, `${specialtyClean}_Case_Write_Up_${formData.fullName || 'Patient'}`);
       setStoryReportStatus('completed');
       setTimeout(() => setStoryReportStatus('idle'), 3000);
     } catch (error: any) {
@@ -1726,7 +1794,8 @@ export default function App() {
       // Generate PDF with fallback data even on top-level catch
       try {
         const blob = await pdf(<ClinicalCaseStoryPDF formData={formData} storyData={fallbackData} />).toBlob();
-        triggerDownload(blob, `Surgical_Case_WriteUp_${formData.fullName || 'Patient'}_FALLBACK`);
+        const specialtyClean = (formData.specialty || 'Clinical').replace(/[^a-zA-Z0-9]/g, '_');
+        triggerDownload(blob, `${specialtyClean}_Case_Write_Up_${formData.fullName || 'Patient'}_FALLBACK`);
         setStoryReportStatus('completed'); // Fallback is still a success of sorts
         setTimeout(() => setStoryReportStatus('idle'), 3000);
       } catch (pdfError) {
@@ -1784,7 +1853,11 @@ export default function App() {
   };
 
   const handleNext = () => {
-    if (currentStepIndex < STEPS.length - 1) {
+    if (currentStep.id === 'physical_exam' && !formData.physicalExamSkipped && (!formData.physicalExam || !formData.physicalExam.trim())) {
+      setShowSkipExamModal(true);
+      return;
+    }
+    if (currentStepIndex < activeSteps.length - 1) {
       setCompletedSteps(prev => new Set(prev).add(currentStep.id));
       setCurrentStepIndex(prev => prev + 1);
     }
@@ -1817,6 +1890,63 @@ export default function App() {
       setFormData((prev: any) => ({ ...prev, [field]: value(prev[field]) }));
     } else {
       setFormData((prev: any) => ({ ...prev, [field]: value }));
+    }
+  };  const startSpeechSynthesis = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = audioSpeed;
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlayingAudio(true);
+    } else {
+      alert("Text-to-speech is not supported in this browser.");
+    }
+  };
+
+  const stopSpeechSynthesis = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    }
+  };
+
+  const handleAISynthesis = async () => {
+    setOriginalReportStatus('generating');
+    setGenerationStatus("AI is analyzing clinical data and writing case story...");
+    
+    try {
+      const prompt = getCaseWriteUpPrompt(formData);
+
+      const response = await callGemini(
+        [{ parts: [{ text: prompt }] }],
+        { 
+          responseMimeType: "application/json",
+          temperature: 0.3,
+        }
+      );
+
+      let parsedData;
+      try {
+        parsedData = JSON.parse(response.text);
+      } catch (err) {
+        console.error("Failed to parse synthesized AI response as JSON", err);
+        throw err;
+      }
+
+      setSyncedStoryData(parsedData);
+      setOriginalReportStatus('completed');
+      setCompletedSteps(prev => new Set(prev).add('compiled_report'));
+      setTimeout(() => setOriginalReportStatus('idle'), 3000);
+      
+      if (user) {
+        await handleSaveReport(parsedData, 'story');
+      }
+    } catch (error) {
+      console.error("AI Compilation Error:", error);
+      alert("AI Compilation failed. Please try again.");
+      setOriginalReportStatus('idle');
     }
   };
 
@@ -1851,174 +1981,1327 @@ export default function App() {
             ))}
           </div>
         );
-      case 'demographics':
+
+      case 'input_history':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField label="Date of Admission" type="date" value={formData.admissionDate} onChange={(v: any) => updateField('admissionDate', v)} required />
-            <InputField label="Patient Initials" placeholder="J.D" value={formData.fullName} onChange={(v: any) => updateField('fullName', v)} required onVoiceInput={() => startVoiceInput('fullName')} isRecording={recordingField === 'fullName'} isTranscribing={transcribingField === 'fullName'} recordingTimeLeft={recordingTimeLeft} />
-            <SelectField 
-              label="Age (years)" 
-              options={Array.from({ length: 121 }, (_, i) => i.toString())} 
-              value={formData.age} 
-              onChange={(v: any) => updateField('age', v)} 
-              required 
-            />
-            <SelectField 
-              label="Sex" 
-              options={['Male', 'Female', 'Other']} 
-              value={formData.sex} 
-              onChange={(v: any) => updateField('sex', v)} 
-              required 
-            />
-            <SelectField 
-              label="Tribe/Ethnicity" 
-              options={['Baganda', 'Banyankole', 'Basoga', 'Bakiga', 'Iteso', 'Langi', 'Acholi', 'Bagisu', 'Lugbara', 'Bunyoro', 'Other']} 
-              value={formData.ethnicity} 
-              onChange={(v: any) => updateField('ethnicity', v)} 
-            />
-            <InputField label="Address/Location" placeholder="Kampala" value={formData.address} onChange={(v: any) => updateField('address', v)} onVoiceInput={() => startVoiceInput('address')} isRecording={recordingField === 'address'} isTranscribing={transcribingField === 'address'} recordingTimeLeft={recordingTimeLeft} />
-            <SelectField 
-              label="Religion" 
-              options={['Christian', 'Muslim', 'Hindu', 'Traditional', 'None', 'Other']} 
-              value={formData.religion} 
-              onChange={(v: any) => updateField('religion', v)} 
-            />
-            <InputField label="Occupation" placeholder="Teacher" value={formData.occupation} onChange={(v: any) => updateField('occupation', v)} onVoiceInput={() => startVoiceInput('occupation')} isRecording={recordingField === 'occupation'} isTranscribing={transcribingField === 'occupation'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Next of Kin (Initials)" placeholder="J.D" value={formData.nextOfKin} onChange={(v: any) => updateField('nextOfKin', v)} onVoiceInput={() => startVoiceInput('nextOfKin')} isRecording={recordingField === 'nextOfKin'} isTranscribing={transcribingField === 'nextOfKin'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Relationship" placeholder="Spouse" value={formData.relationship} onChange={(v: any) => updateField('relationship', v)} onVoiceInput={() => startVoiceInput('relationship')} isRecording={recordingField === 'relationship'} isTranscribing={transcribingField === 'relationship'} recordingTimeLeft={recordingTimeLeft} />
-          </div>
-        );
-      case 'presenting_complaint':
-        return (
-          <div className="flex flex-col gap-8">
-            <TextAreaField label="Chief Complaint" placeholder="e.g., Neck swelling, Epigastric pain" value={formData.chiefComplaint} onChange={(v: any) => updateField('chiefComplaint', v)} required onVoiceInput={() => startVoiceInput('chiefComplaint')} isRecording={recordingField === 'chiefComplaint'} isTranscribing={transcribingField === 'chiefComplaint'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Duration" placeholder="e.g., 1 year, 2 months" value={formData.duration} onChange={(v: any) => updateField('duration', v)} required onVoiceInput={() => startVoiceInput('duration')} isRecording={recordingField === 'duration'} isTranscribing={transcribingField === 'duration'} recordingTimeLeft={recordingTimeLeft} />
-          </div>
-        );
-      case 'hpc_details':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField label="Onset" placeholder="sudden/gradual/insidious" value={formData.onset} onChange={(v: any) => updateField('onset', v)} onVoiceInput={() => startVoiceInput('onset')} isRecording={recordingField === 'onset'} isTranscribing={transcribingField === 'onset'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Progression" placeholder="progressive/static/improving" value={formData.progression} onChange={(v: any) => updateField('progression', v)} onVoiceInput={() => startVoiceInput('progression')} isRecording={recordingField === 'progression'} isTranscribing={transcribingField === 'progression'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Character" placeholder="sharp, dull, burning, aching" value={formData.character} onChange={(v: any) => updateField('character', v)} onVoiceInput={() => startVoiceInput('character')} isRecording={recordingField === 'character'} isTranscribing={transcribingField === 'character'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Severity" placeholder="mild/moderate/severe or 1-10" value={formData.severity} onChange={(v: any) => updateField('severity', v)} onVoiceInput={() => startVoiceInput('severity')} isRecording={recordingField === 'severity'} isTranscribing={transcribingField === 'severity'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Location" placeholder="exact anatomical location" value={formData.location} onChange={(v: any) => updateField('location', v)} onVoiceInput={() => startVoiceInput('location')} isRecording={recordingField === 'location'} isTranscribing={transcribingField === 'location'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Radiation" placeholder="where symptoms radiate" value={formData.radiation} onChange={(v: any) => updateField('radiation', v)} onVoiceInput={() => startVoiceInput('radiation')} isRecording={recordingField === 'radiation'} isTranscribing={transcribingField === 'radiation'} recordingTimeLeft={recordingTimeLeft} />
-            <div className="md:col-span-2">
-              <TextAreaField label="Associated Symptoms (Present)" placeholder="fever, weight loss, night sweats, cough, etc." value={formData.associatedSymptoms} onChange={(v: any) => updateField('associatedSymptoms', v)} onVoiceInput={() => startVoiceInput('associatedSymptoms')} isRecording={recordingField === 'associatedSymptoms'} isTranscribing={transcribingField === 'associatedSymptoms'} recordingTimeLeft={recordingTimeLeft} />
+          <div className="flex flex-col gap-6">
+
+            {/* Input Method Tabs */}
+            <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+              {[
+                { id: 'voice', label: 'Voice Recording', icon: Mic },
+                { id: 'direct', label: 'Direct Entry', icon: ClipboardList },
+                { id: 'doc', label: 'Upload Document', icon: FileUp }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setHistoryTab(tab.id as any)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${historyTab === tab.id ? 'bg-white text-primary shadow-sm' : 'text-text-muted hover:text-text-main'}`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
             </div>
-            <div className="md:col-span-2">
-              <TextAreaField label="Important Negative Findings" placeholder="symptoms NOT present that help rule out differentials" value={formData.negativeFindings} onChange={(v: any) => updateField('negativeFindings', v)} onVoiceInput={() => startVoiceInput('negativeFindings')} isRecording={recordingField === 'negativeFindings'} isTranscribing={transcribingField === 'negativeFindings'} recordingTimeLeft={recordingTimeLeft} />
-            </div>
-            <InputField label="Aggravating Factors" placeholder="lying flat, spicy foods, movement" value={formData.aggravating} onChange={(v: any) => updateField('aggravating', v)} onVoiceInput={() => startVoiceInput('aggravating')} isRecording={recordingField === 'aggravating'} isTranscribing={transcribingField === 'aggravating'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Relieving Factors" placeholder="rest, medication, position" value={formData.relieving} onChange={(v: any) => updateField('relieving', v)} onVoiceInput={() => startVoiceInput('relieving')} isRecording={recordingField === 'relieving'} isTranscribing={transcribingField === 'relieving'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Previous Treatment" placeholder="medications tried" value={formData.prevTreatment} onChange={(v: any) => updateField('prevTreatment', v)} onVoiceInput={() => startVoiceInput('prevTreatment')} isRecording={recordingField === 'prevTreatment'} isTranscribing={transcribingField === 'prevTreatment'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Response to Treatment" placeholder="improvement/no change/worsening" value={formData.respTreatment} onChange={(v: any) => updateField('respTreatment', v)} onVoiceInput={() => startVoiceInput('respTreatment')} isRecording={recordingField === 'respTreatment'} isTranscribing={transcribingField === 'respTreatment'} recordingTimeLeft={recordingTimeLeft} />
-            <div className="md:col-span-2">
-              <TextAreaField label="Impact on Daily Activities" placeholder="how symptoms affect daily life" value={formData.impact} onChange={(v: any) => updateField('impact', v)} onVoiceInput={() => startVoiceInput('impact')} isRecording={recordingField === 'impact'} isTranscribing={transcribingField === 'impact'} recordingTimeLeft={recordingTimeLeft} />
-            </div>
-          </div>
-        );
-      case 'review_of_systems':
-        return (
-          <div className="flex flex-col gap-8">
-            {['GENERAL', 'CARDIOVASCULAR', 'RESPIRATORY', 'GASTROINTESTINAL', 'MUSCULOSKELETAL', 'GENITOURINARY', 'NEUROLOGICAL'].map(system => (
-              <div key={system} className="flex flex-col gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span className="text-[10px] font-bold text-text-main tracking-widest">{system}</span>
+
+            {/* Tab Views */}
+            {historyTab === 'voice' && (
+              <div className="p-8 rounded-3xl bg-slate-900 text-white flex flex-col items-center gap-6 shadow-xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent pointer-events-none" />
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl relative z-10 ${isRecording ? 'bg-red-500 animate-pulse scale-110' : 'bg-primary'}`}>
+                  <button
+                    onClick={() => startVoiceInput('historyInput')}
+                    className="w-full h-full rounded-full flex items-center justify-center text-white"
+                  >
+                    {isRecording ? <MicOff className="w-8 h-8 animate-bounce" /> : <Mic className="w-8 h-8" />}
+                  </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputField label="Symptoms Present" value={formData[`${system}_present`]} onChange={(v: any) => updateField(`${system}_present`, v)} onVoiceInput={() => startVoiceInput(`${system}_present`)} isRecording={recordingField === `${system}_present`} isTranscribing={transcribingField === `${system}_present`} recordingTimeLeft={recordingTimeLeft} />
-                  <InputField label="Symptoms Denied" value={formData[`${system}_denied`]} onChange={(v: any) => updateField(`${system}_denied`, v)} onVoiceInput={() => startVoiceInput(`${system}_denied`)} isRecording={recordingField === `${system}_denied`} isTranscribing={transcribingField === `${system}_denied`} recordingTimeLeft={recordingTimeLeft} />
+                <div className="text-center space-y-2 relative z-10">
+                  <h4 className="text-lg font-black tracking-tight">{isRecording ? 'Dictating Live Patient History...' : 'Start Clinical Recording'}</h4>
+                  <p className="text-xs text-white/60 max-w-sm">Tap mic & start dictating the history. Our AI filters background noise, extracting key medical structures.</p>
+                  {isRecording && (
+                    <div className="text-primary font-bold text-sm tracking-widest mt-2">
+                      REMAINING TIME: {recordingTimeLeft}s
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+            )}
+
+            {historyTab === 'direct' && (() => {
+              let sections = [];
+              if (formData.specialty === 'Pediatrics') {
+                sections = [
+                  { id: 'demographics', label: 'Demographics', sub: 'Patient registry details', icon: UserIcon },
+                  { id: 'complaint', label: 'Presenting Complaint', sub: 'Chief complaint & duration', icon: AlertCircle },
+                  { id: 'hpc', label: 'History of Pres. Complaint', sub: 'Chronological clinical presentation', icon: ClipboardList },
+                  { id: 'review', label: 'Review of other Systems', sub: 'Systemic status inquiry', icon: Activity },
+                  { id: 'medical', label: 'Past Medical History', sub: 'Comorbidities & med regimes', icon: HeartPulse },
+                  { id: 'surgical', label: 'Past Surgical History', sub: 'Prior surgeries & trauma', icon: Syringe },
+                  { id: 'ped_prenatal', label: 'Antenatal and Natal History', sub: 'Pregnancy & birth course', icon: Baby },
+                  { id: 'ped_dev_immune', label: 'Dev & Immunization History', sub: 'Milestones & vaccines', icon: Microscope },
+                  { id: 'ped_nutrition', label: 'Nutritional History', sub: 'Feeding & weaning details', icon: ClipboardList },
+                  { id: 'family_social', label: 'Family-Social History', sub: 'Hereditary & social factors', icon: Users },
+                  { id: 'physical_exam', label: 'Physical Examination', sub: 'Objective clinical exam logs', icon: StethoscopeIcon }
+                ];
+              } else if (formData.specialty === 'Obstetrics & Gynecology') {
+                sections = [
+                   { id: 'demographics', label: 'Demographics', sub: 'Patient registry details', icon: UserIcon },
+                   { id: 'complaint', label: 'Presenting Complaint', sub: 'Chief complaint & duration', icon: AlertCircle },
+                   { id: 'hpc', label: 'History of Pres. Complaint', sub: 'Chronological clinical presentation', icon: ClipboardList },
+                   { id: 'review', label: 'Review of other Systems', sub: 'Systemic status inquiry', icon: Activity },
+                   { id: 'obg_current_obstetric', label: 'Current Obstetrics History', sub: 'Gravida/Parity & current pregnancy', icon: Baby },
+                   { id: 'obg_past_obstetric', label: 'Past Obstetrics History', sub: 'Prior labor & neonatal events', icon: ClipboardList },
+                   { id: 'obg_gynae', label: 'Past Gynaecological History', sub: 'Cycles, menses & screening', icon: Microscope },
+                   { id: 'medical', label: 'Past Medical History', sub: 'Comorbidities & med regimes', icon: HeartPulse },
+                   { id: 'surgical', label: 'Past Surgical History', sub: 'Prior surgeries & trauma', icon: Syringe },
+                   { id: 'family_social', label: 'Family-Social History', sub: 'Hereditary & social factors', icon: Users },
+                   { id: 'physical_exam', label: 'Physical Examination', sub: 'Objective clinical exam logs', icon: StethoscopeIcon }
+                ];
+              } else {
+                sections = [
+                  { id: 'demographics', label: 'Demographics', sub: 'Patient registry details', icon: UserIcon },
+                  { id: 'complaint', label: 'Presenting Complaint', sub: 'Chief complaint & duration', icon: AlertCircle },
+                  { id: 'hpc', label: 'History of Pres. Complaint', sub: 'Chronological clinical presentation', icon: ClipboardList },
+                  { id: 'review', label: 'Review of other Systems', sub: 'Systemic status inquiry', icon: Activity },
+                  { id: 'medical', label: 'Past Medical History', sub: 'Comorbidities & med regimes', icon: HeartPulse },
+                  { id: 'surgical', label: 'Past Surgical History', sub: 'Prior surgeries & trauma', icon: Syringe },
+                  { id: 'family_social', label: 'Family-Social History', sub: 'Hereditary & social factors', icon: Users },
+                  { id: 'physical_exam', label: 'Physical Examination', sub: 'Objective clinical exam logs', icon: StethoscopeIcon }
+                ];
+              }
+
+              return (
+                <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+                  {/* Form Sub-navigation Sidebar */}
+                  <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible no-scrollbar bg-slate-50/70 p-3.5 rounded-3xl border border-line lg:w-72 gap-2 shrink-0 shadow-xs">
+                    <div className="hidden lg:flex items-center justify-between px-3 py-1 mb-2 border-b border-line/40 pb-2">
+                      <span className="text-[10px] font-black text-text-muted uppercase tracking-wider">Clinical Dossier</span>
+                      <span className="text-[8px] px-2 py-0.5 bg-accent/10 text-accent font-bold uppercase rounded-md tracking-widest">{formData.specialty || 'Wards'}</span>
+                    </div>
+                    {sections.map((sec) => {
+                      const isActive = directSection === sec.id;
+                      const Icon = sec.icon;
+                      
+                      let isCompleted = false;
+                      if (sec.id === 'demographics') isCompleted = !!(formData.fullName?.trim() || formData.age || formData.sex);
+                      if (sec.id === 'complaint') isCompleted = !!(formData.chiefComplaint?.trim() || formData.duration?.trim());
+                      if (sec.id === 'hpc') isCompleted = !!formData.historyInput?.trim();
+                      if (sec.id === 'review') isCompleted = !!formData.reviewOfSystems?.trim();
+                      if (sec.id === 'medical') isCompleted = !!(formData.pastMedicalHistory?.trim() || formData.medications?.trim() || formData.allergies?.trim());
+                      if (sec.id === 'surgical') isCompleted = !!formData.pastSurgicalHistory?.trim();
+                      if (sec.id === 'ped_prenatal') isCompleted = !!(formData.antenatalHistory?.trim() || formData.natalHistory?.trim());
+                      if (sec.id === 'ped_dev_immune') isCompleted = !!(formData.immunizationHistory?.trim() || formData.developmentalHistory?.trim());
+                      if (sec.id === 'ped_nutrition') isCompleted = !!formData.nutritionalHistory?.trim();
+                      if (sec.id === 'obg_current_obstetric') isCompleted = !!(formData.gravida?.trim() || formData.parity?.trim() || formData.currentPregnancyDetails?.trim());
+                      if (sec.id === 'obg_past_obstetric') isCompleted = !!formData.obstetricHistory?.trim();
+                      if (sec.id === 'obg_gynae') isCompleted = !!formData.gynaecologicalHistory?.trim();
+                      if (sec.id === 'family_social') isCompleted = !!formData.familySocialHistory?.trim();
+                      if (sec.id === 'physical_exam') isCompleted = !!(formData.physicalExam?.trim() || formData.vitals_bp?.trim() || formData.vitals_pulse?.trim());
+
+                    return (
+                      <button
+                        key={sec.id}
+                        type="button"
+                        onClick={() => {
+                          setDirectSection(sec.id as any);
+                        }}
+                        className={`group flex items-start gap-3.5 px-4.5 py-3.5 rounded-xl text-left whitespace-nowrap lg:whitespace-normal text-xs transition-all active:scale-[0.98] w-full border ${
+                          isActive 
+                            ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.01]' 
+                            : 'text-text-main bg-white border-slate-100/80 hover:border-line hover:shadow-xs'
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg shrink-0 ${isActive ? 'bg-white/10 text-white' : 'bg-bg text-text-muted group-hover:text-primary group-hover:bg-primary/5 transition-colors'}`}>
+                           <Icon className="w-4 h-4 shrink-0" />
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1 leading-normal">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-[11px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-text-main group-hover:text-primary'}`}>{sec.label}</span>
+                            {isCompleted && (
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-white animate-pulse' : 'bg-emerald-500'}`} />
+                            )}
+                          </div>
+                          <span className={`text-[9px] font-medium leading-relaxed mt-0.5 tracking-wide ${isActive ? 'text-white/80 animate-fade-in' : 'text-text-muted'}`}>{sec.sub}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Form Content Panel */}
+                <div className="flex-1 p-6 md:p-8 rounded-3xl border border-line bg-surface min-h-[440px] flex flex-col justify-between shadow-xs relative">
+                  <div>
+                    {directSection === 'complaint' && (
+                      <div className="space-y-6">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Presenting Complaint</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record the primary reason for seeking medical attention and chronological duration.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <InputField 
+                            label="Presenting Complaint" 
+                            placeholder="e.g., Acute onset epigastric pain" 
+                            value={formData.chiefComplaint} 
+                            onChange={(v: any) => updateField('chiefComplaint', v)} 
+                          />
+                          <InputField 
+                            label="Duration / Course" 
+                            placeholder="e.g., 5 days" 
+                            value={formData.duration} 
+                            onChange={(v: any) => updateField('duration', v)} 
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'demographics' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Patient Demographics</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Log standard patient demographics and admission details.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <InputField 
+                            label="Patient Initials" 
+                            placeholder="e.g., J.D." 
+                            value={formData.fullName} 
+                            onChange={(v: any) => updateField('fullName', v)} 
+                          />
+                          <SelectField 
+                            label="Age (years)" 
+                            options={Array.from({ length: 121 }, (_, i) => i.toString())} 
+                            value={formData.age} 
+                            onChange={(v: any) => updateField('age', v)} 
+                          />
+                          <SelectField 
+                            label="Sex" 
+                            options={['Male', 'Female', 'Other']} 
+                            value={formData.sex} 
+                            onChange={(v: any) => updateField('sex', v)} 
+                          />
+                          <InputField 
+                            label="Tribe / Ethnicity" 
+                            placeholder="e.g., Mutooro, Munyankole" 
+                            value={formData.ethnicity} 
+                            onChange={(v: any) => updateField('ethnicity', v)} 
+                          />
+                          <InputField 
+                            label="Address" 
+                            placeholder="e.g., Makindye, Kampala" 
+                            value={formData.address} 
+                            onChange={(v: any) => updateField('address', v)} 
+                          />
+                          <InputField 
+                            label="Religion" 
+                            placeholder="e.g., Anglican, Catholic, Muslim" 
+                            value={formData.religion} 
+                            onChange={(v: any) => updateField('religion', v)} 
+                          />
+                          <InputField 
+                            label="Occupation" 
+                            placeholder="e.g., Business Person, Nurse" 
+                            value={formData.occupation} 
+                            onChange={(v: any) => updateField('occupation', v)} 
+                          />
+                          <InputField 
+                            label="Next of Kin (Initials)" 
+                            placeholder="e.g., T.M." 
+                            value={formData.nextOfKin} 
+                            onChange={(v: any) => updateField('nextOfKin', v)} 
+                          />
+                          <InputField 
+                            label="Relationship" 
+                            placeholder="e.g., Spouse, Sibling" 
+                            value={formData.relationship} 
+                            onChange={(v: any) => updateField('relationship', v)} 
+                          />
+                          <InputField 
+                            label="Registration No" 
+                            placeholder="e.g., 23-025209" 
+                            value={formData.registrationNo} 
+                            onChange={(v: any) => updateField('registrationNo', v)} 
+                          />
+                          <InputField 
+                            label="Ward" 
+                            placeholder="e.g., Nassolo Ward" 
+                            value={formData.ward} 
+                            onChange={(v: any) => updateField('ward', v)} 
+                          />
+                          <InputField 
+                            label="Bed space" 
+                            placeholder="e.g., Bed G" 
+                            value={formData.bed} 
+                            onChange={(v: any) => updateField('bed', v)} 
+                          />
+                          <InputField 
+                            label="Date of Admission" 
+                            type="date" 
+                            value={formData.admissionDate} 
+                            onChange={(v: any) => updateField('admissionDate', v)} 
+                          />
+                          <InputField 
+                            label="Date of Discharge" 
+                            type="date" 
+                            value={formData.dischargeDate} 
+                            onChange={(v: any) => updateField('dischargeDate', v)} 
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'hpc' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">History of Presenting Complaint</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Chronologically detail the clinical presentation history of the patient.</p>
+                        </div>
+
+                        <TextAreaField 
+                          label="Detailed Narrative Chronology" 
+                          placeholder="Detail the chronological progression of symptoms, aggravating, relieving factors, pertinent negatives..." 
+                          value={formData.historyInput} 
+                          rows={10}
+                          onChange={(v: any) => updateField('historyInput', v)} 
+                          onVoiceInput={() => startVoiceInput('historyInput')} 
+                          isRecording={recordingField === 'historyInput'} 
+                          isTranscribing={transcribingField === 'historyInput'} 
+                          recordingTimeLeft={recordingTimeLeft} 
+                        />
+                      </div>
+                    )}
+
+                    {directSection === 'ped_prenatal' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Antenatal & Natal History (Pediatrics)</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record antenatal details, maternal vaccines, gestation, delivery mode, and birth weight.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-5">
+                          <TextAreaField 
+                            label="Antenatal History (ANC, supplements, illness)" 
+                            placeholder="Detail maternal ANC attendance, supplements taken, Tetanus vaccines, malaria prophylaxis, or pregnancy illnesses..." 
+                            value={formData.antenatalHistory} 
+                            rows={4}
+                            onChange={(v: any) => updateField('antenatalHistory', v)} 
+                          />
+                          <TextAreaField 
+                            label="Natal & Neonatal History" 
+                            placeholder="Detail gestation age, mode of delivery, birth weight, immediate cry, APGAR score, or resuscitation history..." 
+                            value={formData.natalHistory} 
+                            rows={4}
+                            onChange={(v: any) => updateField('natalHistory', v)} 
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'ped_dev_immune' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Dev & Immunization History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record childhood developmental milestones and immunization schedule compliance.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-5">
+                          <TextAreaField 
+                            label="Immunization History" 
+                            placeholder="Detail vaccines received, compliant with UNEPI schedule, last vaccine received..." 
+                            value={formData.immunizationHistory} 
+                            rows={3}
+                            onChange={(v: any) => updateField('immunizationHistory', v)} 
+                            onVoiceInput={() => startVoiceInput('immunizationHistory')}
+                            isRecording={recordingField === 'immunizationHistory'}
+                            isTranscribing={transcribingField === 'immunizationHistory'}
+                            recordingTimeLeft={recordingTimeLeft}
+                          />
+                          <TextAreaField 
+                            label="Developmental History" 
+                            placeholder="Detail milestones reached (motor, speech, social) and if they are age-appropriate..." 
+                            value={formData.developmentalHistory} 
+                            rows={3}
+                            onChange={(v: any) => updateField('developmentalHistory', v)} 
+                            onVoiceInput={() => startVoiceInput('developmentalHistory')}
+                            isRecording={recordingField === 'developmentalHistory'}
+                            isTranscribing={transcribingField === 'developmentalHistory'}
+                            recordingTimeLeft={recordingTimeLeft}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'ped_nutrition' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Nutritional History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record breastfeeding duration, exclusive status, and weaning schedules.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-5">
+                          <TextAreaField 
+                            label="Nutritional History" 
+                            placeholder="Breastfeeding duration, exclusive status, weaning food timing/types, or general feeding patterns..." 
+                            value={formData.nutritionalHistory} 
+                            rows={6}
+                            onChange={(v: any) => updateField('nutritionalHistory', v)} 
+                            onVoiceInput={() => startVoiceInput('nutritionalHistory')}
+                            isRecording={recordingField === 'nutritionalHistory'}
+                            isTranscribing={transcribingField === 'nutritionalHistory'}
+                            recordingTimeLeft={recordingTimeLeft}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'obg_current_obstetric' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Current Obstetrics History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record Gravidity, Parity, LMP, EDD, and progress of the current pregnancy.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                          <InputField 
+                            label="Gravida (G)" 
+                            placeholder="e.g., 3" 
+                            value={formData.gravida} 
+                            onChange={(v: any) => updateField('gravida', v)} 
+                          />
+                          <InputField 
+                            label="Parity (P)" 
+                            placeholder="e.g., 1+1" 
+                            value={formData.parity} 
+                            onChange={(v: any) => updateField('parity', v)} 
+                          />
+                          <InputField 
+                            label="LMP" 
+                            placeholder="e.g., DD/MM/YY" 
+                            value={formData.lmp} 
+                            onChange={(v: any) => updateField('lmp', v)} 
+                          />
+                          <InputField 
+                            label="EDD / WOA" 
+                            placeholder="e.g., 35 weeks" 
+                            value={formData.edd} 
+                            onChange={(v: any) => updateField('edd', v)} 
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 gap-5">
+                          <TextAreaField 
+                            label="Current Pregnancy Course" 
+                            placeholder="Inquire about ANC attendance, vaccinations received, complications or active symptoms..." 
+                            value={formData.currentPregnancyDetails} 
+                            rows={6}
+                            onChange={(v: any) => updateField('currentPregnancyDetails', v)} 
+                            onVoiceInput={() => startVoiceInput('currentPregnancyDetails')}
+                            isRecording={recordingField === 'currentPregnancyDetails'}
+                            isTranscribing={transcribingField === 'currentPregnancyDetails'}
+                            recordingTimeLeft={recordingTimeLeft}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'obg_past_obstetric' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Past Obstetrics History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record previous pregnancy outcomes, delivery modes, birth weights, and complications.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-5">
+                          <TextAreaField 
+                            label="Past Deliveries / Pregnancies" 
+                            placeholder="Record previous delivery outcomes, modes, birth weight, and neonatal/postpartum complications..." 
+                            value={formData.obstetricHistory} 
+                            rows={6}
+                            onChange={(v: any) => updateField('obstetricHistory', v)} 
+                            onVoiceInput={() => startVoiceInput('obstetricHistory')}
+                            isRecording={recordingField === 'obstetricHistory'}
+                            isTranscribing={transcribingField === 'obstetricHistory'}
+                            recordingTimeLeft={recordingTimeLeft}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'obg_gynae' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Gynaecological History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Record menstrual cycle, contraception use, and screening tests.</p>
+                        </div>
+                        <TextAreaField 
+                          label="Detailed Gynaecological History" 
+                          placeholder="Detail age of menarche, cycle frequency, duration and flow. Document active contraceptive methods, sexual history, cervical cancer screenings..." 
+                          value={formData.gynaecologicalHistory} 
+                          rows={8}
+                          onChange={(v: any) => updateField('gynaecologicalHistory', v)} 
+                          onVoiceInput={() => startVoiceInput('gynaecologicalHistory')}
+                          isRecording={recordingField === 'gynaecologicalHistory'}
+                          isTranscribing={transcribingField === 'gynaecologicalHistory'}
+                          recordingTimeLeft={recordingTimeLeft} 
+                        />
+                      </div>
+                    )}
+
+                    {directSection === 'review' && (
+                      <div className="space-y-6">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Review of Systems (ROS)</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Screen for additional minor or related clinical clues across all other organ systems.</p>
+                        </div>
+                        <TextAreaField 
+                          label="Systemic Review" 
+                          placeholder="Inquire or document any other related systemic findings (Cardiovascular, Respiratory, gastrointestinal etc.)..." 
+                          value={formData.reviewOfSystems} 
+                          rows={10}
+                          onChange={(v: any) => updateField('reviewOfSystems', v)} 
+                          onVoiceInput={() => startVoiceInput('reviewOfSystems')} 
+                          isRecording={recordingField === 'reviewOfSystems'} 
+                          isTranscribing={transcribingField === 'reviewOfSystems'} 
+                          recordingTimeLeft={recordingTimeLeft} 
+                        />
+                      </div>
+                    )}
+
+                    {directSection === 'medical' && (
+                      <div className="space-y-6">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Past Medical History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Capture any relevant chronic illnesses, active medication regimens, and adverse drug reactions.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-5">
+                          <TextAreaField 
+                            label="Co-morbidities & Conditions" 
+                            placeholder="List any past chronic conditions (Hypertension, Diabetes, Asthma etc.) or Childhood illnesses..." 
+                            value={formData.pastMedicalHistory} 
+                            rows={4}
+                            onChange={(v: any) => updateField('pastMedicalHistory', v)} 
+                          />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <InputField 
+                              label="Current Medications" 
+                              placeholder="e.g., Metformin 500mg daily" 
+                              value={formData.medications} 
+                              onChange={(v: any) => updateField('medications', v)} 
+                            />
+                            <InputField 
+                              label="Known Allergies" 
+                              placeholder="e.g., Penicillin (Anaphylactic)" 
+                              value={formData.allergies} 
+                              onChange={(v: any) => updateField('allergies', v)} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {directSection === 'surgical' && (
+                      <div className="space-y-6">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Past Surgical History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Detail previous operations, traumas, blood transfusions, and post-procedural course.</p>
+                        </div>
+                        <TextAreaField 
+                          label="Prior Surgical Procedures & Trauma" 
+                          placeholder="Record past operations, surgeries, dates of intervention and relevant blood transfusion histories..." 
+                          value={formData.pastSurgicalHistory} 
+                          rows={10}
+                          onChange={(v: any) => updateField('pastSurgicalHistory', v)} 
+                          onVoiceInput={() => startVoiceInput('pastSurgicalHistory')} 
+                          isRecording={recordingField === 'pastSurgicalHistory'} 
+                          isTranscribing={transcribingField === 'pastSurgicalHistory'} 
+                          recordingTimeLeft={recordingTimeLeft} 
+                        />
+                      </div>
+                    )}
+
+                    {directSection === 'family_social' && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="border-b border-line/40 pb-4">
+                          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Family & Social History</h4>
+                          <p className="text-[10px] text-text-muted mt-0.5">Inquire about chronic hereditary conditions, sibling status, home sanitation, source of water, and parents' employment.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                          <InputField 
+                            label="Hereditary Diseases (Asthma, HTN, Sickle Cell...)" 
+                            placeholder="e.g., Asthma/Hypertension in maternal/paternal relatives" 
+                            value={formData.fsh_hereditary} 
+                            onChange={(v: any) => updateField('fsh_hereditary', v)} 
+                          />
+                          <InputField 
+                            label="Home Sanitation & Water" 
+                            placeholder="e.g., Piped water, Pit latrine vs flush toilet" 
+                            value={formData.fsh_sanitation} 
+                            onChange={(v: any) => updateField('fsh_sanitation', v)} 
+                          />
+                          <InputField 
+                            label="Employment / Caregiver Support" 
+                            placeholder="e.g., Stable employment and childcare support structures" 
+                            value={formData.fsh_employment} 
+                            onChange={(v: any) => updateField('fsh_employment', v)} 
+                          />
+                        </div>
+
+                        <TextAreaField 
+                          label="Comprehensive Family and Social History Narrative" 
+                          placeholder="Detail family composition, additional environmental risks, pets, soft blanket, or housing material details..." 
+                          value={formData.familySocialHistory} 
+                          rows={6}
+                          onChange={(v: any) => updateField('familySocialHistory', v)} 
+                          onVoiceInput={() => startVoiceInput('familySocialHistory')} 
+                          isRecording={recordingField === 'familySocialHistory'} 
+                          isTranscribing={transcribingField === 'familySocialHistory'} 
+                          recordingTimeLeft={recordingTimeLeft} 
+                        />
+                      </div>
+                    )}
+
+                    {directSection === 'physical_exam' && renderPhysicalExamForm()}
+                  </div>
+
+                  {/* Quick Assist Presets Panel */}
+                  <div className="mt-8 pt-6 border-t border-line/60 bg-bg/30 -mx-6 -mb-6 md:-mx-8 md:-mb-8 p-6 md:p-8 rounded-b-3xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-[10px] font-black text-text-main uppercase tracking-wider">Clinical Quick Insertion Templates</span>
+                    </div>
+                    <p className="text-[10px] text-text-muted leading-relaxed mb-4">Click to append premium structured documentation templates securely into this form step.</p>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {directSection === 'complaint' && [
+                        { label: "Acute Epigastric Pain (5d)", values: { chiefComplaint: "Acute onset epigastric pain", duration: "5 days" } },
+                        { label: "High-Grade Fever (3d)", values: { chiefComplaint: "High-grade fever accompanied by chills", duration: "3 days" } },
+                        { label: "Productive Cough (2w)", values: { chiefComplaint: "Persistent productive cough with thick yellowish sputum", duration: "2 weeks" } },
+                        { label: "Generalized Dizziness (2d)", values: { chiefComplaint: "Generalized dizziness and lightheadedness worsening on standing", duration: "2 days" } }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            updateField('chiefComplaint', item.values.chiefComplaint);
+                            updateField('duration', item.values.duration);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'hpc' && [
+                        { label: "Typical Acute Progression", text: "The patient presents with an acute onset of symptoms which started suddenly and progress over hours. The pain is described as severe, constant, and localized. It is aggravated by movement and slightly relieved by rest." },
+                        { label: "Slowly Progressive Chronic History", text: "Symptoms began gradually several months ago and have been slowly progressive. The intensity varies from mild to moderate. There are no clear relieving or aggravating factors. The patient reports general fatigue." },
+                        { label: "Intermittent / Relapsing", text: "Symptomatology is reported to be episodic. Episodes last several hours, featuring severe distress, but completely resolve in between. Currently experiencing an active acute flare-up." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const existing = formData.historyInput || '';
+                            const text = item.text;
+                            updateField('historyInput', existing.trim() ? `${existing.trim()}\n\n${text}` : text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'review' && [
+                        { label: "Clear / All Systems Unremarkable", text: "Constitutional: No fever, chills, or weight changes. Cardiorespiratory: No chest pain, palpitations, cough, or dyspnea. Gastrointestinal: No abdominal pain, dysphagia, nausea, or bowel changes. Neurological: No headache, dizziness, or sensory deficits." },
+                        { label: "Cardiorespiratory Normal", text: "Cardiovascular: No chest pain, orthopnea, or ankle swelling. Respiratory: Lungs are reported to be clear, with no cough, wheezing, or shortness of breath." },
+                        { label: "Gastrointestinal Normal", text: "GI: No nausea, vomiting, diarrhea, or constipation. Normal appetite and digestion reported." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const existing = formData.reviewOfSystems || '';
+                            const text = item.text;
+                            updateField('reviewOfSystems', existing.trim() ? `${existing.trim()}\n\n${text}` : text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'medical' && [
+                        { label: "Unremarkable Medical History", values: { pastMedicalHistory: "No prior history of major chronic conditions or systemic illnesses.", medications: "None", allergies: "No known drug allergies (NKDA)" } },
+                        { label: "Controlled HTN & Type 2 DM", values: { pastMedicalHistory: "Essential Hypertension and Type 2 Diabetes Mellitus, both diagnosed ~5 years ago and managed medically.", medications: "Metformin 500mg daily, Amlodipine 5mg daily", allergies: "NKDA" } },
+                        { label: "Bronchial Asthma Baseline", values: { pastMedicalHistory: "Mild persistent bronchial asthma diagnosed in childhood, well controlled.", medications: "Salbutamol inhaler as needed", allergies: "Dust mites, pollen" } }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            updateField('pastMedicalHistory', item.values.pastMedicalHistory);
+                            updateField('medications', item.values.medications);
+                            updateField('allergies', item.values.allergies);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'surgical' && [
+                        { label: "No Prior Surgeries", text: "No prior surgical interventions, hospitalizations, or major traumas reported. Uncomplicated transfusion history (none)." },
+                        { label: "Prior Appendectomy", text: "Prior appendectomy performed under general anesthesia ten years ago with uncomplicated postoperative recovery." },
+                        { label: "Prior Cholecystectomy", text: "Prior laparoscopic cholecystectomy completed five years ago with no history of delayed healing or postsurgical complications." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const existing = formData.pastSurgicalHistory || '';
+                            const text = item.text;
+                            updateField('pastSurgicalHistory', existing.trim() ? `${existing.trim()}\n\n${text}` : text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'family_social' && [
+                        { label: "Healthy Nuclear Family Composition", text: "Living in a nuclear family. Sibling development and health status is fully appropriate. Home environment is stable, brick-built construction with piped clean water and proper sanitation." },
+                        { label: "No Hereditary Conditions", text: "No reported history of hypertension, cardiovascular illnesses, diabetes mellitus, asthma, or sickle cell anemia among first-degree maternal or paternal relatives." },
+                        { label: "Parents Employed & Supported", text: "Parents are both employed with stable income. Active family and community care structures available for childcare support." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const existing = formData.familySocialHistory || '';
+                            const text = item.text;
+                            updateField('familySocialHistory', existing.trim() ? `${existing.trim()}\n\n${text}` : text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'ped_prenatal' && [
+                        { label: "Uncomplicated Term Delivery", text: "Maternal history: Attended all standard antenatal visits, took required iron/folic supplements, and received tetanus vaccines. Term gestation, uneventful spontaneous vaginal delivery (SVD), immediate clean cry on birth, birth weight 3.2 kg, no nursery admission." },
+                        { label: "Preterm ANC Attended", text: "Moderate preterm gestation at 34 weeks, delivered via emergency Caesarean section due to maternal pre-eclampsia. Received surfactant therapy, spent 5 days in neonatal ICU before stable discharge." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            updateField('antenatalHistory', "Mother attended standard ANC visits, took supplements, vaccinated.");
+                            updateField('natalHistory', item.text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'ped_dev_immune' && [
+                        { label: "All Milestones Appropriate", text: "Child's physical, motor, language, cognitive, and social milestones are fully appropriate and synchronized for age. Exclusive breastfed for 6 months, successfully transitioned to soft family solids." },
+                        { label: "Vaccinations Up-To-Date (UNEPI)", text: "Fully immunized and up-to-date with all age-appropriate vaccines according to the UNEPI national guideline immunization schedule." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            updateField('immunizationHistory', "Immunized up to date per UNEPI.");
+                            updateField('developmentalHistory', item.text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'obg_current_obstetric' && [
+                        { label: "Primigravida (Current G1P0)", text: "Patient is a Primigravida (G1P0). Current pregnancy conceived naturally, with early ANC booking and uneventful progress so far. Routine supplements started, normal fetal movements documented." },
+                        { label: "Multiparous Previous SVDs", text: "A G3P2, with history of two prior spontaneous vaginal term deliveries. Both babies born at local hospital, normal weights, no postpartum hemorrhage or severe neonatal complications." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            updateField('gravida', "3");
+                            updateField('parity', "2+0");
+                            updateField('obstetricHistory', item.text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+
+                      {directSection === 'obg_gynae' && [
+                        { label: "Menstrual Cycle Normal", text: "Menarche at age 13. Regular 28-day menstrual cycle lasting 4-5 days of moderate flow, minimal dysmenorrhea. Last cervical screening done 2 years ago (negative pap test)." },
+                        { label: "Regular Screening & Contraception", text: "Menstrual cycles are predictable. Sits on intrauterine contraceptive device (IUD) for family planning with good tolerability. No prior STIs or pelvic inflammatory disease (PID) history." }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            updateField('gynaecologicalHistory', item.text);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-line rounded-lg text-[10px] font-bold text-text-main hover:border-primary hover:text-primary active:scale-[0.98] cursor-pointer transition-all shadow-2xs"
+                        >
+                          + {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+              );
+            })()}
+
+            {historyTab === 'doc' && (
+              <FileUpload 
+                label="Clinical Supporting Document" 
+                subtitle="SUPPORTING PDF OR CLINICAL RECORD TEXT" 
+                onFileSelect={handleFileProcessing}
+                isProcessing={isProcessingFile}
+              />
+            )/* removed physical image upload option per user instruction */}
+
+            {/* Live Synchronized Value Indicator */}
+            {formData.historyInput && (
+              <div className="space-y-2 mt-4">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Live Documented History Block</span>
+                <div className="p-4 rounded-xl border border-line bg-slate-50 text-xs text-slate-700 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto no-scrollbar">
+                  {formData.historyInput}
+                </div>
+              </div>
+            )}
           </div>
         );
-      case 'ob_gyn_hx':
+
+      case 'physical_exam':
+        return renderPhysicalExamForm();
+
+      case 'compiled_report':
         return (
           <div className="flex flex-col gap-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <InputField label="LNMP" type="date" value={formData.lnmp} onChange={(v: any) => updateField('lnmp', v)} />
-              <InputField label="EDD" type="date" value={formData.edd} onChange={(v: any) => updateField('edd', v)} />
-              <InputField label="WOA" placeholder="e.g., 12W5D" value={formData.woa} onChange={(v: any) => updateField('woa', v)} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Raw notes panel */}
+              <div className="p-6 rounded-2xl border border-line bg-surface space-y-4">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest block">Original Clinician Notes</span>
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <span className="font-bold text-slate-800">Specialty Chosen:</span>
+                    <p className="text-slate-600 mt-1">{formData.specialty}</p>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-800">History Narratives:</span>
+                    <p className="text-slate-600 mt-1 whitespace-pre-line">{formData.historyInput || 'No history recorded.'}</p>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-800">Examination Findings:</span>
+                    <p className="text-slate-600 mt-1 whitespace-pre-line">{formData.physicalExam || 'No examination documented.'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cognitive AI compilation panel */}
+              <div className="p-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-surface space-y-4 flex flex-col min-h-[400px]">
+                <div className="flex justify-between items-center border-b border-line pb-4 pb-safe">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    Cognitive AI Synthesized Report
+                  </span>
+                  {syncedStoryData && (
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">
+                      Ready
+                    </span>
+                  )}
+                </div>
+
+                {syncedStoryData ? (
+                  <div className="flex-1 overflow-y-auto max-h-[400px] space-y-4 text-xs leading-relaxed text-slate-700">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-800 border-b border-line pb-1 mb-2">HPC Narratives</h4>
+                      <p>{syncedStoryData.hpcNarrative}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-800 border-b border-line pb-1 mb-2">Review of Systems</h4>
+                      <p>{syncedStoryData.rosNarrative}</p>
+                    </div>
+                    {syncedStoryData.obGynNarrative && syncedStoryData.obGynNarrative !== 'N/A' && (
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-800 border-b border-line pb-1 mb-2">Ob/Gyn History</h4>
+                        <p>{syncedStoryData.obGynNarrative}</p>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-800 border-b border-line pb-1 mb-2">Clinical Impression</h4>
+                      <p className="font-semibold text-primary">{syncedStoryData.impression}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <Sparkles className="w-6 h-6 animate-spin" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-black text-slate-800">Synthesize Formal Case Story</h4>
+                      <p className="text-xs text-text-muted">Generate a fully compiled, structured diagnostic report layout backed by evidence-based medicine.</p>
+                    </div>
+                    <button
+                      onClick={handleAISynthesis}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-accent text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Begin Compilation
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField label="Gravida" placeholder="e.g., G3" value={formData.gravida} onChange={(v: any) => updateField('gravida', v)} />
-              <InputField label="Parity" placeholder="e.g., P1+1" value={formData.parity} onChange={(v: any) => updateField('parity', v)} />
+          </div>
+        );
+
+      case 'generate_output':
+        return (
+          <div className="flex flex-col gap-6">
+            {/* Split layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Output Left: Presentation, PPT slides */}
+              <div className="space-y-6">
+                {/* PPT Download Box */}
+                <div className="p-6 rounded-2xl border border-line bg-surface flex items-center justify-between shadow-sm">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-slate-800 leading-tight">Download slide show deck</h4>
+                    <p className="text-xs text-text-muted">Extract diagnostic slides fully loaded for screens.</p>
+                  </div>
+                  <button
+                    onClick={() => generatePPT(formData, syncedStoryData || {})}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 text-white font-bold text-xs uppercase tracking-wider hover:shadow-xl transition-all active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                    PPTX Slides
+                  </button>
+                </div>
+
+                {/* PDF Download Box */}
+                <div className="p-6 rounded-2xl border border-line bg-surface flex items-center justify-between shadow-sm">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-slate-800 leading-tight">Download Case Write-Up</h4>
+                    <p className="text-xs text-text-muted">Export clean, structured medical write-up document.</p>
+                  </div>
+                  <button
+                    onClick={downloadStoryReport}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase tracking-wider hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                    Case Write-Up
+                  </button>
+                </div>
+
+                {/* Medical Presentation Script with player */}
+                <div className="p-6 rounded-2xl border border-line bg-surface space-y-4 shadow-sm">
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest block">Ward Round Presentation Script</span>
+                  
+                  {/* TTS Player Widget */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-line flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          const speechText = syncedStoryData?.wardRoundPresentation || syncedStoryData?.impression || "Nothing compiled yet";
+                          if (isPlayingAudio) {
+                            stopSpeechSynthesis();
+                          } else {
+                            startSpeechSynthesis(speechText);
+                          }
+                        }}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all ${isPlayingAudio ? 'bg-red-500 hover:bg-red-600' : 'bg-primary hover:bg-accent hover:scale-105'}`}
+                      >
+                        {isPlayingAudio ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
+                      </button>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-slate-800">{isPlayingAudio ? 'AI Speaker Active' : 'Listen to AI Script'}</span>
+                        <span className="text-[10px] text-text-muted font-medium">Text-To-Speech Senior voice</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-text-muted uppercase">Speed</span>
+                      <select
+                        value={audioSpeed}
+                        onChange={(e) => {
+                          setAudioSpeed(parseFloat(e.target.value));
+                          if (isPlayingAudio) {
+                            stopSpeechSynthesis();
+                            setTimeout(() => {
+                              const speechText = syncedStoryData?.wardRoundPresentation || syncedStoryData?.impression || "No content found";
+                              startSpeechSynthesis(speechText);
+                            }, 300);
+                          }
+                        }}
+                        className="px-2 py-1 bg-white border border-line rounded text-xs text-slate-700 focus:outline-none focus:border-primary"
+                      >
+                        <option value="0.75">0.75x</option>
+                        <option value="1">1.0x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <p className="text-xs leading-relaxed text-slate-600 italic border-l-2 border-primary pl-4 py-1">
+                    {syncedStoryData?.wardRoundPresentation || "Please compile the report in Step 3 to auto-generate the ward round presentation summary."}
+                  </p>
+                </div>
+              </div>
+
+              {/* PPT Slides visually rendered right side */}
+              <div className="p-6 rounded-2xl border border-line bg-surface space-y-4 flex flex-col shadow-sm">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest block">PowerPoint Deck Layout Preview</span>
+                <div className="flex-1 overflow-y-auto max-h-[360px] space-y-3 pr-1">
+                  {[
+                    { title: "Slide 1: Title & Demographics", desc: `Patient Initials: ${formData.fullName || 'Initials'} | Age: ${formData.age || 'N/A'}yrs | Sex: ${formData.sex || 'N/A'}` },
+                    { title: "Slide 2: History of Present Illness", desc: syncedStoryData?.hpcNarrative || "History summary narrative..." },
+                    { title: "Slide 3: Differentials List", desc: syncedStoryData?.differentials?.map((d: any) => d.diagnosis).join(', ') || "Synthesized working diagnoses..." },
+                    { title: "Slide 4: Management & Directives Plan", desc: syncedStoryData?.plan?.join(', ') || "Lab diagnostic clinical orders..." }
+                  ].map((slide, i) => (
+                    <div key={i} className="p-3.5 rounded-xl border border-line bg-slate-50 space-y-1">
+                      <span className="text-[10px] font-black text-slate-800 uppercase tracking-wide block">{slide.title}</span>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{slide.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <TextAreaField label="Past Obstetrics History" placeholder="Details of previous pregnancies..." value={formData.pastObHisto} onChange={(v: any) => updateField('pastObHisto', v)} onVoiceInput={() => startVoiceInput('pastObHisto')} isRecording={recordingField === 'pastObHisto'} isTranscribing={transcribingField === 'pastObHisto'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Gynaecological History" placeholder="Menarche, cycles, contraception, etc." value={formData.gynHisto} onChange={(v: any) => updateField('gynHisto', v)} onVoiceInput={() => startVoiceInput('gynHisto')} isRecording={recordingField === 'gynHisto'} isTranscribing={transcribingField === 'gynHisto'} recordingTimeLeft={recordingTimeLeft} />
           </div>
         );
-      case 'past_medical_hx':
+
+      case 'ai_suggestions':
         return (
-          <div className="flex flex-col gap-8">
-            <TextAreaField label="Chronic Medical Conditions" value={formData.chronicConditions} onChange={(v: any) => updateField('chronicConditions', v)} onVoiceInput={() => startVoiceInput('chronicConditions')} isRecording={recordingField === 'chronicConditions'} isTranscribing={transcribingField === 'chronicConditions'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Current Pharmacotherapy" value={formData.medications} onChange={(v: any) => updateField('medications', v)} onVoiceInput={() => startVoiceInput('medications')} isRecording={recordingField === 'medications'} isTranscribing={transcribingField === 'medications'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Allergies & Hypersensitivities" value={formData.allergies} onChange={(v: any) => updateField('allergies', v)} onVoiceInput={() => startVoiceInput('allergies')} isRecording={recordingField === 'allergies'} isTranscribing={transcribingField === 'allergies'} recordingTimeLeft={recordingTimeLeft} />
-            <FileUpload 
-              label="Supporting Records" 
-              subtitle="UPLOAD LAB RESULTS OR CLINICAL NOTES" 
-              onFileSelect={handleFileProcessing}
-              isProcessing={isProcessingFile}
-            />
-          </div>
-        );
-      case 'past_surgical_hx':
-        return (
-          <div className="flex flex-col gap-8">
-            <TextAreaField label="Previous Surgeries" placeholder="Appendectomy 2015, etc." value={formData.surgeries} onChange={(v: any) => updateField('surgeries', v)} onVoiceInput={() => startVoiceInput('surgeries')} isRecording={recordingField === 'surgeries'} isTranscribing={transcribingField === 'surgeries'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Major Trauma/Fractures" placeholder="Describe any major injuries" value={formData.trauma} onChange={(v: any) => updateField('trauma', v)} onVoiceInput={() => startVoiceInput('trauma')} isRecording={recordingField === 'trauma'} isTranscribing={transcribingField === 'trauma'} recordingTimeLeft={recordingTimeLeft} />
-            <InputField label="Blood Transfusion History" placeholder="Yes/No, if yes when and why" value={formData.transfusions} onChange={(v: any) => updateField('transfusions', v)} onVoiceInput={() => startVoiceInput('transfusions')} isRecording={recordingField === 'transfusions'} isTranscribing={transcribingField === 'transfusions'} recordingTimeLeft={recordingTimeLeft} />
-          </div>
-        );
-      case 'family_social_hx':
-        return (
-          <div className="flex flex-col gap-8">
-            <TextAreaField label="Familial Health Patterns" value={formData.familyHistory} onChange={(v: any) => updateField('familyHistory', v)} onVoiceInput={() => startVoiceInput('familyHistory')} isRecording={recordingField === 'familyHistory'} isTranscribing={transcribingField === 'familyHistory'} recordingTimeLeft={recordingTimeLeft} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SelectField label="Alcohol Consumption" options={['None', 'Social', 'Heavy']} value={formData.alcohol} onChange={(v: any) => updateField('alcohol', v)} />
-              <SelectField label="Tobacco Consumption" options={['None', 'Occasional', 'Regular']} value={formData.tobacco} onChange={(v: any) => updateField('tobacco', v)} />
-              <InputField label="Current Marital Status" value={formData.maritalStatus} onChange={(v: any) => updateField('maritalStatus', v)} onVoiceInput={() => startVoiceInput('maritalStatus')} isRecording={recordingField === 'maritalStatus'} isTranscribing={transcribingField === 'maritalStatus'} recordingTimeLeft={recordingTimeLeft} />
-              <InputField label="Household Dependents" value={formData.dependents} onChange={(v: any) => updateField('dependents', v)} onVoiceInput={() => startVoiceInput('dependents')} isRecording={recordingField === 'dependents'} isTranscribing={transcribingField === 'dependents'} recordingTimeLeft={recordingTimeLeft} />
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Differential Diagnoses */}
+              <div className="space-y-4">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">Differential Diagnoses</span>
+                <div className="space-y-4">
+                  {syncedStoryData?.differentials ? (
+                    syncedStoryData.differentials.map((diff: any, index: number) => (
+                      <div key={index} className="p-5 rounded-2xl border border-line bg-surface flex gap-4 shadow-sm items-start hover:border-primary/20 transition-all">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                          {index + 1}
+                        </div>
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="font-bold text-slate-800 text-sm">{diff.diagnosis}</span>
+                          <p className="text-xs text-slate-500 leading-relaxed">{diff.reasoning}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 rounded-2xl border border-dashed border-line text-center text-xs text-text-muted bg-slate-50">
+                      No differential diagnoses compiled yet. Proceed with step 3 AI synthesis first.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Priority Investigations & Management suggestions Column */}
+              <div className="space-y-6">
+                {/* Lab investigations */}
+                <div className="space-y-4">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">Priority Medical Investigations</span>
+                  <div className="space-y-4">
+                    {(syncedStoryData?.priorityInvestigations || syncedStoryData?.plan) ? (
+                      (syncedStoryData?.priorityInvestigations || syncedStoryData?.plan || []).map((item: string, index: number) => (
+                        <div key={index} className="p-5 rounded-2xl border border-line bg-surface flex gap-4 shadow-sm items-start hover:border-primary/20 transition-all">
+                          <div className="w-8 h-8 rounded-xl bg-laravel/10 text-rose-500 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                            🔬
+                          </div>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <span className="font-bold text-slate-800 text-sm">Lab / Imaging Order {index + 1}</span>
+                            <p className="text-xs text-slate-500 leading-relaxed">{item}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 rounded-2xl border border-dashed border-line text-center text-xs text-text-muted bg-slate-50">
+                        No investigative action items compiled yet. Proceed with step 3 AI synthesis first.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Management Suggestions */}
+                <div className="space-y-4">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">Clinical Management Suggestions</span>
+                  
+                  {/* Add Custom Suggestion Input */}
+                  {syncedStoryData && (
+                    <div className="flex gap-2 items-center bg-emerald-50/10 border border-emerald-100 p-2 rounded-2xl shadow-3xs">
+                      <input
+                        type="text"
+                        value={customSuggestionText}
+                        onChange={(e) => setCustomSuggestionText(e.target.value)}
+                        placeholder="Add dynamic diagnostic or treatment instruction..."
+                        className="text-xs text-slate-800 placeholder-slate-400 bg-transparent flex-1 focus:outline-none px-2"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddCustomSuggestion();
+                        }}
+                      />
+                      <button
+                        onClick={handleAddCustomSuggestion}
+                        className="p-1 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0 font-sans"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {(syncedStoryData?.managementSuggestions || syncedStoryData?.plan) ? (
+                      (syncedStoryData?.managementSuggestions || syncedStoryData?.plan || []).map((item: string, index: number) => {
+                        const isInPlan = syncedStoryData?.plan?.some((p: string) => p.trim().toLowerCase() === item.trim().toLowerCase());
+                        return (
+                          <div 
+                            key={index} 
+                            className={`p-4 rounded-2xl border transition-all flex flex-col gap-2 shadow-sm relative ${
+                              isInPlan 
+                                ? "border-emerald-200 bg-emerald-50/20" 
+                                : "border-slate-200 bg-slate-50/30 opacity-75 hover:opacity-100"
+                            }`}
+                          >
+                            <div className="flex gap-4 items-start">
+                              <button
+                                onClick={() => handleToggleSuggestionInPlan(item)}
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 mt-0.5 transition-all outline-none ${
+                                  isInPlan 
+                                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs" 
+                                    : "bg-slate-100 text-slate-450 border border-slate-200 hover:bg-slate-200 hover:text-slate-600"
+                                }`}
+                                title={isInPlan ? "Active in write-up. Click to exclude." : "Excluded. Click to include."}
+                              >
+                                {isInPlan ? "✓" : "＋"}
+                              </button>
+                              
+                              <div className="flex-1 min-w-0 flex flex-col gap-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className={`font-bold text-sm leading-none ${isInPlan ? "text-emerald-950" : "text-slate-600"}`}>
+                                    Therapeutic Action {index + 1}
+                                  </span>
+                                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                    isInPlan ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
+                                  }`}>
+                                    {isInPlan ? "In Plan" : "Excluded"}
+                                  </span>
+                                </div>
+                                
+                                <textarea
+                                  value={item}
+                                  rows={1}
+                                  onChange={(e) => handleUpdateSuggestionText(index, e.target.value)}
+                                  className="text-xs leading-relaxed bg-transparent border-0 focus:ring-0 focus:outline-none p-0 resize-none font-medium text-slate-700 w-full hover:bg-slate-100/50 p-1 rounded transition-colors"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-6 rounded-2xl border border-dashed border-line text-center text-xs text-text-muted bg-slate-50">
+                        No management suggestions compiled yet. Proceed with step 3 AI synthesis first.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
-      case 'examination':
-        return (
-          <div className="flex flex-col gap-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField label="BP" placeholder="120/80" value={formData.bp} onChange={(v: any) => updateField('bp', v)} />
-              <InputField label="Pulse Rate" placeholder="72bpm" value={formData.pr} onChange={(v: any) => updateField('pr', v)} />
-              <InputField label="Respiratory Rate" placeholder="18bpm" value={formData.rr} onChange={(v: any) => updateField('rr', v)} />
-              <InputField label="SPO2" placeholder="98%" value={formData.spo2} onChange={(v: any) => updateField('spo2', v)} />
-            </div>
-            <TextAreaField label="General Examination" placeholder="Condition, pallor, jaundice, edema..." value={formData.generalExam} onChange={(v: any) => updateField('generalExam', v)} onVoiceInput={() => startVoiceInput('generalExam')} isRecording={recordingField === 'generalExam'} isTranscribing={transcribingField === 'generalExam'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Abdominal Examination" placeholder="Fullness, tenderness, masses, FH..." value={formData.abdominalExam} onChange={(v: any) => updateField('abdominalExam', v)} onVoiceInput={() => startVoiceInput('abdominalExam')} isRecording={recordingField === 'abdominalExam'} isTranscribing={transcribingField === 'abdominalExam'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Vaginal Examination" placeholder="Vulva, vagina, cervix, OS..." value={formData.vaginalExam} onChange={(v: any) => updateField('vaginalExam', v)} onVoiceInput={() => startVoiceInput('vaginalExam')} isRecording={recordingField === 'vaginalExam'} isTranscribing={transcribingField === 'vaginalExam'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Systemic Examination" placeholder="Cardiovascular, Respiratory, CNS..." value={formData.systemicExam} onChange={(v: any) => updateField('systemicExam', v)} onVoiceInput={() => startVoiceInput('systemicExam')} isRecording={recordingField === 'systemicExam'} isTranscribing={transcribingField === 'systemicExam'} recordingTimeLeft={recordingTimeLeft} />
-          </div>
-        );
-      case 'investigations':
-        return (
-          <div className="flex flex-col gap-8">
-            <TextAreaField label="Laboratory Results" placeholder="FBC, RFTs, LFTs, HIV, Hep B..." value={formData.labResults} onChange={(v: any) => updateField('labResults', v)} onVoiceInput={() => startVoiceInput('labResults')} isRecording={recordingField === 'labResults'} isTranscribing={transcribingField === 'labResults'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Imaging Reports" placeholder="USS, X-ray, CT, MRI..." value={formData.imagingReports} onChange={(v: any) => updateField('imagingReports', v)} onVoiceInput={() => startVoiceInput('imagingReports')} isRecording={recordingField === 'imagingReports'} isTranscribing={transcribingField === 'imagingReports'} recordingTimeLeft={recordingTimeLeft} />
-          </div>
-        );
-      case 'procedure_notes':
-        return (
-          <div className="flex flex-col gap-8">
-            <TextAreaField label="Intraoperative Notes" placeholder="Procedure details, findings, EBL..." value={formData.intraopNotes} onChange={(v: any) => updateField('intraopNotes', v)} onVoiceInput={() => startVoiceInput('intraopNotes')} isRecording={recordingField === 'intraopNotes'} isTranscribing={transcribingField === 'intraopNotes'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Post-Operative Instructions" placeholder="Monitoring, fluids, medications..." value={formData.postopInstructions} onChange={(v: any) => updateField('postopInstructions', v)} onVoiceInput={() => startVoiceInput('postopInstructions')} isRecording={recordingField === 'postopInstructions'} isTranscribing={transcribingField === 'postopInstructions'} recordingTimeLeft={recordingTimeLeft} />
-            <TextAreaField label="Follow-up / Progress Notes" placeholder="Daily reviews, improvement, discharge plan..." value={formData.progressNotes} onChange={(v: any) => updateField('progressNotes', v)} onVoiceInput={() => startVoiceInput('progressNotes')} isRecording={recordingField === 'progressNotes'} isTranscribing={transcribingField === 'progressNotes'} recordingTimeLeft={recordingTimeLeft} />
-          </div>
-        );
+
       default:
         return null;
     }
+  };
+
+  const renderPhysicalExamForm = () => {
+    return (
+      <div className="space-y-6 animate-fade-in text-left">
+        <div className="border-b border-line/40 pb-4">
+          <h4 className="font-black text-base uppercase tracking-wider text-slate-800">Physical Examination</h4>
+          <p className="text-[10px] text-text-muted mt-0.5 font-medium">Log vital parameters, systemic diagnostic observations, and target physical findings.</p>
+        </div>
+
+        {/* Skip Examination Option Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 border border-slate-100 p-5 rounded-2xl">
+          <div className="text-left">
+            <span className="text-xs font-black text-slate-800 uppercase tracking-wider block">Haven't examined patient yet?</span>
+            <span className="text-xs text-slate-500 leading-normal block mt-1">You may skip the physical examination. The report compiler will note this as "Not Examined" and proceed immediately.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              updateField('physicalExamSkipped', true);
+              updateField('vitals_bp', '');
+              updateField('vitals_pulse', '');
+              updateField('vitals_temp', '');
+              updateField('vitals_rr', '');
+              updateField('vitals_spo2', '');
+              updateField('phys_general_exam', '');
+              updateField('phys_respiratory', '');
+              updateField('phys_cns', '');
+              updateField('phys_cvs', '');
+              updateField('phys_abdomen', '');
+              updateField('physicalExam', 'Physical examination was not performed.');
+              
+              if (currentStepIndex < activeSteps.length - 1) {
+                setCompletedSteps(prev => {
+                  const s = new Set(prev);
+                  s.add('physical_exam');
+                  return s;
+                });
+                setCurrentStepIndex(currentStepIndex + 1);
+              }
+            }}
+            className="px-5 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shrink-0 active:scale-95"
+          >
+            Skip Physical Exam
+          </button>
+        </div>
+
+        {/* Vitals Grid */}
+        <div className="p-5 rounded-2xl bg-slate-50 border border-line/60 space-y-4 shadow-2xs">
+          <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider block">1. Vital Signs & General Exam</span>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <InputField 
+              label="BP (mmHg)" 
+              placeholder="e.g., 120/80" 
+              value={formData.vitals_bp} 
+              onChange={(v: any) => updateField('vitals_bp', v)} 
+            />
+            <InputField 
+              label="Pulse Rate (bpm)" 
+              placeholder="e.g., 72" 
+              value={formData.vitals_pulse} 
+              onChange={(v: any) => updateField('vitals_pulse', v)} 
+            />
+            <InputField 
+              label="Temp (°C)" 
+              placeholder="e.g., 36.8" 
+              value={formData.vitals_temp} 
+              onChange={(v: any) => updateField('vitals_temp', v)} 
+            />
+            <InputField 
+              label="Resp Rate (/min)" 
+              placeholder="e.g., 16" 
+              value={formData.vitals_rr} 
+              onChange={(v: any) => updateField('vitals_rr', v)} 
+            />
+            <InputField 
+              label="SpO2 (%)" 
+              placeholder="e.g., 98%" 
+              value={formData.vitals_spo2} 
+              onChange={(v: any) => updateField('vitals_spo2', v)} 
+            />
+          </div>
+          <InputField 
+            label="General Condition Description" 
+            placeholder="e.g., Patient alert, cooperative, not pale, not dehydrated, non-icteric" 
+            value={formData.phys_general_exam} 
+            onChange={(v: any) => updateField('phys_general_exam', v)} 
+            onVoiceInput={() => startVoiceInput('phys_general_exam')}
+            isRecording={recordingField === 'phys_general_exam'}
+            isTranscribing={transcribingField === 'phys_general_exam'}
+            recordingTimeLeft={recordingTimeLeft}
+          />
+        </div>
+
+        {/* Systemic Examination Blocks */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-black text-slate-850 uppercase tracking-wider">2. Systemic Examination Logs</span>
+            <div className="flex flex-wrap gap-1.5 ml-auto animate-fade-in">
+              {[
+                { label: "Normal Chest/Resp", text: "Chest wall symmetrical, normal expansion. Respiration vesicular with clear lungs bilaterally, no crepitations or wheezes heard." },
+                { label: "Normal CNS", text: "Alert, oriented to time, place, and person. GCS 15/15. Pupils equal and reactive to light. Active limb movement, no gross motor or sensory deficits. Cranial nerves intact." }
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => {
+                    if (chip.label.includes("CNS")) {
+                      updateField('phys_cns', chip.text);
+                    } else {
+                      updateField('phys_respiratory', chip.text);
+                    }
+                  }}
+                  className="px-2 py-0.5 bg-white border border-line rounded text-[9px] font-bold text-slate-600 hover:text-primary hover:border-primary active:scale-95 shadow-3xs transition-all"
+                >
+                  + {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TextAreaField 
+              label="Respiratory Examination" 
+              placeholder="Lungs clear, chest wall moves symmetrically, normal vesicular breath sounds, no added crackles or wheezes..." 
+              value={formData.phys_respiratory} 
+              rows={3}
+              onChange={(v: any) => updateField('phys_respiratory', v)} 
+              onVoiceInput={() => startVoiceInput('phys_respiratory')}
+              isRecording={recordingField === 'phys_respiratory'}
+              isTranscribing={transcribingField === 'phys_respiratory'}
+              recordingTimeLeft={recordingTimeLeft}
+            />
+            <TextAreaField 
+              label="Central Nervous System (CNS) Examination" 
+              placeholder="Alert, oriented to time/place/person, GCS 15/15, Pupils active to light, motor power 5/5, reflexes normal..." 
+              value={formData.phys_cns} 
+              rows={3}
+              onChange={(v: any) => updateField('phys_cns', v)} 
+              onVoiceInput={() => startVoiceInput('phys_cns')}
+              isRecording={recordingField === 'phys_cns'}
+              isTranscribing={transcribingField === 'phys_cns'}
+              recordingTimeLeft={recordingTimeLeft}
+            />
+            <TextAreaField 
+              label="Cardiovascular (CVS) Examination" 
+              placeholder="Precordium quiet, apex beat in 5th intercostal space MCL, S1 S2 heard clarity, no murmurs..." 
+              value={formData.phys_cvs} 
+              rows={3}
+              onChange={(v: any) => updateField('phys_cvs', v)} 
+              onVoiceInput={() => startVoiceInput('phys_cvs')}
+              isRecording={recordingField === 'phys_cvs'}
+              isTranscribing={transcribingField === 'phys_cvs'}
+              recordingTimeLeft={recordingTimeLeft}
+            />
+            <TextAreaField 
+              label="Abdomen & Other Regional Exam" 
+              placeholder="Abdomen flat, soft, non-tender, no hepatosplenomegaly, normal bowel sounds..." 
+              value={formData.phys_abdomen} 
+              rows={3}
+              onChange={(v: any) => updateField('phys_abdomen', v)} 
+              onVoiceInput={() => startVoiceInput('phys_abdomen')}
+              isRecording={recordingField === 'phys_abdomen'}
+              isTranscribing={transcribingField === 'phys_abdomen'}
+              recordingTimeLeft={recordingTimeLeft}
+            />
+          </div>
+        </div>
+
+        {/* Miscellaneous / Other Summary findings */}
+        <TextAreaField 
+          label="Additional Physical Examination Details & Comprehensive Summary" 
+          placeholder="Detailed description of wound dressings, surgical sites, reflexes, skin layers, or other specialized diagnostic notes..." 
+          value={formData.physicalExam} 
+          rows={4}
+          onChange={(v: any) => updateField('physicalExam', v)} 
+          onVoiceInput={() => startVoiceInput('physicalExam')} 
+          isRecording={recordingField === 'physicalExam'} 
+          isTranscribing={transcribingField === 'physicalExam'} 
+          recordingTimeLeft={recordingTimeLeft} 
+        />
+      </div>
+    );
   };
 
   return (
@@ -2117,11 +3400,149 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Mobile Sidebar (Drawer) */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <div className="fixed inset-0 z-[60] md:hidden">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            {/* Drawer Content */}
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute inset-y-0 left-0 w-72 bg-surface border-r border-line flex flex-col h-full shadow-2xl z-10"
+            >
+              <div className="p-6 flex items-center justify-between border-b border-line">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl pink-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
+                    <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg text-text-main leading-none">Malae</span>
+                    <span className="text-[8px] font-bold text-primary uppercase tracking-[0.2em] mt-1">Health Intel</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="p-2 text-text-muted hover:text-red-500 rounded-lg bg-bg hover:bg-red-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <nav className="flex-1 px-4 py-6 flex flex-col gap-1.5 overflow-y-auto no-scrollbar">
+                <button
+                  onClick={() => {
+                    setView('dashboard');
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className={`
+                    flex items-center gap-4 px-4 py-3 rounded-xl transition-all active:scale-[0.98] w-full
+                    ${view === 'dashboard' ? 'bg-primary text-white shadow-md' : 'text-text-muted hover:bg-bg'}
+                  `}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.15em]">Dashboard</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setView('profile');
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className={`
+                    flex items-center gap-4 px-4 py-3 rounded-xl transition-all active:scale-[0.98] w-full
+                    ${view === 'profile' ? 'bg-primary text-white shadow-md' : 'text-text-muted hover:bg-bg'}
+                  `}
+                >
+                  <UserIcon className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.15em]">Physician Profile</span>
+                </button>
+
+                {view === 'generator' && (
+                  <div className="mt-8 space-y-2">
+                    <div className="px-4 py-1 border-b border-line mb-2">
+                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-[0.2em]">Case Progress</span>
+                    </div>
+                    {activeSteps.map((step, index) => {
+                      const isActive = currentStepIndex === index;
+                      const isCompleted = completedSteps.has(step.id);
+                      const Icon = step.icon;
+
+                      return (
+                        <button
+                          key={step.id}
+                          onClick={() => {
+                            setCurrentStepIndex(index);
+                            setIsMobileSidebarOpen(false);
+                          }}
+                          className={`
+                            w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left active:scale-[0.98]
+                            ${isActive ? 'bg-bg text-primary border border-line' : 'text-text-muted hover:bg-bg'}
+                          `}
+                        >
+                          <div className={`
+                            w-5 h-5 rounded flex items-center justify-center transition-all shrink-0
+                            ${isActive ? 'bg-primary text-white' : isCompleted ? 'bg-emerald-50 text-emerald-500' : 'bg-line text-text-muted'}
+                          `}>
+                            {isCompleted && !isActive ? <CheckCircle2 className="w-2.5 h-2.5 animate-bounce-once" /> : <Icon className="w-2.5 h-2.5" />}
+                          </div>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider ${isActive ? 'text-primary' : 'text-text-muted'}`}>
+                            {step.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </nav>
+
+              <div className="p-6 border-t border-line space-y-4">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-bg border border-line">
+                  <div className="w-8 h-8 rounded-lg pink-gradient flex items-center justify-center text-white font-bold text-sm">
+                    {user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'P'}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-bold text-text-main truncate uppercase tracking-wider">{user?.displayName || 'Physician'}</span>
+                    <span className="text-[8px] text-text-muted truncate font-medium">{user?.email}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-all font-bold text-[9px] uppercase tracking-wider border border-line"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              </div>
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden relative">
         {/* Mobile Header */}
         <header className="md:hidden h-16 bg-surface border-b border-line px-6 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 -ml-2 text-text-main hover:text-primary transition-colors focus:outline-none"
+              aria-label="Toggle Side Menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             <div className="w-8 h-8 rounded-lg pink-gradient flex items-center justify-center shadow-sm overflow-hidden">
               <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
@@ -2138,35 +3559,6 @@ export default function App() {
           </div>
         </header>
 
-        {/* Mobile Step Navigator (Only in Generator) */}
-        {view === 'generator' && (
-          <div className="md:hidden bg-surface border-b border-line shadow-sm overflow-x-auto no-scrollbar py-3 px-4 flex items-center gap-2 sticky top-16 z-40">
-            {activeSteps.map((step, index) => {
-              const isActive = currentStepIndex === index;
-              const isCompleted = completedSteps.has(step.id);
-              const Icon = step.icon;
-
-              return (
-                <button
-                  key={step.id}
-                  onClick={() => setCurrentStepIndex(index)}
-                  className={`
-                    flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all whitespace-nowrap shrink-0 border
-                    ${isActive 
-                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20' 
-                      : isCompleted 
-                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
-                        : 'bg-bg border-line text-text-muted'}
-                  `}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">{step.label}</span>
-                  {isCompleted && !isActive && <CheckCircle2 className="w-3 h-3 ml-0.5" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
         {view === 'dashboard' ? (
           <div className="flex-1 overflow-y-auto">
             <Dashboard 
@@ -2176,13 +3568,15 @@ export default function App() {
                 setFormData({});
                 setCurrentStepIndex(0);
                 setCompletedSteps(new Set());
-                setGeneratorMode('selection');
+                setGeneratorMode('form');
+                setSyncedStoryData(null);
                 setView('generator');
                 setSelectedReport(null);
               }}
               onSelectReport={(report) => {
                 setSelectedReport(report);
                 setFormData(report.patientData || {});
+                setSyncedStoryData(report.reportData || null);
                 setView('viewer');
               }}
               onDeleteReport={(id) => {
@@ -2337,22 +3731,34 @@ export default function App() {
                           <p className="text-sm font-black text-slate-900">{selectedReport.patientData.fullName || 'Not recorded'}</p>
                         </div>
                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                          <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Chief Complaint</p>
+                          <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Presenting Complaint</p>
                           <p className="text-sm font-black text-slate-900">{selectedReport.patientData.chiefComplaint || 'Not recorded'}</p>
                         </div>
                       </section>
                       
                       <section>
                         <h2 className="text-base sm:text-lg font-black text-slate-900 mb-4">Clinical History</h2>
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="p-4 rounded-xl border border-slate-100">
-                            <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">History of Presenting Illness</h4>
-                            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.hpi || 'No data recorded'}</p>
+                            <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">History of Presenting Complaint</h4>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.historyInput || 'No data recorded'}</p>
                           </div>
+                          {selectedReport.patientData.reviewOfSystems && (
+                            <div className="p-4 rounded-xl border border-slate-100">
+                              <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Review of Systems</h4>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.reviewOfSystems}</p>
+                            </div>
+                          )}
                           <div className="p-4 rounded-xl border border-slate-100">
                             <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Past Medical History</h4>
-                            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.pmh || 'No data recorded'}</p>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.pastMedicalHistory || 'No data recorded'}</p>
                           </div>
+                          {selectedReport.patientData.pastSurgicalHistory && (
+                            <div className="p-4 rounded-xl border border-slate-100">
+                              <h4 className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Past Surgical History</h4>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{selectedReport.patientData.pastSurgicalHistory}</p>
+                            </div>
+                          )}
                         </div>
                       </section>
 
@@ -2692,17 +4098,17 @@ export default function App() {
                 setFormData({});
                 setCurrentStepIndex(0);
                 setCompletedSteps(new Set());
-                setGeneratorMode('selection');
+                setGeneratorMode('form');
                 setView('generator');
                 setSelectedReport(null);
               }
             }}
-            className={`flex flex-col items-center justify-center gap-1.5 relative -top-4 transition-all`}
+            className="flex flex-col items-center justify-center relative -top-3.5 transition-all w-16"
           >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-transform active:scale-95 ${view === 'generator' ? 'bg-primary text-white shadow-primary/30 rotate-45' : 'bg-slate-900 text-white shadow-slate-300'}`}>
-              <Plus className={`w-6 h-6 ${view === 'generator' ? '-rotate-45' : ''}`} />
+            <div className={`w-13 h-13 rounded-2xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${view === 'generator' ? 'bg-primary text-white shadow-primary/30 rotate-45' : 'bg-slate-900 text-white shadow-slate-300'}`}>
+              <Plus className={`w-5.5 h-5.5 ${view === 'generator' ? '-rotate-45' : ''}`} />
             </div>
-            <span className={`text-[9px] font-bold uppercase tracking-tight -mt-3 ${view === 'generator' ? 'text-primary' : 'text-text-muted'}`}>Create</span>
+            <span className={`text-[9.5px] font-black uppercase tracking-wider mt-1.5 transition-colors ${view === 'generator' ? 'text-primary' : 'text-text-muted'}`}>Create</span>
           </button>
 
           <button
@@ -2734,6 +4140,63 @@ export default function App() {
               <p className="text-xs text-primary font-bold uppercase tracking-[0.2em] mt-2">{generationStatus || "Synthesizing clinical data..."}</p>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Physical Exam Skip Modal */}
+      <AnimatePresence>
+        {showSkipExamModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSkipExamModal(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-surface rounded-[2rem] p-8 shadow-2xl border border-line"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-6 mx-auto animate-pulse">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-text-main text-center mb-2">Skip Examination?</h3>
+              <p className="text-text-muted text-center text-xs leading-relaxed mb-8">
+                You have not captured any physical findings or vitals for this patient. Skip the physical exam? The compiler will log "Physical examination was not performed." and proceed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSkipExamModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-line text-text-muted font-bold text-xs hover:bg-bg transition-all uppercase tracking-wider"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateField('physicalExamSkipped', true);
+                    updateField('physicalExam', 'Physical examination was not performed.');
+                    setShowSkipExamModal(false);
+                    if (currentStepIndex < activeSteps.length - 1) {
+                      setCompletedSteps(prev => {
+                        const s = new Set(prev);
+                        s.add(currentStep.id);
+                        return s;
+                      });
+                      setCurrentStepIndex(prev => prev + 1);
+                    }
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-900 transition-all uppercase tracking-wider shadow-md shadow-slate-200"
+                >
+                  Skip Exam
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

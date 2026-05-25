@@ -82,9 +82,9 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isDocOwner() || isCollaborator();
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidReport(request.resource.data) && request.resource.data.userId == request.auth.uid;
-      allow update: if (isDocOwner() || isCollaborator()) && isValidReport(request.resource.data) && 
+      allow update: if isAuthenticated() && isValidReport(request.resource.data) && 
                       request.resource.data.userId == resource.data.userId;
       allow delete: if isDocOwner();
     }

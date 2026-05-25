@@ -13,7 +13,8 @@ import {
   Calendar,
   MoreHorizontal,
   Trash2,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -88,7 +89,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    const name = auth.currentUser?.displayName?.split(' ')[0] || 'Doctor';
+    const displayName = auth.currentUser?.displayName || '';
+    const cleanedName = displayName.replace(/^(dr\b\.?|doctor)\s+/i, '').trim();
+    const name = cleanedName.split(' ')[0] || 'Doctor';
     if (hour < 12) return `Good morning, Dr. ${name}`;
     if (hour < 17) return `Good afternoon, Dr. ${name}`;
     return `Good evening, Dr. ${name}`;
@@ -286,13 +289,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              const email = prompt("Enter collaborator's email:");
-                              if (email) onInviteCollaborator(report.id, email);
+                              setSelectedReportForInvite(report.id);
                             }}
                             className="p-1.5 rounded-lg bg-bg text-text-muted hover:text-primary hover:bg-primary/5 transition-all active:scale-90"
-                            title="Invite Collaborator"
+                            title="Share & Collaborate"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Users className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -323,6 +325,102 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Share / Collaboration Modal */}
+      <AnimatePresence>
+        {selectedReportForInvite && (() => {
+          const report = reports.find(r => r.id === selectedReportForInvite);
+          if (!report) return null;
+          
+          const shareUrl = `${window.location.origin}${window.location.pathname}?reportId=${report.id}`;
+          
+          return (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in"
+              onClick={() => setSelectedReportForInvite(null)}
+            >
+              <motion.div 
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-100 shadow-2xl space-y-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Share Clinical Case</h3>
+                    <p className="text-xs text-text-muted mt-0.5">Collaborate on this case with other physicians.</p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedReportForInvite(null)}
+                    className="p-1.5 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {/* Invite by Email */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-muted block">Invite via Email Address</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="email" 
+                      placeholder="colleague@hospital.org" 
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="flex-1 px-4 py-3 border border-line rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-slate-50/50 text-slate-800"
+                    />
+                    <button 
+                      onClick={() => {
+                        if (inviteEmail.trim()) {
+                          onInviteCollaborator(report.id, inviteEmail.trim());
+                          setInviteEmail('');
+                          setSelectedReportForInvite(null);
+                        }
+                      }}
+                      className="px-4 py-2.5 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-colors active:scale-95 shrink-0"
+                    >
+                      Invite
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-slate-100"></div>
+                  <span className="flex-shrink mx-4 text-[9px] font-black uppercase tracking-widest text-slate-300">OR</span>
+                  <div className="flex-grow border-t border-slate-100"></div>
+                </div>
+                
+                {/* Copy Edit Link */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-muted block">Direct Colleague Edit Link</label>
+                  <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                    <span className="text-xs text-slate-500 font-mono truncate flex-1 select-none">
+                      {shareUrl}
+                    </span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(shareUrl);
+                        alert("Secure case-edit link copied to clipboard!");
+                        setSelectedReportForInvite(null);
+                      }}
+                      className="px-4 py-2 bg-primary text-white font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-accent transition-all active:scale-95 shrink-0"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-muted leading-relaxed">
+                    Any physician with this link will be able to edit and update this case safely in their clinician workspace.
+                  </p>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 };

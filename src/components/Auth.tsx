@@ -233,7 +233,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
           >
             <div className="flex items-center gap-4 mb-12">
               <div className="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center shadow-2xl shadow-black/20 overflow-hidden border border-white/20">
-                <div className="w-full h-full pink-gradient flex items-center justify-center text-white font-black text-2xl">M</div>
+                <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="flex flex-col">
                 <span className="text-3xl font-black text-white tracking-widest uppercase leading-none">Malae</span>
@@ -287,8 +287,8 @@ export const Auth = ({ onSuccess }: AuthProps) => {
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden text-white font-black">
-                M
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
+                <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-black text-text-main tracking-widest uppercase leading-none">Malae</span>
@@ -298,6 +298,16 @@ export const Auth = ({ onSuccess }: AuthProps) => {
           </div>
 
           <div className="mb-10">
+            {/* Desktop Brand Logo */}
+            <div className="hidden lg:flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-line flex items-center justify-center shadow-sm">
+                <img src="/images/logo.png" alt="Malae Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-black text-text-main tracking-widest uppercase leading-none">Malae</span>
+                <span className="text-[8px] font-bold text-primary uppercase tracking-[0.25em] mt-0.5">Clinical Workspace</span>
+              </div>
+            </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-text-main tracking-tight mb-3">
               {isLogin ? 'Welcome back' : (signupStep === 1 ? 'Get started' : 'Professional Profile')}
             </h1>
