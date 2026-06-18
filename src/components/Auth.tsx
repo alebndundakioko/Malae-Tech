@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   updateProfile,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
@@ -21,6 +23,7 @@ import {
   Building2
 } from 'lucide-react';
 import { Loader } from './Loader';
+import { Capacitor } from '@capacitor/core';
 
 interface AuthProps {
   onSuccess: () => void;
@@ -141,6 +144,65 @@ export const Auth = ({ onSuccess }: AuthProps) => {
     }
   };
 
+  const syncGoogleUserProfile = async (user: any) => {
+    if (!user.email) {
+      throw new Error("No email associated with this Google account.");
+    }
+
+    const userRef = doc(db, 'users', user.uid);
+    const path = `users/${user.uid}`;
+    
+    try {
+      const userSnap = await getDocFromServer(userRef);
+      
+      if (!userSnap.exists()) {
+        console.log("Creating new user profile...");
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || '',
+          hospital: '',
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        });
+      } else {
+        console.log("Updating existing user profile...");
+        await setDoc(userRef, {
+          lastLogin: serverTimestamp(),
+          // Don't overwrite existing displayName if Google's is empty
+          ...(user.displayName ? { displayName: user.displayName } : {})
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Firestore error during Google sign-in profile sync:", error);
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        setLoading(true);
+        console.log("Checking for Google Sign-In redirect result...");
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          console.log("Redirect Google Sign-In success:", result.user.uid);
+          await syncGoogleUserProfile(result.user);
+          onSuccess();
+        }
+      } catch (err: any) {
+        console.error("Redirect Google Sign-In error:", err);
+        setError(err.message || "Google Sign-In failed during redirect. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      checkRedirectResult();
+    }
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
@@ -150,45 +212,14 @@ export const Auth = ({ onSuccess }: AuthProps) => {
     
     try {
       console.log("Starting Google Sign-In...");
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      if (!user.email) {
-        throw new Error("No email associated with this Google account.");
+      if (Capacitor.isNativePlatform()) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        await syncGoogleUserProfile(user);
+        onSuccess();
       }
-
-      console.log("Google Sign-In successful, user:", user.uid);
-
-      // Check if user document exists first to avoid overwriting metadata
-      const userRef = doc(db, 'users', user.uid);
-      const path = `users/${user.uid}`;
-      
-      try {
-        const userSnap = await getDocFromServer(userRef);
-        
-        if (!userSnap.exists()) {
-          console.log("Creating new user profile...");
-          await setDoc(userRef, {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || '',
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp()
-          });
-        } else {
-          console.log("Updating existing user profile...");
-          await setDoc(userRef, {
-            lastLogin: serverTimestamp(),
-            // Don't overwrite existing displayName if Google's is empty
-            ...(user.displayName ? { displayName: user.displayName } : {})
-          }, { merge: true });
-        }
-      } catch (error) {
-        console.error("Firestore error during Google sign-in profile sync:", error);
-        handleFirestoreError(error, OperationType.WRITE, path);
-      }
-      
-      onSuccess();
     } catch (err: any) {
       console.error("Google Sign-In error details:", err);
       if (err.code === 'auth/popup-closed-by-user') {

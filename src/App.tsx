@@ -870,8 +870,18 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
 
 // --- Helpers ---
 
+const getApiBaseUrl = () => {
+  if (Capacitor.isNativePlatform()) {
+    const savedUrl = localStorage.getItem('malae_api_url');
+    if (savedUrl) return savedUrl;
+    return 'https://ais-pre-uyd6ehinkvjd3dd3ytwd53-33678728397.europe-west1.run.app';
+  }
+  return '';
+};
+
 const callGemini = async (contents: any[], config: any = {}, model: string = "gemini-3-flash-preview") => {
-  const response = await fetch("/api/gemini", {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/api/gemini`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model, contents, config })

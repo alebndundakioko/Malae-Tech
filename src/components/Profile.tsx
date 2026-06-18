@@ -14,10 +14,12 @@ import {
   Smartphone,
   Download,
   Trash2,
-  ShieldAlert
+  ShieldAlert,
+  Globe
 } from 'lucide-react';
 import { Loader } from './Loader';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { Capacitor } from '@capacitor/core';
 
 interface ProfileProps {
   onBack: () => void;
@@ -26,6 +28,9 @@ interface ProfileProps {
 export const Profile = ({ onBack }: ProfileProps) => {
   const [displayName, setDisplayName] = useState(auth.currentUser?.displayName || '');
   const [hospital, setHospital] = useState('');
+  const [apiUrl, setApiUrl] = useState(() => {
+    return localStorage.getItem('malae_api_url') || 'https://ais-pre-uyd6ehinkvjd3dd3ytwd53-33678728397.europe-west1.run.app';
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +82,9 @@ export const Profile = ({ onBack }: ProfileProps) => {
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, path);
       }
+
+      // Save local API Base URL setting
+      localStorage.setItem('malae_api_url', apiUrl);
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -170,6 +178,25 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 placeholder="General Hospital"
               />
             </div>
+          </div>
+
+          <div className="space-y-3">
+            <label htmlFor="profile-api-url" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Backend Server URL ({Capacitor.isNativePlatform() ? 'Mobile Mode' : 'Web Mode'})</label>
+            <div className="relative group">
+              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
+              <input
+                id="profile-api-url"
+                type="url"
+                required
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                placeholder="https://your-custom-backend.run.app"
+              />
+            </div>
+            <p className="text-[9px] text-text-muted font-medium ml-1">
+              The full endpoint URL with HTTPS (e.g. your Cloud Run domain) that this native app should use to connect to the backend server containing your API key.
+            </p>
           </div>
 
           {error && (
