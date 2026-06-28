@@ -31,7 +31,7 @@ async function startServer() {
       });
 
       const response = await ai.models.generateContent({
-        model: modelName || "gemini-3-flash-preview",
+        model: modelName || "gemini-3.5-flash",
         contents,
         config
       });

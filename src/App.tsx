@@ -541,6 +541,39 @@ const getCaseWriteUpPrompt = (formData: any) => {
     - Comprehensive/Additional physical examination details: ${formData.physicalExam || 'No additional details.'}
   `.trim();
 
+  const hpcDetailsCombined = `
+    ${formData.historyInput || 'No direct text narrative history recorded yet.'}
+    ${formData.onset ? `- Onset: ${formData.onset}` : ''}
+    ${formData.progression ? `- Progression: ${formData.progression}` : ''}
+    ${formData.character ? `- Character: ${formData.character}` : ''}
+    ${formData.severity ? `- Severity: ${formData.severity}` : ''}
+    ${formData.location ? `- Location: ${formData.location}` : ''}
+    ${formData.radiation ? `- Radiation: ${formData.radiation}` : ''}
+    ${formData.associatedSymptoms ? `- Associated Symptoms: ${formData.associatedSymptoms}` : ''}
+    ${formData.negativeFindings ? `- Pertinent Negatives: ${formData.negativeFindings}` : ''}
+    ${formData.aggravating ? `- Aggravating Factors: ${formData.aggravating}` : ''}
+    ${formData.relieving ? `- Relieving Factors: ${formData.relieving}` : ''}
+    ${formData.prevTreatment ? `- Previous Medical Interventions: ${formData.prevTreatment}` : ''}
+    ${formData.respTreatment ? `- Response to Previous Treatments: ${formData.respTreatment}` : ''}
+    ${formData.impact ? `- Functional Impact: ${formData.impact}` : ''}
+  `.trim();
+
+  const obgynDetailsCombined = `
+    - Gravida: ${formData.gravida || 'Not specified'}
+    - Parity: ${formData.parity || 'Not specified'}
+    - Current Pregnancy Details: ${formData.currentPregnancyDetails || 'Not specified'}
+    - Past Obstetric History: ${formData.obstetricHistory || 'Not specified'}
+    - Gynaecological History: ${formData.gynaecologicalHistory || 'Not specified'}
+  `.trim();
+
+  const pediatricDetailsCombined = `
+    - Antenatal & Prenatal History: ${formData.antenatalHistory || 'Not specified'}
+    - Natal & Delivery History: ${formData.natalHistory || 'Not specified'}
+    - Nutritional & Weaning History: ${formData.nutritionalHistory || 'Not specified'}
+    - Immunization Status & History: ${formData.immunizationHistory || 'Not specified'}
+    - Development & Milestones History: ${formData.developmentalHistory || 'Not specified'}
+  `.trim();
+
   return `
     You are an elite Senior Clinical Consultant and a medical educator at a leading Commonwealth teaching hospital (such as Mengo Hospital or Mulago Hospital).
     Your task is to synthesize an exceptionally high-quality, comprehensive, and detailed academic clinical case write-up based on the raw records provided.
@@ -562,13 +595,15 @@ const getCaseWriteUpPrompt = (formData: any) => {
 
     RAW PRESENTING COMPLAINT & CLINICAL NOTES:
     - Chief Complaint: ${formData.chiefComplaint || 'Not specified'} (Duration: ${formData.duration || 'Not specified'})
-    - History of Presenting Complaint (HPC): ${formData.historyInput || 'No HPC history recorded yet.'}
+    - History of Presenting Complaint (HPC): ${hpcDetailsCombined}
     - Review of Systems (ROS): ${formData.reviewOfSystems || 'No specific ROS details recorded.'}
     - Past Medical History (PMH): ${formData.pastMedicalHistory || 'No PMH details recorded.'}
     - Chronic conditions/Medications/Allergies: ${formData.medications || 'None'} / ${formData.allergies || 'None'}
     - Past Surgical History (PSH): ${formData.pastSurgicalHistory || 'No PSH details recorded.'}
     - Family & Social History (FSH): ${fshDetailsCombined}
     - Physical Examination Findings: ${physicalDetailsCombined}
+    - Obstetrics & Gynaecology History Details: ${obgynDetailsCombined}
+    - Pediatrics Developmental & Birth History Details: ${pediatricDetailsCombined}
 
     DETAILED RESPONSE SECTION INSTRUCTIONS:
     1. hpcNarrative: Draft a rigorous, chronological narrative of the history of presenting complaint (HPC). Specify onset, progression, character, aggravating/alleviating factors, and pertinent negatives with elite clinical precision.
@@ -879,7 +914,7 @@ const getApiBaseUrl = () => {
   return '';
 };
 
-const callGemini = async (contents: any[], config: any = {}, model: string = "gemini-3-flash-preview") => {
+const callGemini = async (contents: any[], config: any = {}, model: string = "gemini-3.5-flash") => {
   const baseUrl = getApiBaseUrl();
   const response = await fetch(`${baseUrl}/api/gemini`, {
     method: "POST",
@@ -887,12 +922,66 @@ const callGemini = async (contents: any[], config: any = {}, model: string = "ge
     body: JSON.stringify({ model, contents, config })
   });
   
+  const responseData = await response.json().catch(() => ({ error: "Failed to parse JSON response from backend server" }));
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to communicate with AI server");
+    throw new Error(responseData.error || `AI backend responded with status: ${response.status}`);
   }
   
-  return await response.json();
+  if (responseData.error) {
+    throw new Error(responseData.error);
+  }
+  
+  return responseData;
+};
+
+const cleanMimeType = (type: string) => {
+  if (!type) return 'audio/webm';
+  let clean = type.split(';')[0].trim().toLowerCase();
+  
+  if (clean === 'audio/x-m4a') return 'audio/m4a';
+  if (clean === 'audio/x-wav') return 'audio/wav';
+  if (clean === 'audio/x-mp3') return 'audio/mp3';
+  if (clean === 'audio/x-webm') return 'audio/webm';
+  if (clean === 'audio/3gp') return 'audio/3gpp';
+  if (clean === 'audio/aac') return 'audio/aac';
+  
+  return clean || 'audio/webm';
+};
+
+const cleanAndParseJSON = (text: string) => {
+  if (!text) throw new Error("Empty JSON text");
+  let cleaned = text.trim();
+  
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+    cleaned = cleaned.replace(/\s*```$/, '');
+    cleaned = cleaned.trim();
+  }
+  
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+  } else {
+    const firstBracket = cleaned.indexOf('[');
+    const lastBracket = cleaned.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      cleaned = cleaned.slice(firstBracket, lastBracket + 1);
+    }
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.warn("First JSON parse attempt failed, trying to sanitize trailing commas...", err);
+    try {
+      const sanitized = cleaned.replace(/,\s*([\}\]])/g, '$1');
+      return JSON.parse(sanitized);
+    } catch (secondErr) {
+      console.error("Both JSON parse attempts failed on:", cleaned);
+      throw secondErr;
+    }
+  }
 };
 
 export default function App() {
@@ -1197,7 +1286,8 @@ export default function App() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const recordedMimeType = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: recordedMimeType });
         await transcribeAudio(audioBlob, field);
         setRecordingField(null);
         if (recordingIntervalRef.current) {
@@ -1247,10 +1337,11 @@ export default function App() {
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
+          const cleanType = cleanMimeType(blob.type);
           const response = await callGemini([{
             parts: [
               { text: "Transcribe this clinical audio accurately. Return only the transcription text. If the audio is silent or unintelligible, return an empty string." },
-              { inlineData: { data: base64Audio, mimeType: 'audio/webm' } }
+              { inlineData: { data: base64Audio, mimeType: cleanType } }
             ]
           }]);
 
@@ -1315,14 +1406,16 @@ export default function App() {
         `;
 
         const response = await callGemini(
-          [
-            { parts: [{ text: prompt }] },
-            { parts: [{ inlineData: { data: base64Data, mimeType } }] }
-          ],
+          [{
+            parts: [
+              { text: prompt },
+              { inlineData: { data: base64Data, mimeType } }
+            ]
+          }],
           { responseMimeType: "application/json" }
         );
 
-        const extractedData = JSON.parse(response.text);
+        const extractedData = cleanAndParseJSON(response.text);
         
         let combinedHistory = '';
         if (extractedData.chiefComplaint) {
@@ -1425,14 +1518,16 @@ export default function App() {
         `;
 
         const response = await callGemini(
-          [
-            { parts: [{ text: prompt }] },
-            { parts: [{ inlineData: { data: base64Data, mimeType } }] }
-          ],
+          [{
+            parts: [
+              { text: prompt },
+              { inlineData: { data: base64Data, mimeType } }
+            ]
+          }],
           { responseMimeType: "application/json" }
         );
 
-        const extractedData = JSON.parse(response.text);
+        const extractedData = cleanAndParseJSON(response.text);
         setFormData((prev: any) => ({ ...prev, ...extractedData }));
         setGeneratorMode('form');
         setIsProcessingFile(false);
@@ -1505,15 +1600,24 @@ export default function App() {
           }
         `;
 
+        const cleanType = cleanMimeType(blob.type);
         const response = await callGemini(
-          [
-            { parts: [{ text: prompt }] },
-            { parts: [{ inlineData: { data: base64Audio, mimeType: 'audio/webm' } }] }
-          ],
+          [{
+            parts: [
+              { text: prompt },
+              { inlineData: { data: base64Audio, mimeType: cleanType } }
+            ]
+          }],
           { responseMimeType: "application/json" }
         );
 
-        const extractedData = JSON.parse(response.text);
+        let extractedData = {};
+        try {
+          extractedData = cleanAndParseJSON(response.text);
+        } catch (parseErr) {
+          console.error("Failed parsing extracted structured audio JSON:", parseErr);
+          alert("We were unable to extract structured data from the audio transcription. Please verify the audio file or try detailing the history manually.");
+        }
         setFormData((prev: any) => ({ ...prev, ...extractedData }));
         setGeneratorMode('form');
         setIsProcessingFile(false);
@@ -1541,7 +1645,8 @@ export default function App() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const recordedMimeType = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: recordedMimeType });
         await handleFullCaseAudioTranscription(audioBlob);
       };
 
@@ -1771,7 +1876,7 @@ export default function App() {
       try {
         const text = response.text;
         if (!text) throw new Error("Empty response from AI");
-        storyData = JSON.parse(text);
+        storyData = cleanAndParseJSON(text);
         
         // Basic validation of required fields
         const requiredFields = ['hpcNarrative', 'rosNarrative', 'impression', 'plan'];
@@ -1939,15 +2044,61 @@ export default function App() {
 
       let parsedData;
       try {
-        parsedData = JSON.parse(response.text);
+        parsedData = cleanAndParseJSON(response.text);
+        
+        const fallbackFields: any = {
+          hpcNarrative: "The clinical narrative could not be generated at this time.",
+          rosNarrative: "Review of systems analysis unavailable.",
+          pmhNarrative: "Medical history summary unavailable.",
+          pshNarrative: "Surgical history summary unavailable.",
+          fshNarrative: "Social history summary unavailable.",
+          examinationNarrative: "Physical examination write-up unavailable.",
+          impression: "Clinical impression pending further analysis.",
+          plan: ["Review clinical data manually"],
+          differentials: [],
+          caseDiscussionSections: [],
+          references: [],
+          priorityInvestigations: [],
+          managementSuggestions: [],
+          wardRoundPresentation: ""
+        };
+        
+        parsedData = { ...fallbackFields, ...parsedData };
       } catch (err) {
-        console.error("Failed to parse synthesized AI response as JSON", err);
-        throw err;
+        console.error("Failed to parse synthesized AI response as JSON, using hard fallback:", err);
+        parsedData = {
+          hpcNarrative: "The clinical narrative could not be generated at this time. Please review raw data.",
+          rosNarrative: "Review of systems analysis unavailable.",
+          obGynNarrative: "",
+          pediatricNarrative: "",
+          pmhNarrative: "Medical history summary unavailable.",
+          pshNarrative: "Surgical history summary unavailable.",
+          fshNarrative: "Social history summary unavailable.",
+          examinationNarrative: "Physical examination write-up unavailable.",
+          investigationsNarrative: "",
+          procedureNarrative: "",
+          impression: "Clinical impression pending further analysis.",
+          plan: ["Review clinical data manually", "Re-attempt report generation"],
+          differentials: [
+            { diagnosis: "Clinical Correlation Required", reasoning: "The AI was unable to synthesize differential diagnoses." }
+          ],
+          caseDiscussionSections: [
+            { title: "System Notice", content: "Academic case discussion is unavailable due to a parsing error." }
+          ],
+          references: ["Malae Clinical Intelligence System Documentation"],
+          priorityInvestigations: ["Complete Blood Count (CBC)"],
+          managementSuggestions: ["Supportive Clinical Monitoring"],
+          wardRoundPresentation: "Admission briefing pending review."
+        };
       }
 
       setSyncedStoryData(parsedData);
       setOriginalReportStatus('completed');
-      setCompletedSteps(prev => new Set(prev).add('compiled_report'));
+      setCompletedSteps(prev => {
+        const next = new Set(prev);
+        next.add('compiled_report');
+        return next;
+      });
       setTimeout(() => setOriginalReportStatus('idle'), 3000);
       
       if (user) {

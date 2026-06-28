@@ -198,9 +198,7 @@ export const Auth = ({ onSuccess }: AuthProps) => {
       }
     };
 
-    if (Capacitor.isNativePlatform()) {
-      checkRedirectResult();
-    }
+    checkRedirectResult();
   }, []);
 
   const handleGoogleSignIn = async () => {
@@ -212,7 +210,8 @@ export const Auth = ({ onSuccess }: AuthProps) => {
     
     try {
       console.log("Starting Google Sign-In...");
-      if (Capacitor.isNativePlatform()) {
+      const isMobile = Capacitor.isNativePlatform() || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
         await signInWithRedirect(auth, provider);
       } else {
         const result = await signInWithPopup(auth, provider);
