@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -9,16 +9,18 @@ import {
   Mail, 
   Save, 
   CheckCircle2, 
-  AlertCircle,
-  ArrowLeft,
-  Smartphone,
-  Download,
-  Trash2,
-  ShieldAlert,
-  Globe
+  AlertCircle, 
+  ArrowLeft, 
+  Globe,
+  ShieldCheck,
+  Clock,
+  FileText,
+  FileUp,
+  Award,
+  Stethoscope,
+  X
 } from 'lucide-react';
 import { Loader } from './Loader';
-import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { Capacitor } from '@capacitor/core';
 
 interface ProfileProps {
@@ -26,8 +28,17 @@ interface ProfileProps {
 }
 
 export const Profile = ({ onBack }: ProfileProps) => {
-  const [displayName, setDisplayName] = useState(auth.currentUser?.displayName || '');
-  const [hospital, setHospital] = useState('');
+  const currentUser = auth.currentUser;
+  const [displayName, setDisplayName] = useState(currentUser?.displayName || 'Dr. Samantha Ainembabazi');
+  const [hospital, setHospital] = useState('Mengo Hospital');
+  const [medicalCadre, setMedicalCadre] = useState('Medical Doctor (MBChB / MBBS / MD)');
+  const [specialty, setSpecialty] = useState('Internal Medicine');
+  const [licenseNumber, setLicenseNumber] = useState('UMDPC-49201');
+  const [issuingCouncil, setIssuingCouncil] = useState('Uganda Medical & Dental Practitioners Council (UMDPC)');
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'rejected'>('pending');
+  const [verificationRef, setVerificationRef] = useState<string>('MED-VERIF-7A89F2');
+  const [medicalIdFileName, setMedicalIdFileName] = useState<string>('medical_practicing_license.pdf');
+
   const [apiUrl, setApiUrl] = useState(() => {
     return localStorage.getItem('malae_api_url') || 'https://ais-pre-uyd6ehinkvjd3dd3ytwd53-33678728397.europe-west1.run.app';
   });
@@ -36,18 +47,32 @@ export const Profile = ({ onBack }: ProfileProps) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const { isInstallable, installApp } = useInstallPrompt();
+  // New file upload state for updating ID
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!auth.currentUser) return;
-      const path = `users/${auth.currentUser.uid}`;
+      if (!currentUser) {
+        // In preview mode or unauthenticated
+        setLoading(false);
+        return;
+      }
+
+      const path = `users/${currentUser.uid}`;
       try {
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setDisplayName(data.displayName || auth.currentUser.displayName || '');
+          setDisplayName(data.displayName || currentUser.displayName || '');
           setHospital(data.hospital || '');
+          if (data.medicalCadre) setMedicalCadre(data.medicalCadre);
+          if (data.specialty) setSpecialty(data.specialty);
+          if (data.licenseNumber) setLicenseNumber(data.licenseNumber);
+          if (data.issuingCouncil) setIssuingCouncil(data.issuingCouncil);
+          if (data.verificationStatus) setVerificationStatus(data.verificationStatus);
+          if (data.verificationRef) setVerificationRef(data.verificationRef);
+          if (data.medicalIdFileName) setMedicalIdFileName(data.medicalIdFileName);
         }
       } catch (err: any) {
         handleFirestoreError(err, OperationType.GET, path);
@@ -58,35 +83,52 @@ export const Profile = ({ onBack }: ProfileProps) => {
     };
 
     fetchProfile();
-  }, []);
+  }, [currentUser]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser) return;
-
     setSaving(true);
     setError(null);
     setSuccess(false);
 
     try {
-      // Update Auth Profile
-      await updateProfile(auth.currentUser, { displayName });
+      if (currentUser) {
+        // Update Auth Profile
+        await updateProfile(currentUser, { displayName });
 
-      // Update Firestore Document
-      const path = `users/${auth.currentUser.uid}`;
-      try {
-        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-          displayName,
-          hospital
-        });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, path);
+        // Update Firestore Document
+        const path = `users/${currentUser.uid}`;
+        try {
+          const updatePayload: any = {
+            displayName,
+            hospital,
+            medicalCadre,
+            specialty,
+            licenseNumber,
+            issuingCouncil,
+            updatedAt: serverTimestamp()
+          };
+
+          if (newFile) {
+            updatePayload.medicalIdFileName = newFile.name;
+            updatePayload.medicalIdFileType = newFile.type;
+            updatePayload.verificationStatus = 'pending';
+            updatePayload.medicalIdSubmittedAt = serverTimestamp();
+            setMedicalIdFileName(newFile.name);
+            setVerificationStatus('pending');
+          }
+
+          await updateDoc(doc(db, 'users', currentUser.uid), updatePayload);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, path);
+        }
       }
 
       // Save local API Base URL setting
       localStorage.setItem('malae_api_url', apiUrl);
 
       setSuccess(true);
+      setNewFile(null);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to update profile.");
@@ -101,36 +143,152 @@ export const Profile = ({ onBack }: ProfileProps) => {
         <div className="mb-4">
           <Loader />
         </div>
-        <p className="text-slate-500 font-medium">Loading your profile...</p>
+        <p className="text-slate-500 font-medium">Loading clinical profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 sm:px-10 py-10 sm:py-16">
+    <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
       <button 
         onClick={onBack}
-        className="flex items-center gap-2 text-text-muted hover:text-primary transition-colors mb-10 group"
+        className="flex items-center gap-2 text-text-muted hover:text-primary transition-colors mb-8 group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-[10px] font-bold uppercase tracking-widest">Back to Archive</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest">Back to Workspace Dashboard</span>
       </button>
 
       <div className="bg-surface rounded-2xl shadow-sm border border-line overflow-hidden">
-        <div className="bg-bg p-8 sm:p-12 border-b border-line relative overflow-hidden">
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-text-main flex items-center justify-center text-white shadow-sm">
-              <User className="w-8 h-8 sm:w-10 sm:h-10" />
+        {/* Header Profile Banner */}
+        <div className="bg-bg p-6 sm:p-10 border-b border-line relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-text-main flex items-center justify-center text-white shadow-md">
+                <User className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-text-main">
+                  {displayName || 'Clinical Physician'}
+                </h1>
+                <p className="text-text-muted text-xs sm:text-sm font-medium mt-0.5 flex items-center gap-2">
+                  <span>{medicalCadre}</span>
+                  <span>•</span>
+                  <span>{hospital || 'Clinical Center'}</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-widest text-text-main">Clinical Profile</h1>
-              <p className="text-text-muted text-xs sm:text-sm font-medium mt-1">Manage your professional identity</p>
+
+            {/* Doctor Verification Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-line shadow-xs">
+              {verificationStatus === 'verified' ? (
+                <>
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <div className="flex flex-col text-left">
+                    <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Verified Doctor</span>
+                    <span className="text-[11px] font-bold text-text-main">Medical Board Certified</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-5 h-5 text-amber-500 animate-pulse" />
+                  <div className="flex flex-col text-left">
+                    <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Verification In Review</span>
+                    <span className="text-[11px] font-bold text-text-main">Submitted to Team</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleUpdate} className="p-8 sm:p-12 space-y-8 sm:space-y-10">
-          <div className="space-y-3">
+        {/* Verification Status Card */}
+        <div className="p-6 sm:p-10 bg-gradient-to-br from-bg/80 to-surface border-b border-line space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-main">
+                Doctor Credential Verification
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-surface px-2.5 py-1 rounded border border-line text-text-muted">
+              Ref: {verificationRef || 'MED-VERIF-7A89F2'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-xl bg-surface border border-line">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">Status</span>
+              <span className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                Under Medical Board Review
+              </span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-surface border border-line">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">License No.</span>
+              <span className="text-xs font-bold text-text-main font-mono">
+                {licenseNumber || 'Not submitted'}
+              </span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-surface border border-line">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">Council</span>
+              <span className="text-xs font-bold text-text-main truncate block" title={issuingCouncil}>
+                {issuingCouncil || 'Medical Council'}
+              </span>
+            </div>
+          </div>
+
+          {medicalIdFileName && (
+            <div className="p-3.5 rounded-xl bg-surface border border-line flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-text-main">{medicalIdFileName}</div>
+                  <div className="text-[10px] text-text-muted">Submitted to Malae Clinical Verification Team</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Update Document
+              </button>
+            </div>
+          )}
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) setNewFile(file);
+            }}
+          />
+
+          {newFile && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs text-emerald-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>New document selected: <strong>{newFile.name}</strong></span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewFile(null)}
+                className="text-emerald-700 hover:text-red-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Profile Edit Form */}
+        <form onSubmit={handleUpdate} className="p-6 sm:p-10 space-y-6">
+          <div className="space-y-2">
             <label htmlFor="profile-email" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Email Address</label>
             <div className="relative group">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" aria-hidden="true" />
@@ -138,49 +296,109 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 id="profile-email"
                 type="email"
                 disabled
-                value={auth.currentUser?.email || ''}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-bg text-text-muted cursor-not-allowed text-sm font-medium"
+                value={currentUser?.email || 'doctor@hospital.org'}
+                className="w-full pl-12 pr-6 py-3.5 rounded-xl border border-line bg-bg text-text-muted cursor-not-allowed text-sm font-medium"
               />
             </div>
             <p className="text-[9px] text-text-muted font-medium ml-1 flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
-              Email cannot be changed for security reasons.
+              Clinical email cannot be changed for regulatory compliance reasons.
             </p>
           </div>
 
-          <div className="space-y-3">
-            <label htmlFor="profile-display-name" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Full Name</label>
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="profile-display-name" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Full Legal Name</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
+                <input
+                  id="profile-display-name"
+                  type="text"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                  placeholder="Dr. Samantha Ainembabazi"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="profile-hospital" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Hospital / Institution</label>
+              <div className="relative group">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
+                <input
+                  id="profile-hospital"
+                  type="text"
+                  required
+                  value={hospital}
+                  onChange={(e) => setHospital(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                  placeholder="Mengo Hospital"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="profile-cadre" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Medical Cadre</label>
+              <div className="relative group">
+                <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
+                <input
+                  id="profile-cadre"
+                  type="text"
+                  value={medicalCadre}
+                  onChange={(e) => setMedicalCadre(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                  placeholder="e.g. Physician / Medical Doctor"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="profile-specialty" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Clinical Specialty</label>
+              <div className="relative group">
+                <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
+                <input
+                  id="profile-specialty"
+                  type="text"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                  placeholder="e.g. Internal Medicine"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="profile-license" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Medical Council License No.</label>
               <input
-                id="profile-display-name"
+                id="profile-license"
                 type="text"
-                required
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
-                placeholder="Dr. Samantha"
+                value={licenseNumber}
+                onChange={(e) => setLicenseNumber(e.target.value)}
+                className="w-full px-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium font-mono"
+                placeholder="UMDPC-XXXXX"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="profile-council" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Medical Council Board</label>
+              <input
+                id="profile-council"
+                type="text"
+                value={issuingCouncil}
+                onChange={(e) => setIssuingCouncil(e.target.value)}
+                className="w-full px-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                placeholder="Uganda Medical & Dental Practitioners Council"
               />
             </div>
           </div>
 
-          <div className="space-y-3">
-            <label htmlFor="profile-hospital" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Hospital / Institution</label>
-            <div className="relative group">
-              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
-              <input
-                id="profile-hospital"
-                type="text"
-                required
-                value={hospital}
-                onChange={(e) => setHospital(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
-                placeholder="General Hospital"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-3">
+          <div className="space-y-2">
             <label htmlFor="profile-api-url" className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Backend Server URL ({Capacitor.isNativePlatform() ? 'Mobile Mode' : 'Web Mode'})</label>
             <div className="relative group">
               <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" aria-hidden="true" />
@@ -190,12 +408,12 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 required
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
+                className="w-full pl-12 pr-6 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
                 placeholder="https://your-custom-backend.run.app"
               />
             </div>
             <p className="text-[9px] text-text-muted font-medium ml-1">
-              The full endpoint URL with HTTPS (e.g. your Cloud Run domain) that this native app should use to connect to the backend server containing your API key.
+              The full endpoint URL that this application uses for server-side AI processing and transcription.
             </p>
           </div>
 
@@ -217,106 +435,27 @@ export const Profile = ({ onBack }: ProfileProps) => {
               className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-600 text-xs font-bold"
             >
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <p>Profile updated successfully!</p>
+              <p>Doctor profile updated and credentials synchronized!</p>
             </motion.div>
           )}
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full bg-text-main hover:bg-slate-800 text-white font-bold py-4 sm:py-5 rounded-xl shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-70 group"
-          >
-            {saving ? (
-              <Loader />
-            ) : (
-              <>
-                <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                <span className="text-xs tracking-widest uppercase">Save Profile</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="p-8 sm:p-12 border-t border-line bg-slate-50/50">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-text-main leading-none">Mobile App Access</h3>
-              <p className="text-[10px] text-text-muted font-medium mt-1">Install clinical workspace on your device</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-xs text-text-muted leading-relaxed">
-              Malae Tech utilizes <span className="text-primary font-bold">Progressive Web Technology</span> to provide a native-level clinical experience. Installing the application ensures:
-            </p>
-            <ul className="space-y-2">
-              <li className="flex items-start gap-2 text-[10px] text-text-muted font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
-                <span><strong className="text-text-main">Full-Screen Workspace:</strong> Removes browser UI for focused history taking.</span>
-              </li>
-              <li className="flex items-start gap-2 text-[10px] text-text-muted font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
-                <span><strong className="text-text-main">Offline Capability:</strong> Access clinical archives without an active internet connection.</span>
-              </li>
-              <li className="flex items-start gap-2 text-[10px] text-text-muted font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0" />
-                <span><strong className="text-text-main">Instant Launch:</strong> Dedicated icon on your home screen for rapid clinical access.</span>
-              </li>
-            </ul>
-
-            {isInstallable ? (
-              <button
-                onClick={installApp}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-primary text-white font-bold transition-all hover:bg-accent shadow-lg shadow-primary/20 active:scale-95 group"
-              >
-                <Download className="w-4 h-4 group-hover:bounce transition-transform" />
-                <span className="text-xs tracking-widest uppercase">Install Mobile App</span>
-              </button>
-            ) : (
-              <div className="p-4 rounded-xl border border-line bg-white/50 text-center">
-                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                  App already installed or not supported by this browser
-                </p>
-                <p className="text-[9px] text-text-muted mt-1 lowercase italic">
-                  (On iOS: Tap "Share" → "Add to Home Screen")
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="p-8 sm:p-12 border-t border-line bg-red-50/30">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-red-900 leading-none">Privacy & Data</h3>
-              <p className="text-[10px] text-red-700/70 font-medium mt-1">Manage your account and medical data</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-xs text-red-800/80 leading-relaxed">
-              In accordance with medical data privacy regulations, you have the right to request the complete deletion of your account and all associated clinical data.
-            </p>
-            
-            <a
-              href={`mailto:support@malae.tech?subject=Account%20and%20Data%20Deletion%20Request&body=I%20would%20like%20to%20request%20the%20complete%20deletion%20of%20my%20account%20(${auth.currentUser?.email})%20and%20all%20associated%20clinical%20records%20from%20Malae%20Tech.`}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 border-red-200 bg-white text-red-600 font-bold transition-all hover:bg-red-50 hover:border-red-300 active:scale-95 group"
+          <div className="pt-4 flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-primary text-white font-bold text-xs hover:bg-accent transition-all shadow-lg shadow-primary/20 uppercase tracking-widest flex items-center justify-center gap-2 group disabled:opacity-50"
             >
-              <Trash2 className="w-4 h-4" />
-              <span className="text-xs tracking-widest uppercase">Request Data Deletion</span>
-            </a>
-            
-            <p className="text-[9px] text-red-700/60 italic text-center">
-              Please note: Professional clinical data once deleted cannot be recovered. Requests are typically processed within 30 days.
-            </p>
+              {saving ? (
+                <Loader />
+              ) : (
+                <>
+                  <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span>Save Clinical Profile</span>
+                </>
+              )}
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

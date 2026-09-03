@@ -1091,25 +1091,38 @@ export default function App() {
   const [generationStatus, setGenerationStatus] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
 
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+
   useEffect(() => {
     async function testConnection() {
-      const path = 'test/connection';
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error) {
         if(error instanceof Error && error.message.includes('the client is offline')) {
           console.error("Please check your Firebase configuration. The client is offline.");
         }
-        handleFirestoreError(error, OperationType.GET, path);
       }
     }
     testConnection();
 
+    // Safety timeout: Ensure preview is never stuck on authLoading loader
+    const authTimeout = setTimeout(() => {
+      setAuthLoading(false);
+    }, 1500);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(authTimeout);
       setUser(user);
       setAuthLoading(false);
     });
 
+    return () => {
+      clearTimeout(authTimeout);
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     let reportsUnsubscribe: (() => void) | undefined;
     let collabUnsubscribe: (() => void) | undefined;
 
@@ -1144,7 +1157,6 @@ export default function App() {
           })) as Report[];
           setCollaboratorReports(reportsData);
         }, (error) => {
-          // Silently handle or log
           console.error("Collab fetch error:", error);
         });
       }
@@ -1163,7 +1175,6 @@ export default function App() {
     }
 
     return () => {
-      unsubscribe();
       if (reportsUnsubscribe) reportsUnsubscribe();
       if (collabUnsubscribe) collabUnsubscribe();
     };
@@ -1208,8 +1219,77 @@ export default function App() {
     }
   }, [user, authLoading]);
 
+const SAMPLE_PREVIEW_REPORTS: Report[] = [
+  {
+    id: 'demo-report-1',
+    userId: 'demo-doctor',
+    title: 'Hypertensive Heart Disease with Acute Heart Failure',
+    type: 'story',
+    createdAt: new Date().toISOString(),
+    hpcNarrative: 'A 58-year-old female known hypertensive on treatment presenting with progressive dyspnea on exertion, orthopnea, and paroxysmal nocturnal dyspnea for 2 weeks.',
+    patientData: {
+      fullName: 'Florence N.',
+      age: '58',
+      sex: 'Female',
+      specialty: 'Internal Medicine',
+      ward: 'Ward 3B (Medical HDU)',
+      registrationNo: 'MED-2026-081',
+      chiefComplaint: 'Shortness of breath and bilateral leg swelling for 2 weeks',
+      historyInput: 'Patient reports gradual onset of shortness of breath initially on climbing hills, progressing to dyspnea at rest. Associated with 3-pillow orthopnea and paroxysmal nocturnal dyspnea.'
+    },
+    reportData: {
+      impression: 'Hypertensive Heart Disease in Acute Decompensated Heart Failure (NYHA Class IV)',
+      differentials: [
+        { diagnosis: 'Acute Decompensated Heart Failure', reasoning: 'Cardiomegaly, elevated JVP, bilateral basilar crepitations, and tender hepatomegaly with grade 3 pitting edema.' },
+        { diagnosis: 'Community Acquired Pneumonia with Heart Strain', reasoning: 'Presence of low-grade pyrexia and productive cough with mucoid sputum.' }
+      ],
+      plan: [
+        'Admit to Medical HDU, propped up at 45 degrees with bed rest',
+        'Supplemental Oxygen via nasal cannula 2-4 L/min to target SpO2 > 94%',
+        'IV Furosemide 40mg stat, reassess urinary output hourly',
+        'Strict fluid balance chart (input < 1.5 L/day)',
+        'Urgent Transthoracic Echocardiogram & 12-lead ECG',
+        'Serum electrolytes, urea, creatinine, and cardiac biomarkers'
+      ]
+    }
+  },
+  {
+    id: 'demo-report-2',
+    userId: 'demo-doctor',
+    title: 'Severe Malaria with Cerebral Complications',
+    type: 'story',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    hpcNarrative: 'A 4-year-old male child presenting with high-grade intermittent fever for 4 days, followed by 3 episodes of generalized tonic-clonic convulsions and altered consciousness.',
+    patientData: {
+      fullName: 'Junior K.',
+      age: '4',
+      sex: 'Male',
+      specialty: 'Pediatrics',
+      ward: 'Pediatric Acute Care Unit',
+      registrationNo: 'PED-2026-114',
+      chiefComplaint: 'High fever and seizures for 2 days',
+      historyInput: 'Child developed sudden onset hotness of body accompanied by vomiting and refusal to feed. Convulsions lasted 5-10 minutes each with post-ictal drowsiness.'
+    },
+    reportData: {
+      impression: 'Severe Cerebral Malaria (Plasmodium falciparum)',
+      differentials: [
+        { diagnosis: 'Cerebral Malaria', reasoning: 'High fever, Blantyre Coma Score 2/5, and positive malaria antigen test with high parasitemia.' },
+        { diagnosis: 'Acute Bacterial Meningitis', reasoning: 'Seizures, fever, and neck stiffness noted on clinical pediatric examination.' }
+      ],
+      plan: [
+        'IV Artesunate 2.4 mg/kg at 0, 12, 24 hours, then once daily',
+        'IV Ceftriaxone 100 mg/kg once daily pending lumbar puncture',
+        'Maintain airway, left lateral recovery position, monitor blood glucose Q2H to avoid hypoglycemia'
+      ]
+    }
+  }
+];
+
   const allReports = useMemo(() => {
-    const combined = [...reports, ...collaboratorReports];
+    const base = reports.length === 0 && isPreviewMode && !user
+      ? SAMPLE_PREVIEW_REPORTS
+      : reports;
+    const combined = [...base, ...collaboratorReports];
     // Remove duplicates by ID
     const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
     return unique.sort((a, b) => {
@@ -1217,7 +1297,7 @@ export default function App() {
       const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
       return dateB - dateA;
     });
-  }, [reports, collaboratorReports]);
+  }, [reports, collaboratorReports, isPreviewMode, user]);
 
   // Auto-save logic
   useEffect(() => {
@@ -1725,6 +1805,7 @@ export default function App() {
       onConfirm: async () => {
         try {
           await signOut(auth);
+          setIsPreviewMode(false);
           localStorage.removeItem('malae_form_data');
           setView('dashboard');
         } catch (error) {
@@ -1789,8 +1870,13 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return <Auth onSuccess={() => setView('dashboard')} />;
+  if (!user && !isPreviewMode) {
+    return (
+      <Auth 
+        onSuccess={() => setView('dashboard')} 
+        onEnterPreview={() => setIsPreviewMode(true)} 
+      />
+    );
   }
 
   const handleCompileReport = async () => {
@@ -3544,11 +3630,11 @@ export default function App() {
         <div className="p-8 border-t border-line space-y-6">
           <div className="flex items-center gap-3 p-4 rounded-2xl bg-bg border border-line">
             <div className="w-10 h-10 rounded-xl pink-gradient flex items-center justify-center text-white font-bold text-lg">
-              {user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'P'}
+              {user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'D'}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user.displayName || 'Physician'}</span>
-              <span className="text-[9px] text-text-muted truncate font-medium">{user.email}</span>
+              <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user?.displayName || 'Dr. Samantha Ainembabazi'}</span>
+              <span className="text-[9px] text-text-muted truncate font-medium">{user?.email || 'drsamanthaainembabazi@gmail.com'}</span>
             </div>
           </div>
           <button 
@@ -3694,6 +3780,26 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden relative">
+        {/* Clinical Workspace Preview Mode Banner */}
+        {isPreviewMode && !user && (
+          <div className="bg-gradient-to-r from-amber-600 via-primary to-accent text-white px-4 py-2 text-xs font-medium flex items-center justify-between shadow-sm z-50 shrink-0">
+            <div className="flex items-center gap-2 max-w-5xl mx-auto flex-1">
+              <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
+              <span>
+                <strong>Clinical Workspace Preview:</strong> Active as <em>Dr. Samantha Ainembabazi (MBChB, Mengo Hospital)</em>. AI Case Compiler, Audio Transcription, and Diagnostic Reports are fully interactive.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button 
+                onClick={() => setIsPreviewMode(false)}
+                className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-white font-bold text-xs uppercase tracking-wider transition-colors"
+              >
+                Sign In / Register
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Mobile Header */}
         <header className="md:hidden h-16 bg-surface border-b border-line px-6 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-3">

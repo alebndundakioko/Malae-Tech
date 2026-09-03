@@ -9,6 +9,16 @@
         "email": { "type": "string", "format": "email", "description": "The user's email address." },
         "displayName": { "type": "string", "description": "The user's display name." },
         "hospital": { "type": "string", "description": "The user's hospital or institution." },
+        "medicalCadre": { "type": "string", "description": "Medical cadre or role (e.g. Physician, Consultant, Intern)." },
+        "specialty": { "type": "string", "description": "Primary clinical specialty." },
+        "licenseNumber": { "type": "string", "description": "Official medical license / practitioner registration number." },
+        "issuingCouncil": { "type": "string", "description": "Medical regulatory council or licensing authority." },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected"], "description": "Status of doctor credential verification by Malae review team." },
+        "verificationRef": { "type": "string", "description": "Reference tracking code for medical verification." },
+        "medicalIdFileName": { "type": "string", "description": "Name of the uploaded medical license document." },
+        "medicalIdFileType": { "type": "string", "description": "MIME type of the uploaded credential." },
+        "medicalIdBase64": { "type": "string", "description": "Base64 payload or thumbnail of the uploaded medical ID." },
+        "medicalIdSubmittedAt": { "type": "string", "format": "date-time", "description": "Timestamp when credentials were submitted to the team." },
         "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
       },
       "required": ["uid", "email"]
