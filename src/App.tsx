@@ -58,7 +58,7 @@ import {
 
 // Firebase imports
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
-import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User as FirebaseUser, getRedirectResult } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -67,6 +67,8 @@ import {
   addDoc, 
   serverTimestamp, 
   doc, 
+  getDoc,
+  setDoc,
   getDocFromServer, 
   onSnapshot, 
   query, 
@@ -986,6 +988,8 @@ const cleanAndParseJSON = (text: string) => {
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfileData, setUserProfileData] = useState<any>(null);
+  const [needsVerificationOnboarding, setNeedsVerificationOnboarding] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<'dashboard' | 'generator' | 'viewer' | 'profile'>('dashboard');
   const [generatorMode, setGeneratorMode] = useState<'selection' | 'form' | 'upload' | 'audio'>('selection');
@@ -1091,8 +1095,6 @@ export default function App() {
   const [generationStatus, setGenerationStatus] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-
   useEffect(() => {
     async function testConnection() {
       try {
@@ -1105,22 +1107,121 @@ export default function App() {
     }
     testConnection();
 
-    // Safety timeout: Ensure preview is never stuck on authLoading loader
-    const authTimeout = setTimeout(() => {
-      setAuthLoading(false);
-    }, 1500);
+    // Check user profile in Firestore (enforces student verification for new sign-ups)
+    const checkUserVerificationState = async (currentUser: FirebaseUser) => {
+      if (!currentUser || !currentUser.email) return;
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          // New user (e.g. from Google sign up): must be redirected to student verification tab before home page
+          console.log("New Google user requires student verification onboarding:", currentUser.email);
+          setNeedsVerificationOnboarding(true);
+          setUserProfileData(null);
+          return;
+        }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      clearTimeout(authTimeout);
-      setUser(user);
-      setAuthLoading(false);
-    });
+        const data = userSnap.data();
+        setUserProfileData(data);
+
+        // Check if user has already submitted student verification details or is verified
+        const hasSubmitted = !!(
+          data.studentIdFileName || 
+          data.medicalSchool || 
+          data.registrationNumber || 
+          data.licenseNumber ||
+          data.verificationStatus === 'verified' ||
+          data.verificationStatus === 'pending'
+        );
+
+        if (!hasSubmitted) {
+          console.log("User missing student verification details, redirecting to verification tab:", currentUser.email);
+          setNeedsVerificationOnboarding(true);
+        } else {
+          setNeedsVerificationOnboarding(false);
+          await setDoc(userRef, {
+            lastLogin: serverTimestamp(),
+            ...(currentUser.displayName ? { displayName: currentUser.displayName } : {})
+          }, { merge: true });
+        }
+      } catch (profileErr) {
+        console.warn("Practitioner profile sync notice (non-blocking):", profileErr);
+      }
+    };
+
+    let isMounted = true;
+    let authUnsubscribe: (() => void) | undefined;
+
+    // First check if coming back from a Google sign-in redirect
+    const initAuth = async () => {
+      try {
+        console.log("Checking Google sign-in redirect result...");
+        const redirectRes = await getRedirectResult(auth);
+        if (redirectRes && redirectRes.user && isMounted) {
+          console.log("Successfully retrieved user from Google redirect:", redirectRes.user.email);
+          setUser(redirectRes.user);
+          await checkUserVerificationState(redirectRes.user);
+          setAuthLoading(false);
+          return;
+        }
+      } catch (redirectErr: any) {
+        console.warn("Redirect check completed:", redirectErr?.message || redirectErr);
+      }
+
+      // Listen for auth state changes
+      authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        if (!isMounted) return;
+        setUser(currentUser);
+
+        if (currentUser) {
+          await checkUserVerificationState(currentUser);
+        } else {
+          setNeedsVerificationOnboarding(false);
+          setUserProfileData(null);
+        }
+        setAuthLoading(false);
+      });
+    };
+
+    initAuth();
+
+    // Safety timeout: Ensure preview never remains stuck on loader
+    const authTimeout = setTimeout(() => {
+      if (isMounted) {
+        setAuthLoading(false);
+      }
+    }, 3500);
 
     return () => {
+      isMounted = false;
       clearTimeout(authTimeout);
-      unsubscribe();
+      if (authUnsubscribe) {
+        authUnsubscribe();
+      }
     };
   }, []);
+
+  // Real-time synchronization of user profile & verification status
+  useEffect(() => {
+    if (!user) {
+      setUserProfileData(null);
+      return;
+    }
+
+    const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserProfileData(data);
+        if (data.verificationStatus === 'pending' || data.verificationStatus === 'verified' || data.medicalSchool || data.studentIdFileName) {
+          setNeedsVerificationOnboarding(false);
+        }
+      }
+    }, (err) => {
+      console.warn("Profile sync notice:", err);
+    });
+
+    return () => unsubProfile();
+  }, [user]);
 
   useEffect(() => {
     let reportsUnsubscribe: (() => void) | undefined;
@@ -1219,77 +1320,8 @@ export default function App() {
     }
   }, [user, authLoading]);
 
-const SAMPLE_PREVIEW_REPORTS: Report[] = [
-  {
-    id: 'demo-report-1',
-    userId: 'demo-doctor',
-    title: 'Hypertensive Heart Disease with Acute Heart Failure',
-    type: 'story',
-    createdAt: new Date().toISOString(),
-    hpcNarrative: 'A 58-year-old female known hypertensive on treatment presenting with progressive dyspnea on exertion, orthopnea, and paroxysmal nocturnal dyspnea for 2 weeks.',
-    patientData: {
-      fullName: 'Florence N.',
-      age: '58',
-      sex: 'Female',
-      specialty: 'Internal Medicine',
-      ward: 'Ward 3B (Medical HDU)',
-      registrationNo: 'MED-2026-081',
-      chiefComplaint: 'Shortness of breath and bilateral leg swelling for 2 weeks',
-      historyInput: 'Patient reports gradual onset of shortness of breath initially on climbing hills, progressing to dyspnea at rest. Associated with 3-pillow orthopnea and paroxysmal nocturnal dyspnea.'
-    },
-    reportData: {
-      impression: 'Hypertensive Heart Disease in Acute Decompensated Heart Failure (NYHA Class IV)',
-      differentials: [
-        { diagnosis: 'Acute Decompensated Heart Failure', reasoning: 'Cardiomegaly, elevated JVP, bilateral basilar crepitations, and tender hepatomegaly with grade 3 pitting edema.' },
-        { diagnosis: 'Community Acquired Pneumonia with Heart Strain', reasoning: 'Presence of low-grade pyrexia and productive cough with mucoid sputum.' }
-      ],
-      plan: [
-        'Admit to Medical HDU, propped up at 45 degrees with bed rest',
-        'Supplemental Oxygen via nasal cannula 2-4 L/min to target SpO2 > 94%',
-        'IV Furosemide 40mg stat, reassess urinary output hourly',
-        'Strict fluid balance chart (input < 1.5 L/day)',
-        'Urgent Transthoracic Echocardiogram & 12-lead ECG',
-        'Serum electrolytes, urea, creatinine, and cardiac biomarkers'
-      ]
-    }
-  },
-  {
-    id: 'demo-report-2',
-    userId: 'demo-doctor',
-    title: 'Severe Malaria with Cerebral Complications',
-    type: 'story',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    hpcNarrative: 'A 4-year-old male child presenting with high-grade intermittent fever for 4 days, followed by 3 episodes of generalized tonic-clonic convulsions and altered consciousness.',
-    patientData: {
-      fullName: 'Junior K.',
-      age: '4',
-      sex: 'Male',
-      specialty: 'Pediatrics',
-      ward: 'Pediatric Acute Care Unit',
-      registrationNo: 'PED-2026-114',
-      chiefComplaint: 'High fever and seizures for 2 days',
-      historyInput: 'Child developed sudden onset hotness of body accompanied by vomiting and refusal to feed. Convulsions lasted 5-10 minutes each with post-ictal drowsiness.'
-    },
-    reportData: {
-      impression: 'Severe Cerebral Malaria (Plasmodium falciparum)',
-      differentials: [
-        { diagnosis: 'Cerebral Malaria', reasoning: 'High fever, Blantyre Coma Score 2/5, and positive malaria antigen test with high parasitemia.' },
-        { diagnosis: 'Acute Bacterial Meningitis', reasoning: 'Seizures, fever, and neck stiffness noted on clinical pediatric examination.' }
-      ],
-      plan: [
-        'IV Artesunate 2.4 mg/kg at 0, 12, 24 hours, then once daily',
-        'IV Ceftriaxone 100 mg/kg once daily pending lumbar puncture',
-        'Maintain airway, left lateral recovery position, monitor blood glucose Q2H to avoid hypoglycemia'
-      ]
-    }
-  }
-];
-
   const allReports = useMemo(() => {
-    const base = reports.length === 0 && isPreviewMode && !user
-      ? SAMPLE_PREVIEW_REPORTS
-      : reports;
-    const combined = [...base, ...collaboratorReports];
+    const combined = [...reports, ...collaboratorReports];
     // Remove duplicates by ID
     const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
     return unique.sort((a, b) => {
@@ -1297,7 +1329,7 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
       const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
       return dateB - dateA;
     });
-  }, [reports, collaboratorReports, isPreviewMode, user]);
+  }, [reports, collaboratorReports]);
 
   // Auto-save logic
   useEffect(() => {
@@ -1805,7 +1837,9 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
       onConfirm: async () => {
         try {
           await signOut(auth);
-          setIsPreviewMode(false);
+          setUser(null);
+          setNeedsVerificationOnboarding(false);
+          setUserProfileData(null);
           localStorage.removeItem('malae_form_data');
           setView('dashboard');
         } catch (error) {
@@ -1864,17 +1898,26 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <Loader />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg p-4 text-center">
+        <Loader size="lg" />
+        <p className="mt-4 text-sm font-semibold text-text-muted animate-pulse">
+          Signing in &amp; preparing clinical workspace...
+        </p>
       </div>
     );
   }
 
-  if (!user && !isPreviewMode) {
+  if (!user || needsVerificationOnboarding) {
     return (
       <Auth 
-        onSuccess={() => setView('dashboard')} 
-        onEnterPreview={() => setIsPreviewMode(true)} 
+        initialGoogleUser={needsVerificationOnboarding ? user : null}
+        onSuccess={() => {
+          setNeedsVerificationOnboarding(false);
+          setView('dashboard');
+        }} 
+        onUserAuthenticated={(authenticatedUser) => {
+          setUser(authenticatedUser);
+        }}
       />
     );
   }
@@ -3635,6 +3678,18 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
             <div className="flex flex-col min-w-0">
               <span className="text-[11px] font-bold text-text-main truncate uppercase tracking-widest">{user?.displayName || 'Dr. Samantha Ainembabazi'}</span>
               <span className="text-[9px] text-text-muted truncate font-medium">{user?.email || 'drsamanthaainembabazi@gmail.com'}</span>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider">Account:</span>
+                {userProfileData?.verificationStatus === 'verified' ? (
+                  <span className="inline-flex items-center text-[8px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                    [verified]
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center text-[8px] font-mono font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                    [pending verification]
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button 
@@ -3760,6 +3815,17 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
                   <div className="flex flex-col min-w-0">
                     <span className="text-[10px] font-bold text-text-main truncate uppercase tracking-wider">{user?.displayName || 'Physician'}</span>
                     <span className="text-[8px] text-text-muted truncate font-medium">{user?.email}</span>
+                    <div className="mt-1 flex items-center gap-1">
+                      {userProfileData?.verificationStatus === 'verified' ? (
+                        <span className="inline-flex items-center text-[8px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                          [verified]
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[8px] font-mono font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                          [pending verification]
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <button
@@ -3780,26 +3846,6 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden relative">
-        {/* Clinical Workspace Preview Mode Banner */}
-        {isPreviewMode && !user && (
-          <div className="bg-gradient-to-r from-amber-600 via-primary to-accent text-white px-4 py-2 text-xs font-medium flex items-center justify-between shadow-sm z-50 shrink-0">
-            <div className="flex items-center gap-2 max-w-5xl mx-auto flex-1">
-              <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
-              <span>
-                <strong>Clinical Workspace Preview:</strong> Active as <em>Dr. Samantha Ainembabazi (MBChB, Mengo Hospital)</em>. AI Case Compiler, Audio Transcription, and Diagnostic Reports are fully interactive.
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button 
-                onClick={() => setIsPreviewMode(false)}
-                className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-white font-bold text-xs uppercase tracking-wider transition-colors"
-              >
-                Sign In / Register
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Mobile Header */}
         <header className="md:hidden h-16 bg-surface border-b border-line px-6 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-3">
@@ -3831,6 +3877,7 @@ const SAMPLE_PREVIEW_REPORTS: Report[] = [
             <Dashboard 
               reports={allReports}
               user={user}
+              userProfile={userProfileData}
               onNewReport={() => {
                 setFormData({});
                 setCurrentStepIndex(0);

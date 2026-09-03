@@ -7,9 +7,10 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  signOut,
   GoogleAuthProvider
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocFromServer, getDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mail, 
@@ -27,20 +28,26 @@ import {
   FileText,
   X,
   Stethoscope,
-  Award,
-  Sparkles,
-  ChevronRight,
-  ShieldAlert
+  Award, 
+  ShieldAlert,
+  GraduationCap,
+  CreditCard,
+  UploadCloud,
+  Check,
+  LogOut,
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { Loader } from './Loader';
 import { Capacitor } from '@capacitor/core';
 
 interface AuthProps {
   onSuccess: () => void;
-  onEnterPreview?: () => void;
+  onUserAuthenticated?: (user: any) => void;
+  initialGoogleUser?: any;
 }
 
-export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
+export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: AuthProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,9 +67,25 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
   const [verificationRef, setVerificationRef] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Google Student Verification Onboarding Tab State
+  const [isGoogleVerificationTab, setIsGoogleVerificationTab] = useState(false);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<any>(null);
+  const [studentMedicalSchool, setStudentMedicalSchool] = useState('');
+  const [studentRegNumber, setStudentRegNumber] = useState('');
+  const [studentCadre, setStudentCadre] = useState('Medical Student (MBChB / MBBS - Clinical Clerkship)');
+  const [studentIdFile, setStudentIdFile] = useState<File | null>(null);
+  const [studentIdPreview, setStudentIdPreview] = useState<string | null>(null);
+  const [isStudentDragging, setIsStudentDragging] = useState(false);
+  const [studentAttestation, setStudentAttestation] = useState(false);
+  const [submittingStudentVerif, setSubmittingStudentVerif] = useState(false);
+  const [studentVerifRef, setStudentVerifRef] = useState<string | null>(null);
+  const [studentVerifSuccess, setStudentVerifSuccess] = useState(false);
+  const studentFileInputRef = useRef<HTMLInputElement>(null);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // signupStep: 1 = Credentials, 2 = Doctor Details, 3 = Medical ID Upload, 4 = Confirmation
@@ -224,7 +247,10 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
     setLoading(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (onUserAuthenticated) {
+          onUserAuthenticated(userCredential.user);
+        }
         onSuccess();
       } else {
         // Sign Up with Doctor Verification
@@ -239,6 +265,9 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        if (onUserAuthenticated) {
+          onUserAuthenticated(user);
+        }
         
         await updateProfile(user, { displayName });
         
@@ -252,17 +281,40 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
             email: user.email || email,
             displayName: displayName || user.displayName || '',
             hospital: hospital || '',
+            medicalSchool: hospital || 'Clinical Institution',
             medicalCadre,
             specialty,
             licenseNumber,
+            registrationNumber: licenseNumber,
             issuingCouncil,
             verificationStatus: 'pending',
             verificationRef: generatedRef,
             medicalIdFileName: medicalIdFile?.name || 'medical_id.jpg',
+            studentIdFileName: medicalIdFile?.name || 'medical_id.jpg',
             medicalIdFileType: medicalIdFile?.type || 'image/jpeg',
+            studentIdFileType: medicalIdFile?.type || 'image/jpeg',
             medicalIdBase64: compressedBase64,
+            studentIdBase64: compressedBase64,
             medicalIdSubmittedAt: serverTimestamp(),
+            verificationSubmittedAt: serverTimestamp(),
             createdAt: serverTimestamp()
+          });
+
+          // Also forward credentials to administrator's verification queue
+          await setDoc(doc(db, 'verificationRequests', user.uid), {
+            id: user.uid,
+            userId: user.uid,
+            userEmail: user.email || email,
+            displayName: displayName || user.displayName || '',
+            medicalSchool: hospital || 'Clinical Institution',
+            registrationNumber: licenseNumber || 'Pending',
+            medicalCadre,
+            studentIdFileName: medicalIdFile?.name || 'medical_id.jpg',
+            studentIdFileType: medicalIdFile?.type || 'image/jpeg',
+            studentIdBase64: compressedBase64,
+            verificationRef: generatedRef,
+            status: 'pending',
+            submittedAt: serverTimestamp()
           });
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, path);
@@ -293,97 +345,294 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
     }
   };
 
-  const syncGoogleUserProfile = async (user: any) => {
+  useEffect(() => {
+    if (initialGoogleUser) {
+      setPendingGoogleUser(initialGoogleUser);
+      setIsGoogleVerificationTab(true);
+      const rawName = initialGoogleUser.displayName?.trim();
+      const emailPrefix = initialGoogleUser.email?.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const cleanDisplayName = rawName 
+        ? (rawName.toLowerCase().startsWith('dr') ? rawName : `Dr. ${rawName}`)
+        : `Dr. ${emailPrefix}`;
+      setDisplayName(cleanDisplayName);
+    }
+  }, [initialGoogleUser]);
+
+  const handleStudentFileSelect = (file: File) => {
+    setError(null);
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File size exceeds 10MB limit. Please upload a smaller document.");
+      return;
+    }
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      setError("Please upload a valid image (JPEG, PNG, WEBP) or PDF document.");
+      return;
+    }
+
+    setStudentIdFile(file);
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setStudentIdPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setStudentIdPreview(null);
+    }
+  };
+
+  const handleGoogleUserVerificationCheck = async (user: any) => {
     if (!user.email) {
       throw new Error("No email associated with this Google account.");
     }
 
+    const rawName = user.displayName?.trim();
+    const emailPrefix = user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const cleanDisplayName = rawName 
+      ? (rawName.toLowerCase().startsWith('dr') ? rawName : `Dr. ${rawName}`)
+      : `Dr. ${emailPrefix}`;
+    setDisplayName(cleanDisplayName);
+
     const userRef = doc(db, 'users', user.uid);
-    const path = `users/${user.uid}`;
-    
     try {
-      const userSnap = await getDocFromServer(userRef);
-      
-      if (!userSnap.exists()) {
-        console.log("Creating new Google user profile...");
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || 'Dr. Medical Clinician',
-          hospital: 'Clinical Practice',
-          medicalCadre: 'Medical Doctor',
-          specialty: 'General Medicine',
-          verificationStatus: 'pending',
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp()
-        });
-      } else {
-        console.log("Updating existing Google user profile...");
-        await setDoc(userRef, {
-          lastLogin: serverTimestamp(),
-          ...(user.displayName ? { displayName: user.displayName } : {})
-        }, { merge: true });
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        // If the user has already provided medical school or registration/license number, they are already onboarded!
+        if (data.medicalSchool || data.registrationNumber || data.licenseNumber) {
+          console.log("Existing onboarded user detected:", user.email);
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            lastLogin: serverTimestamp(),
+            ...(user.displayName ? { displayName: user.displayName } : {})
+          }, { merge: true });
+
+          if (onUserAuthenticated) {
+            onUserAuthenticated(user);
+          }
+          onSuccess();
+          return;
+        }
       }
-    } catch (error) {
-      console.error("Firestore error during Google sign-in profile sync:", error);
-      handleFirestoreError(error, OperationType.WRITE, path);
+    } catch (checkErr) {
+      console.warn("Notice checking user record in Firestore:", checkErr);
+    }
+
+    // New Google sign up or missing student credentials:
+    // REDIRECT TO STUDENT VERIFICATION TAB BEFORE TAKING THEM TO THE HOME PAGE!
+    console.log("Redirecting Google user to student verification tab:", user.email);
+    setPendingGoogleUser(user);
+    setIsGoogleVerificationTab(true);
+  };
+
+  const handleStudentVerificationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!studentMedicalSchool.trim()) {
+      setError("Please enter your medical school or university name.");
+      return;
+    }
+
+    if (!studentRegNumber.trim()) {
+      setError("Please provide your student ID or registration number.");
+      return;
+    }
+
+    if (!studentIdFile) {
+      setError("Please upload your student ID card or proof of enrollment.");
+      return;
+    }
+
+    if (!studentAttestation) {
+      setError("Please confirm the medical student/trainee attestation declaration.");
+      return;
+    }
+
+    if (!pendingGoogleUser) {
+      setError("Authentication session not found. Please sign in again.");
+      return;
+    }
+
+    setSubmittingStudentVerif(true);
+
+    try {
+      let compressedBase64: string | null = null;
+      if (studentIdFile) {
+        try {
+          compressedBase64 = await compressImage(studentIdFile);
+        } catch (compErr) {
+          console.warn("Notice compressing student ID, using raw reader:", compErr);
+          const reader = new FileReader();
+          compressedBase64 = await new Promise((res) => {
+            reader.onload = () => res(reader.result as string);
+            reader.readAsDataURL(studentIdFile);
+          });
+        }
+      }
+
+      const generatedRef = `MED-STU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      setStudentVerifRef(generatedRef);
+
+      const user = pendingGoogleUser;
+
+      // 1. Update user profile in Firestore: account status is 'pending'
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: displayName || user.displayName || 'Medical Doctor',
+        hospital: studentMedicalSchool.trim(),
+        medicalSchool: studentMedicalSchool.trim(),
+        registrationNumber: studentRegNumber.trim(),
+        licenseNumber: studentRegNumber.trim(),
+        medicalCadre: studentCadre,
+        specialty: 'Clinical Medicine',
+        issuingCouncil: studentMedicalSchool.trim(),
+        verificationStatus: 'pending',
+        verificationRef: generatedRef,
+        studentIdFileName: studentIdFile.name,
+        studentIdFileType: studentIdFile.type,
+        studentIdBase64: compressedBase64,
+        verificationSubmittedAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      // 2. Send information to administrator queue in Firestore
+      await setDoc(doc(db, 'verificationRequests', user.uid), {
+        id: user.uid,
+        userId: user.uid,
+        userEmail: user.email,
+        displayName: displayName || user.displayName || 'Medical Doctor',
+        medicalSchool: studentMedicalSchool.trim(),
+        registrationNumber: studentRegNumber.trim(),
+        medicalCadre: studentCadre,
+        studentIdFileName: studentIdFile.name,
+        studentIdFileType: studentIdFile.type,
+        studentIdBase64: compressedBase64,
+        verificationRef: generatedRef,
+        status: 'pending',
+        adminNotificationEmail: 'drsamanthaainembabazi@gmail.com',
+        submittedAt: serverTimestamp()
+      });
+
+      console.log("Successfully sent student credentials to admin for:", user.email);
+
+      // 3. Notify Admin via server notification endpoint
+      try {
+        await fetch('/api/notify-admin-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            userEmail: user.email,
+            displayName: displayName || user.displayName || 'Medical Student/Doctor',
+            medicalSchool: studentMedicalSchool.trim(),
+            registrationNumber: studentRegNumber.trim(),
+            studentIdFileName: studentIdFile.name,
+            verificationRef: generatedRef
+          })
+        });
+      } catch (notifyErr) {
+        console.warn("Notice: admin notification dispatched via Firestore document:", notifyErr);
+      }
+
+      // 4. Show brief success feedback and log user into the home page
+      setStudentVerifSuccess(true);
+      setTimeout(() => {
+        if (onUserAuthenticated) {
+          onUserAuthenticated(user);
+        }
+        onSuccess();
+      }, 1200);
+
+    } catch (submitErr: any) {
+      console.error("Verification submit error:", submitErr);
+      setError(submitErr.message || "Failed to submit student verification details. Please try again.");
+      setSubmittingStudentVerif(false);
+    }
+  };
+
+  const handleCancelStudentVerification = async () => {
+    try {
+      await signOut(auth);
+      setPendingGoogleUser(null);
+      setIsGoogleVerificationTab(false);
+    } catch (err) {
+      console.warn("Sign out notice:", err);
+      setIsGoogleVerificationTab(false);
     }
   };
 
   useEffect(() => {
+    let isMounted = true;
     const checkRedirectResult = async () => {
       try {
-        setLoading(true);
-        console.log("Checking for Google Sign-In redirect result...");
         const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          console.log("Redirect Google Sign-In success:", result.user.uid);
-          await syncGoogleUserProfile(result.user);
-          onSuccess();
+        if (result && result.user && isMounted) {
+          console.log("Redirect Google Sign-In returned user:", result.user.uid);
+          await handleGoogleUserVerificationCheck(result.user);
         }
       } catch (err: any) {
-        console.error("Redirect Google Sign-In error:", err);
-        setError(err.message || "Google Sign-In failed during redirect. Please try again.");
-      } finally {
-        setLoading(false);
+        console.warn("Redirect Google Sign-In notice in Auth component:", err);
       }
     };
 
     checkRedirectResult();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
+    setGoogleLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      console.log("Starting Google Sign-In...");
-      const isMobile = Capacitor.isNativePlatform() || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        await syncGoogleUserProfile(user);
-        onSuccess();
+      console.log("Starting Google Sign-In with popup...");
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      if (user) {
+        console.log("Google Sign-In successful for:", user.email);
+        await handleGoogleUserVerificationCheck(user);
       }
     } catch (err: any) {
       console.error("Google Sign-In error details:", err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError("Sign-in cancelled. The popup was closed before completion.");
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setError("Sign-in was closed. Please click 'Continue with Google' to try again.");
       } else if (err.code === 'auth/operation-not-allowed') {
         setError("Google sign-in is not enabled. Please enable it in Firebase Console.");
       } else if (err.code === 'auth/popup-blocked') {
-        setError("Sign-in popup was blocked by your browser. Please allow popups to sign in.");
+        try {
+          console.log("Popup blocked by browser, falling back to redirect...");
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectErr: any) {
+          setError("Your browser blocked the Google sign-in window. Please allow popups for this site or open in a new tab.");
+        }
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError("This domain is not authorized for Google Sign-In. Please add it in Firebase Console.");
+        setError("This domain is not authorized for Google Sign-In. Please add it to Authorized Domains in Firebase Console.");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Network error connecting to Google. Please check your internet connection.");
       } else {
-        setError(err.message || "Google Sign-In failed. Please try again.");
+        try {
+          console.log("Falling back to redirect due to:", err.code);
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectErr) {
+          setError(err.message || "Google Sign-In failed. Please try again.");
+        }
       }
     } finally {
-      setLoading(false);
+      setGoogleLoading(false);
     }
   };
 
@@ -426,21 +675,6 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
               <p className="text-lg text-slate-300 leading-relaxed font-normal">
                 Empowering healthcare professionals to transform bed-side clinical findings into structured case presentations with AI-assisted clinical synthesis.
               </p>
-
-              {/* Instant Preview Badge on Left Side */}
-              {onEnterPreview && (
-                <div className="pt-4">
-                  <button
-                    type="button"
-                    onClick={onEnterPreview}
-                    className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-md transition-all group"
-                  >
-                    <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Explore Clinical Workspace (Preview Mode)</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              )}
             </div>
           </motion.div>
 
@@ -486,32 +720,7 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
                 <span className="text-[7px] font-bold text-primary uppercase tracking-[0.3em] mt-0.5">Clinical Workspace</span>
               </div>
             </div>
-
-            {onEnterPreview && (
-              <button
-                type="button"
-                onClick={onEnterPreview}
-                className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary hover:text-white transition-all flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Preview Mode</span>
-              </button>
-            )}
           </div>
-
-          {/* Desktop Instant Preview Link at Top Right */}
-          {onEnterPreview && (
-            <div className="hidden lg:flex justify-end mb-6">
-              <button
-                type="button"
-                onClick={onEnterPreview}
-                className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border border-amber-500/20"
-              >
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                <span>Explore Live Workspace (Preview Mode)</span>
-              </button>
-            </div>
-          )}
 
           {/* Flow Header */}
           <div className="mb-8">
@@ -526,30 +735,52 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-text-main tracking-tight mb-2">
-              {isLogin 
-                ? 'Welcome back, Doctor' 
-                : (signupStep === 1 
-                    ? 'Clinical Account Registration' 
-                    : (signupStep === 2 
-                        ? 'Medical Practitioner Details' 
-                        : (signupStep === 3 
-                            ? 'Medical ID Verification' 
-                            : 'Verification Submitted')))}
+              {isGoogleVerificationTab
+                ? 'Student & Academic Verification'
+                : (isLogin 
+                    ? 'Welcome back, Doctor' 
+                    : (signupStep === 1 
+                        ? 'Clinical Account Registration' 
+                        : (signupStep === 2 
+                            ? 'Medical Practitioner Details' 
+                            : (signupStep === 3 
+                                ? 'Medical ID Verification' 
+                                : 'Verification Submitted'))))}
             </h1>
             <p className="text-text-muted text-xs sm:text-sm">
-              {isLogin 
-                ? 'Enter your clinical credentials to access your hospital records & cases.' 
-                : (signupStep === 1 
-                    ? 'Step 1 of 3: Create secure clinical access credentials.' 
-                    : (signupStep === 2 
-                        ? 'Step 2 of 3: Provide your official medical licensing information.' 
-                        : (signupStep === 3 
-                            ? 'Step 3 of 3: Upload your medical ID to verify doctor status with our team.' 
-                            : 'Your application has been received by our clinical review board.')))}
+              {isGoogleVerificationTab
+                ? 'Step 2 of 2: Please provide your medical school name and upload your student ID to send to the administrator before entering the workspace.'
+                : (isLogin 
+                    ? 'Enter your clinical credentials to access your hospital records & cases.' 
+                    : (signupStep === 1 
+                        ? 'Step 1 of 3: Create secure clinical access credentials.' 
+                        : (signupStep === 2 
+                            ? 'Step 2 of 3: Provide your official medical licensing information.' 
+                            : (signupStep === 3 
+                                ? 'Step 3 of 3: Upload your medical ID to verify doctor status with our team.' 
+                                : 'Your application has been received by our clinical review board.')))}
             </p>
 
+            {/* Step Progress Bar for Google Student Verification */}
+            {isGoogleVerificationTab && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                  <span className="text-emerald-600 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> 1. Google Account Linked
+                  </span>
+                  <span className="text-primary font-bold flex items-center gap-1">
+                    <GraduationCap className="w-3.5 h-3.5" /> 2. Student ID &amp; Med School
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-emerald-500 shadow-sm" />
+                  <div className="h-1.5 flex-1 rounded-full bg-primary shadow-sm shadow-primary/30" />
+                </div>
+              </div>
+            )}
+
             {/* Step Progress Bar for Sign Up */}
-            {!isLogin && signupStep < 4 && (
+            {!isGoogleVerificationTab && !isLogin && signupStep < 4 && (
               <div className="mt-6">
                 <div className="flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
                   <span className={signupStep >= 1 ? 'text-primary' : ''}>1. Credentials</span>
@@ -569,8 +800,268 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
           </div>
 
           <div className="space-y-6">
-            {/* Step 4: Submission Complete Confirmation Screen */}
-            {!isLogin && signupStep === 4 ? (
+            {/* Google Student Verification Tab */}
+            {isGoogleVerificationTab ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-surface rounded-2xl p-6 sm:p-7 border border-line shadow-sm space-y-5"
+              >
+                {studentVerifSuccess ? (
+                  <div className="text-center py-6 space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
+                      <ShieldCheck className="w-9 h-9" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 text-[10px] font-bold uppercase tracking-wider font-mono">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        [Pending Verification]
+                      </div>
+                      <h3 className="text-xl font-bold text-text-main">
+                        Details Transmitted to Admin!
+                      </h3>
+                      <p className="text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
+                        Your student ID, medical school, and registration details have been sent to the administrator for verification.
+                      </p>
+                      {studentVerifRef && (
+                        <div className="text-[11px] font-mono text-text-muted bg-bg px-3 py-1.5 rounded-lg border border-line inline-block">
+                          Ref: <strong className="text-text-main">{studentVerifRef}</strong>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-center gap-2 pt-2 text-xs text-primary font-semibold">
+                      <Loader size="sm" />
+                      <span>Logging into workspace...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleStudentVerificationSubmit} className="space-y-4">
+                    {/* Authenticated User Banner */}
+                    <div className="p-3 bg-bg rounded-xl border border-line flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold">
+                          <GraduationCap className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-text-main truncate">
+                            {pendingGoogleUser?.displayName || displayName || 'Medical Student'}
+                          </div>
+                          <div className="text-[10px] text-text-muted truncate">
+                            {pendingGoogleUser?.email}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCancelStudentVerification}
+                        className="text-[10px] font-bold text-text-muted hover:text-red-500 transition-colors uppercase tracking-wider flex items-center gap-1 shrink-0 px-2 py-1 rounded hover:bg-surface border border-transparent hover:border-line"
+                      >
+                        <LogOut className="w-3 h-3" />
+                        Switch
+                      </button>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/15 flex items-start gap-2.5 text-[11px] text-text-muted leading-relaxed">
+                      <Clock className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <span>
+                        Please submit your medical school details and student ID below. Upon submission, your details are sent to the admin and you are logged into the workspace with the <strong>[Pending Verification]</strong> tag.
+                      </span>
+                    </div>
+
+                    {error && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-2 text-xs text-red-600">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
+                    {/* Medical School / University Hospital Name */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-text-main flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-primary" />
+                        Medical School / University Hospital Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={studentMedicalSchool}
+                        onChange={(e) => setStudentMedicalSchool(e.target.value)}
+                        placeholder="e.g. Makerere University College of Health Sciences"
+                        className="w-full px-3.5 py-2.5 bg-bg border border-line rounded-xl text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-text-muted/60"
+                      />
+                      {/* Suggestion Chips */}
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {['Makerere CHS', 'Mbarara (MUST)', 'KIU Western', 'Gulu Med', 'UCU Medicine'].map((school) => (
+                          <button
+                            type="button"
+                            key={school}
+                            onClick={() => setStudentMedicalSchool(school)}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-bg border border-line hover:border-primary hover:text-primary transition-colors text-text-muted"
+                          >
+                            + {school}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Student ID / Registration Number */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-text-main flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-primary" />
+                        Student ID / Registration Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={studentRegNumber}
+                        onChange={(e) => setStudentRegNumber(e.target.value)}
+                        placeholder="e.g. 21/U/19482/EVE or MED-2023-492"
+                        className="w-full px-3.5 py-2.5 bg-bg border border-line rounded-xl text-sm font-mono focus:outline-none focus:border-primary transition-colors placeholder:text-text-muted/60"
+                      />
+                    </div>
+
+                    {/* Cadre / Training Level */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-text-main flex items-center gap-1.5">
+                        <Stethoscope className="w-3.5 h-3.5 text-primary" />
+                        Cadre / Training Level
+                      </label>
+                      <select
+                        value={studentCadre}
+                        onChange={(e) => setStudentCadre(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-bg border border-line rounded-xl text-sm focus:outline-none focus:border-primary transition-colors text-text-main"
+                      >
+                        <option value="Medical Student (MBChB / MBBS - Clinical Clerkship)">Medical Student (MBChB / MBBS - Clinical Clerkship)</option>
+                        <option value="Medical Student (MBChB / MBBS - Pre-Clinical)">Medical Student (MBChB / MBBS - Pre-Clinical)</option>
+                        <option value="Clinical Officer Student (DCM / BCM)">Clinical Officer Student (DCM / BCM)</option>
+                        <option value="Medical Intern (Doctor)">Medical Intern (Doctor)</option>
+                        <option value="Resident Physician / Postgraduate (MMed)">Resident Physician / Postgraduate (MMed)</option>
+                        <option value="Other Healthcare Professional Trainee">Other Healthcare Professional Trainee</option>
+                      </select>
+                    </div>
+
+                    {/* Upload Student ID Card */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-text-main flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <UploadCloud className="w-3.5 h-3.5 text-primary" />
+                          Upload Student ID Card / Proof of Enrollment *
+                        </span>
+                        <span className="text-[10px] text-text-muted font-normal">JPEG, PNG, PDF (Max 10MB)</span>
+                      </label>
+
+                      <input
+                        type="file"
+                        ref={studentFileInputRef}
+                        onChange={(e) => e.target.files?.[0] && handleStudentFileSelect(e.target.files[0])}
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        className="hidden"
+                      />
+
+                      {!studentIdFile ? (
+                        <div
+                          onClick={() => studentFileInputRef.current?.click()}
+                          onDragOver={(e) => { e.preventDefault(); setIsStudentDragging(true); }}
+                          onDragLeave={() => setIsStudentDragging(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsStudentDragging(false);
+                            if (e.dataTransfer.files?.[0]) handleStudentFileSelect(e.dataTransfer.files[0]);
+                          }}
+                          className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all ${
+                            isStudentDragging
+                              ? 'border-primary bg-primary/5'
+                              : 'border-line hover:border-primary/50 bg-bg/50 hover:bg-bg'
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2">
+                            <FileUp className="w-5 h-5" />
+                          </div>
+                          <p className="text-xs font-bold text-text-main mb-0.5">
+                            Click or drag &amp; drop your Student ID
+                          </p>
+                          <p className="text-[10px] text-text-muted">
+                            University student card, clinical badge, or admission letter
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-bg rounded-xl border border-line flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {studentIdPreview ? (
+                              <img
+                                src={studentIdPreview}
+                                alt="Student ID Preview"
+                                className="w-12 h-12 object-cover rounded-lg border border-line shrink-0"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-surface border border-line flex items-center justify-center text-primary shrink-0">
+                                <FileText className="w-6 h-6" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-text-main truncate">
+                                {studentIdFile.name}
+                              </div>
+                              <div className="text-[10px] text-text-muted">
+                                {(studentIdFile.size / 1024).toFixed(1)} KB • Ready to submit
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStudentIdFile(null);
+                              setStudentIdPreview(null);
+                            }}
+                            className="p-1.5 hover:bg-surface rounded-lg text-text-muted hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Attestation Checkbox */}
+                    <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="student-attestation"
+                        checked={studentAttestation}
+                        onChange={(e) => setStudentAttestation(e.target.checked)}
+                        className="mt-0.5 rounded text-primary focus:ring-primary h-4 w-4 border-line shrink-0"
+                      />
+                      <label htmlFor="student-attestation" className="text-[11px] text-text-muted leading-tight cursor-pointer">
+                        I confirm that I am a medical trainee at this institution. I agree to transmit this data to the administrator for verification, and understand my account status will reflect <strong>[Pending Verification]</strong> upon login.
+                      </label>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={submittingStudentVerif}
+                      className="w-full bg-primary hover:bg-accent text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 group text-sm disabled:opacity-60 cursor-pointer"
+                    >
+                      {submittingStudentVerif ? (
+                        <div className="flex items-center gap-2">
+                          <Loader size="sm" />
+                          <span>Transmitting to Admin...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Submit to Admin &amp; Enter Home Page</span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-[10px] text-center text-text-muted">
+                      Notification will be sent to the administrator. You will be redirected to the home page with full access.
+                    </p>
+                  </form>
+                )}
+              </motion.div>
+            ) : !isLogin && signupStep === 4 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -581,9 +1072,9 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 text-[10px] font-bold uppercase tracking-wider font-mono">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    Pending Verification Review
+                    [Pending Verification]
                   </div>
                   <h3 className="text-xl font-bold text-text-main">
                     Medical Credentials Submitted!
@@ -640,14 +1131,17 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
                     <button
                       type="button"
                       onClick={handleGoogleSignIn}
-                      disabled={loading}
-                      className="w-full bg-white border border-line hover:border-primary/50 hover:bg-bg text-text-main font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base shadow-sm hover:shadow-md disabled:opacity-70 group"
+                      disabled={loading || googleLoading}
+                      className="w-full bg-white border border-line hover:border-primary/50 hover:bg-bg text-text-main font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 text-sm sm:text-base shadow-sm hover:shadow-md disabled:opacity-70 group active:scale-[0.99]"
                     >
-                      {loading ? (
-                        <Loader />
+                      {googleLoading ? (
+                        <div className="flex items-center gap-2.5">
+                          <Loader size="sm" />
+                          <span className="text-text-muted text-xs uppercase tracking-wider font-semibold">Connecting to Google...</span>
+                        </div>
                       ) : (
                         <>
-                          <Chrome className="w-5 h-5 group-hover:scale-110 transition-transform text-red-500" />
+                          <Chrome className="w-5 h-5 group-hover:scale-110 transition-transform text-primary" />
                           <span>Continue with Google</span>
                         </>
                       )}
@@ -1073,21 +1567,6 @@ export const Auth = ({ onSuccess, onEnterPreview }: AuthProps) => {
                     {isLogin ? 'Register & Verify Medical ID' : 'Sign in here'}
                   </button>
                 </p>
-
-                {/* Direct Preview Link for Instant Testing */}
-                {onEnterPreview && (
-                  <div className="pt-2 text-center border-t border-line/60">
-                    <button
-                      type="button"
-                      onClick={onEnterPreview}
-                      className="text-xs text-text-muted hover:text-primary transition-colors inline-flex items-center gap-1.5 font-medium"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Just exploring? <strong>Launch in Clinical Preview Mode</strong></span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
               </>
             )}
           </div>

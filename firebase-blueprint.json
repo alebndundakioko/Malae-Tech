@@ -12,9 +12,14 @@
         "medicalCadre": { "type": "string", "description": "Medical cadre or role (e.g. Physician, Consultant, Intern)." },
         "specialty": { "type": "string", "description": "Primary clinical specialty." },
         "licenseNumber": { "type": "string", "description": "Official medical license / practitioner registration number." },
+        "medicalSchool": { "type": "string", "description": "Medical school or university faculty name." },
+        "registrationNumber": { "type": "string", "description": "Student registration number or matriculation index." },
         "issuingCouncil": { "type": "string", "description": "Medical regulatory council or licensing authority." },
-        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected"], "description": "Status of doctor credential verification by Malae review team." },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected"], "description": "Status of doctor/student credential verification." },
         "verificationRef": { "type": "string", "description": "Reference tracking code for medical verification." },
+        "studentIdFileName": { "type": "string", "description": "Name of uploaded student ID or license document." },
+        "studentIdFileType": { "type": "string", "description": "MIME type of uploaded document." },
+        "studentIdBase64": { "type": "string", "description": "Base64 payload or thumbnail of uploaded student ID." },
         "medicalIdFileName": { "type": "string", "description": "Name of the uploaded medical license document." },
         "medicalIdFileType": { "type": "string", "description": "MIME type of the uploaded credential." },
         "medicalIdBase64": { "type": "string", "description": "Base64 payload or thumbnail of the uploaded medical ID." },
@@ -22,6 +27,27 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
       },
       "required": ["uid", "email"]
+    },
+    "VerificationRequest": {
+      "title": "Admin Verification Request",
+      "description": "Queued student ID and medical school details sent to the admin for review.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Document ID." },
+        "userId": { "type": "string", "description": "UID of the applicant." },
+        "userEmail": { "type": "string", "format": "email", "description": "Email address of the applicant." },
+        "displayName": { "type": "string", "description": "Full name of the medical student/practitioner." },
+        "medicalSchool": { "type": "string", "description": "Medical school or institution name." },
+        "registrationNumber": { "type": "string", "description": "Student registration or index number." },
+        "medicalCadre": { "type": "string", "description": "Medical training level or cadre." },
+        "studentIdFileName": { "type": "string", "description": "Student ID file name." },
+        "studentIdFileType": { "type": "string", "description": "Student ID file MIME type." },
+        "studentIdBase64": { "type": "string", "description": "Base64 encoded student ID preview." },
+        "verificationRef": { "type": "string", "description": "Generated verification reference code." },
+        "status": { "type": "string", "enum": ["pending", "verified", "rejected"], "description": "Verification status." },
+        "submittedAt": { "type": "string", "format": "date-time", "description": "Submission timestamp." }
+      },
+      "required": ["userId", "userEmail", "medicalSchool", "registrationNumber", "status"]
     },
     "Report": {
       "title": "Clinical Report",
@@ -44,6 +70,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profile documents."
+    },
+    "/verificationRequests/{requestId}": {
+      "schema": "VerificationRequest",
+      "description": "Queue of medical student and practitioner verification requests sent to admin."
     },
     "/reports/{reportId}": {
       "schema": "Report",

@@ -24,6 +24,7 @@ import { auth } from '../firebase';
 interface DashboardProps {
   reports: Report[];
   user: any;
+  userProfile?: any;
   onSelectReport: (report: Report) => void;
   onNewReport: () => void;
   onDeleteReport: (id: string) => void;
@@ -33,8 +34,9 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ 
   reports = [], 
   user,
+  userProfile,
   onSelectReport, 
-  onNewReport,
+  onNewReport, 
   onDeleteReport,
   onInviteCollaborator
 }) => {
@@ -102,7 +104,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Top Navigation / Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-text-main tracking-tight">{getGreeting()}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold text-text-main tracking-tight">{getGreeting()}</h1>
+            {userProfile?.verificationStatus === 'verified' ? (
+              <span className="inline-flex items-center text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                [verified]
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                [pending verification]
+              </span>
+            )}
+          </div>
           <p className="text-text-muted font-medium">Your clinical command center is synchronized.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">

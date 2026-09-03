@@ -43,6 +43,47 @@ async function startServer() {
     }
   });
 
+  // Admin Verification Notification Endpoint
+  app.post("/api/notify-admin-verification", async (req, res) => {
+    try {
+      const { 
+        userId, 
+        userEmail, 
+        displayName, 
+        medicalSchool, 
+        registrationNumber, 
+        studentIdFileName, 
+        verificationRef 
+      } = req.body;
+
+      const ADMIN_EMAIL = "drsamanthaainembabazi@gmail.com";
+      
+      console.log(`[ADMIN NOTIFICATION] New Student Verification Request for Admin (${ADMIN_EMAIL}):`);
+      console.log({
+        targetAdmin: ADMIN_EMAIL,
+        userId,
+        userEmail,
+        displayName,
+        medicalSchool,
+        registrationNumber,
+        studentIdFileName,
+        verificationRef,
+        status: "pending_verification",
+        receivedAt: new Date().toISOString()
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Verification notification queued for admin ${ADMIN_EMAIL}`,
+        adminNotified: ADMIN_EMAIL,
+        status: "pending"
+      });
+    } catch (notifyErr: any) {
+      console.error("Admin notification endpoint error:", notifyErr);
+      res.status(500).json({ error: notifyErr.message || "Failed to notify admin" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

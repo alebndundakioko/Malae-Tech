@@ -184,7 +184,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 <>
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
                   <div className="flex flex-col text-left">
-                    <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Verified Doctor</span>
+                    <span className="text-[9px] font-mono font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">[verified]</span>
                     <span className="text-[11px] font-bold text-text-main">Medical Board Certified</span>
                   </div>
                 </>
@@ -192,8 +192,8 @@ export const Profile = ({ onBack }: ProfileProps) => {
                 <>
                   <Clock className="w-5 h-5 text-amber-500 animate-pulse" />
                   <div className="flex flex-col text-left">
-                    <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Verification In Review</span>
-                    <span className="text-[11px] font-bold text-text-main">Submitted to Team</span>
+                    <span className="text-[9px] font-mono font-bold text-amber-700 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block">[pending verification]</span>
+                    <span className="text-[11px] font-bold text-text-main">Awaiting Administrator Review</span>
                   </div>
                 </>
               )}
@@ -217,11 +217,18 @@ export const Profile = ({ onBack }: ProfileProps) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3.5 rounded-xl bg-surface border border-line">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">Status</span>
-              <span className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                Under Medical Board Review
-              </span>
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">Account Status</span>
+              {verificationStatus === 'verified' ? (
+                <span className="text-xs font-mono font-bold text-emerald-700 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  [verified]
+                </span>
+              ) : (
+                <span className="text-xs font-mono font-bold text-amber-700 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  [pending verification]
+                </span>
+              )}
             </div>
             <div className="p-3.5 rounded-xl bg-surface border border-line">
               <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">License No.</span>
