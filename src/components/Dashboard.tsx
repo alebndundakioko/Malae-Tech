@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { Report } from '../types';
 import { auth } from '../firebase';
+import { LegalAndComplianceModal, LegalTab } from './LegalAndComplianceModal';
 
 interface DashboardProps {
   reports: Report[];
@@ -44,6 +45,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [filter, setFilter] = useState<'all' | 'recent' | 'finalized' | 'shared'>('all');
   const [inviteEmail, setInviteEmail] = useState('');
   const [selectedReportForInvite, setSelectedReportForInvite] = useState<string | null>(null);
+
+  // Legal modal state for compliance
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalTab, setLegalTab] = useState<LegalTab>('disclaimer');
 
   const filteredReports = useMemo(() => {
     return reports.filter(report => {
@@ -435,6 +440,49 @@ export const Dashboard: React.FC<DashboardProps> = ({
           );
         })()}
       </AnimatePresence>
+
+      {/* Google Play Compliance Footer */}
+      <footer className="mt-16 pt-8 pb-6 border-t border-line/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+          <span>Malae Tech Clinical Workspace • Professional Edition</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-[11px]">
+          <button
+            type="button"
+            id="dashboard-open-disclaimer-btn"
+            onClick={() => { setLegalTab('disclaimer'); setShowLegalModal(true); }}
+            className="hover:text-primary transition-colors underline underline-offset-2"
+          >
+            Medical Disclaimer
+          </button>
+          <span>•</span>
+          <button
+            type="button"
+            id="dashboard-open-privacy-btn"
+            onClick={() => { setLegalTab('privacy'); setShowLegalModal(true); }}
+            className="hover:text-primary transition-colors underline underline-offset-2"
+          >
+            Privacy Policy
+          </button>
+          <span>•</span>
+          <button
+            type="button"
+            id="dashboard-open-terms-btn"
+            onClick={() => { setLegalTab('terms'); setShowLegalModal(true); }}
+            className="hover:text-primary transition-colors underline underline-offset-2"
+          >
+            Terms of Service
+          </button>
+        </div>
+      </footer>
+
+      {/* Compliance & Legal Modal */}
+      <LegalAndComplianceModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        defaultTab={legalTab}
+      />
     </div>
   );
 };

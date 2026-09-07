@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { Loader } from './Loader';
 import { Capacitor } from '@capacitor/core';
+import { LegalAndComplianceModal, LegalTab } from './LegalAndComplianceModal';
 
 interface AuthProps {
   onSuccess: () => void;
@@ -87,6 +88,10 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Legal & Google Play compliance modal state
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalTab, setLegalTab] = useState<LegalTab>('disclaimer');
 
   // signupStep: 1 = Credentials, 2 = Doctor Details, 3 = Medical ID Upload, 4 = Confirmation
   const [signupStep, setSignupStep] = useState(1);
@@ -758,7 +763,7 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
                             ? 'Step 2 of 3: Provide your official medical licensing information.' 
                             : (signupStep === 3 
                                 ? 'Step 3 of 3: Upload your medical ID to verify doctor status with our team.' 
-                                : 'Your application has been received by our clinical review board.')))}
+                                : 'Your application has been received by our clinical review board.'))))}
             </p>
 
             {/* Step Progress Bar for Google Student Verification */}
@@ -1567,11 +1572,48 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
                     {isLogin ? 'Register & Verify Medical ID' : 'Sign in here'}
                   </button>
                 </p>
+
+                {/* Google Play Compliance & Disclaimers Footer */}
+                <div className="mt-8 pt-4 border-t border-line/60 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[11px] text-text-muted">
+                  <button 
+                    type="button" 
+                    id="auth-open-disclaimer-btn"
+                    onClick={() => { setLegalTab('disclaimer'); setShowLegalModal(true); }}
+                    className="hover:text-primary transition-colors underline underline-offset-2"
+                  >
+                    Medical Disclaimer
+                  </button>
+                  <span aria-hidden="true">•</span>
+                  <button 
+                    type="button" 
+                    id="auth-open-privacy-btn"
+                    onClick={() => { setLegalTab('privacy'); setShowLegalModal(true); }}
+                    className="hover:text-primary transition-colors underline underline-offset-2"
+                  >
+                    Privacy Policy
+                  </button>
+                  <span aria-hidden="true">•</span>
+                  <button 
+                    type="button" 
+                    id="auth-open-terms-btn"
+                    onClick={() => { setLegalTab('terms'); setShowLegalModal(true); }}
+                    className="hover:text-primary transition-colors underline underline-offset-2"
+                  >
+                    Terms of Service
+                  </button>
+                </div>
               </>
             )}
           </div>
         </motion.div>
       </div>
+
+      {/* Legal & Compliance Modal */}
+      <LegalAndComplianceModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        defaultTab={legalTab}
+      />
     </div>
   );
 };

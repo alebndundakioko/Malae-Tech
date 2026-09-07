@@ -60,6 +60,8 @@ import {
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser, getRedirectResult } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { StatusBar, Style as StatusBarStyle } from '@capacitor/status-bar';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { 
@@ -1094,6 +1096,43 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [generationStatus, setGenerationStatus] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Native Android Status Bar configuration
+    if (Capacitor.isNativePlatform()) {
+      try {
+        StatusBar.setStyle({ style: StatusBarStyle.Dark });
+        StatusBar.setBackgroundColor({ color: '#FAF7F2' });
+      } catch (err) {
+        console.warn('Native status bar setup skipped:', err);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Native Android Hardware Back Button listener
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listener = CapacitorApp.addListener('backButton', () => {
+      if (isMobileSidebarOpen) {
+        setIsMobileSidebarOpen(false);
+      } else if (showReportModal) {
+        setShowReportModal(false);
+      } else if (showConfirmModal.show) {
+        setShowConfirmModal({ show: false, title: '', message: '', onConfirm: () => {} });
+      } else if (showSkipExamModal) {
+        setShowSkipExamModal(false);
+      } else if (view !== 'dashboard') {
+        setView('dashboard');
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      listener.then(l => l.remove()).catch(() => {});
+    };
+  }, [isMobileSidebarOpen, showReportModal, showConfirmModal.show, showSkipExamModal, view]);
 
   useEffect(() => {
     async function testConnection() {
@@ -3847,7 +3886,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden relative">
         {/* Mobile Header */}
-        <header className="md:hidden h-16 bg-surface border-b border-line px-6 flex items-center justify-between sticky top-0 z-50">
+        <header className="md:hidden min-h-16 pt-safe bg-surface border-b border-line px-6 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}

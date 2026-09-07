@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
-import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { motion } from 'framer-motion';
+import { updateProfile, deleteUser, signOut } from 'firebase/auth';
+import { doc, getDoc, updateDoc, serverTimestamp, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
   Building2, 
@@ -18,10 +18,15 @@ import {
   FileUp,
   Award,
   Stethoscope,
-  X
+  X,
+  Trash2,
+  Lock,
+  AlertTriangle,
+  Scale
 } from 'lucide-react';
 import { Loader } from './Loader';
 import { Capacitor } from '@capacitor/core';
+import { LegalAndComplianceModal, LegalTab } from './LegalAndComplianceModal';
 
 interface ProfileProps {
   onBack: () => void;
@@ -50,6 +55,79 @@ export const Profile = ({ onBack }: ProfileProps) => {
   // New file upload state for updating ID
   const [newFile, setNewFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Legal & Compliance Modal State (Google Play health compliance)
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalDefaultTab, setLegalDefaultTab] = useState<LegalTab>('disclaimer');
+
+  // Account Deletion & Data Purge (Google Play User Data requirement)
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const openLegalModal = (tab: LegalTab) => {
+    setLegalDefaultTab(tab);
+    setLegalModalOpen(true);
+  };
+
+  const handlePermanentAccountDeletion = async () => {
+    if (!currentUser) return;
+    if (deleteConfirmationInput.trim().toUpperCase() !== 'DELETE') {
+      setDeleteError("Please type 'DELETE' to confirm.");
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      // 1. Delete all user reports
+      try {
+        const q = query(collection(db, 'reports'), where('userId', '==', currentUser.uid));
+        const reportsSnapshot = await getDocs(q);
+        const deletePromises = reportsSnapshot.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(deletePromises);
+      } catch (err) {
+        console.warn("Notice: could not delete some reports:", err);
+      }
+
+      // 2. Delete verification requests if any
+      try {
+        const vq = query(collection(db, 'verificationRequests'), where('userId', '==', currentUser.uid));
+        const vqSnapshot = await getDocs(vq);
+        const vqPromises = vqSnapshot.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(vqPromises);
+      } catch (err) {
+        console.warn("Notice: could not delete verification requests:", err);
+      }
+
+      // 3. Delete user document from Firestore
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid));
+      } catch (err) {
+        console.warn("Notice: could not delete user document:", err);
+      }
+
+      // 4. Delete user from Firebase Auth
+      await deleteUser(currentUser);
+
+      // 5. Clean local state
+      localStorage.removeItem('malae_form_data');
+      localStorage.removeItem('malae_api_url');
+
+      // Reload window to reset auth state cleanly
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Account deletion failed:", err);
+      if (err.code === 'auth/requires-recent-login') {
+        setDeleteError("Security notice: Deleting your account requires recent authentication. Please sign out, sign in again, and retry account deletion.");
+      } else {
+        setDeleteError(err.message || "Failed to complete account deletion.");
+      }
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -464,6 +542,185 @@ export const Profile = ({ onBack }: ProfileProps) => {
           </div>
         </form>
       </div>
+
+      {/* Google Play Store Compliance & Legal Documentation */}
+      <div className="mt-8 p-6 rounded-2xl bg-surface border border-line space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-text-main">App Compliance & Policies</h3>
+              <p className="text-[11px] text-text-muted">Google Play Developer Policy & Medical Regulatory Disclosures</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+            <button
+              type="button"
+              id="profile-open-disclaimer-btn"
+              onClick={() => openLegalModal('disclaimer')}
+              className="p-3 rounded-xl bg-bg/80 border border-line text-left hover:border-primary hover:bg-surface transition-all group"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-text-main group-hover:text-primary transition-colors flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                  Medical Disclaimer
+                </span>
+              </div>
+              <p className="text-[10px] text-text-muted">Clinical use & diagnostic limitations notice</p>
+            </button>
+
+            <button
+              type="button"
+              id="profile-open-privacy-btn"
+              onClick={() => openLegalModal('privacy')}
+              className="p-3 rounded-xl bg-bg/80 border border-line text-left hover:border-primary hover:bg-surface transition-all group"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-text-main group-hover:text-primary transition-colors flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-blue-600" />
+                  Privacy Policy
+                </span>
+              </div>
+              <p className="text-[10px] text-text-muted">Data safety, encryption & user rights</p>
+            </button>
+
+            <button
+              type="button"
+              id="profile-open-terms-btn"
+              onClick={() => openLegalModal('terms')}
+              className="p-3 rounded-xl bg-bg/80 border border-line text-left hover:border-primary hover:bg-surface transition-all group"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-text-main group-hover:text-primary transition-colors flex items-center gap-1.5">
+                  <Scale className="w-3.5 h-3.5 text-primary" />
+                  Terms of Service
+                </span>
+              </div>
+              <p className="text-[10px] text-text-muted">Platform usage agreement & clinical terms</p>
+            </button>
+          </div>
+        </div>
+
+        {/* Google Play Required: In-App Account Deletion */}
+        <div className="mt-8 p-6 rounded-2xl bg-red-50/60 border border-red-200/60 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+              <Trash2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-red-900">Account Management & Data Deletion</h3>
+              <p className="text-[11px] text-red-700/80">Google Play Store User Data Compliance Requirement</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-red-800/90 leading-relaxed">
+            In compliance with Google Play Developer policies, you have the right to permanently purge your account, profile, clinical documents, and medical verification credentials from our servers at any time.
+          </p>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              id="open-delete-account-modal-btn"
+              onClick={() => {
+                setDeleteConfirmationInput('');
+                setDeleteError(null);
+                setShowDeleteModal(true);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Account & Purge Data</span>
+            </button>
+          </div>
+        </div>
+
+      {/* Legal & Compliance Modal */}
+      <LegalAndComplianceModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        defaultTab={legalDefaultTab}
+      />
+
+      {/* Account Deletion Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div 
+            id="delete-account-modal-backdrop" 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-surface rounded-2xl border border-line shadow-2xl w-full max-w-md p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3 text-red-600">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-text-main">Permanently Delete Account?</h3>
+                  <p className="text-xs text-red-600 font-medium">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <div className="text-xs text-text-muted space-y-2 leading-relaxed bg-red-50/50 p-3.5 rounded-xl border border-red-100">
+                <p>Deleting your account will permanently purge:</p>
+                <ul className="list-disc pl-5 space-y-1 text-red-900 font-medium">
+                  <li>Your user profile and registered credentials</li>
+                  <li>All saved clinical case reports and presentations</li>
+                  <li>Submitted medical student/license verification records</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-text-main block">
+                  To confirm, please type <span className="font-mono text-red-600 font-black">DELETE</span> below:
+                </label>
+                <input
+                  id="confirm-delete-account-input"
+                  type="text"
+                  value={deleteConfirmationInput}
+                  onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-text-main font-mono text-sm focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              {deleteError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  id="cancel-delete-account-btn"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-text-muted hover:text-text-main transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  id="confirm-permanent-delete-btn"
+                  onClick={handlePermanentAccountDeletion}
+                  disabled={isDeleting || deleteConfirmationInput.trim().toUpperCase() !== 'DELETE'}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isDeleting ? <Loader /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>{isDeleting ? 'Deleting...' : 'Permanently Delete'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
