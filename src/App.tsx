@@ -1181,7 +1181,7 @@ export default function App() {
           await setDoc(userRef, {
             lastLogin: serverTimestamp(),
             ...(currentUser.displayName ? { displayName: currentUser.displayName } : {})
-          }, { merge: true });
+          }, { merge: true }).catch((err) => console.warn("Background lastLogin sync notice:", err));
         }
       } catch (profileErr) {
         console.warn("Practitioner profile sync notice (non-blocking):", profileErr);
@@ -1195,7 +1195,7 @@ export default function App() {
     const initAuth = async () => {
       try {
         console.log("Checking Google sign-in redirect result...");
-        const redirectRes = await getRedirectResult(auth);
+        const redirectRes = await getRedirectResult(auth).catch(() => null);
         if (redirectRes && redirectRes.user && isMounted) {
           console.log("Successfully retrieved user from Google redirect:", redirectRes.user.email);
           setUser(redirectRes.user);
@@ -1208,28 +1208,36 @@ export default function App() {
       }
 
       // Listen for auth state changes
-      authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        if (!isMounted) return;
-        setUser(currentUser);
+      try {
+        authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+          if (!isMounted) return;
+          setUser(currentUser);
 
-        if (currentUser) {
-          await checkUserVerificationState(currentUser);
-        } else {
-          setNeedsVerificationOnboarding(false);
-          setUserProfileData(null);
-        }
-        setAuthLoading(false);
-      });
+          if (currentUser) {
+            await checkUserVerificationState(currentUser);
+          } else {
+            setNeedsVerificationOnboarding(false);
+            setUserProfileData(null);
+          }
+          setAuthLoading(false);
+        }, (authError) => {
+          console.warn("Auth state observer warning:", authError);
+          if (isMounted) setAuthLoading(false);
+        });
+      } catch (subErr) {
+        console.warn("Failed to attach auth state observer:", subErr);
+        if (isMounted) setAuthLoading(false);
+      }
     };
 
     initAuth();
 
-    // Safety timeout: Ensure preview never remains stuck on loader
+    // Safety timeout: Ensure preview and app never remain stuck on loader under cold start/offline
     const authTimeout = setTimeout(() => {
       if (isMounted) {
         setAuthLoading(false);
       }
-    }, 3500);
+    }, 2500);
 
     return () => {
       isMounted = false;
@@ -1280,7 +1288,13 @@ export default function App() {
         })) as Report[];
         setReports(reportsData);
       }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'reports');
+        console.warn("Reports snapshot notice (handled gracefully):", error);
+        // Record error details for diagnostics without throwing unhandled rejection that crashes React root
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'reports');
+        } catch (diagErr) {
+          console.warn("Diagnosed firestore error:", diagErr);
+        }
       });
 
       if (user.email) {

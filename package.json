@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build:client": "vite build",
     "start": "node dist/server.cjs",
     "pwa:build": "npm run build && node -e \"const fs = require('fs'); if (fs.existsSync('dist/manifest.webmanifest')) { fs.copyFileSync('dist/manifest.webmanifest', 'dist/manifest.json'); console.log('Manifest copied to dist/manifest.json'); }\"",
     "clean": "rm -rf dist",
