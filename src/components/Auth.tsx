@@ -891,22 +891,9 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
                         required
                         value={studentMedicalSchool}
                         onChange={(e) => setStudentMedicalSchool(e.target.value)}
-                        placeholder="e.g. Makerere University College of Health Sciences"
+                        placeholder="e.g. University School of Medicine / Teaching Hospital"
                         className="w-full px-3.5 py-2.5 bg-bg border border-line rounded-xl text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-text-muted/60"
                       />
-                      {/* Suggestion Chips */}
-                      <div className="flex flex-wrap gap-1 pt-0.5">
-                        {['Makerere CHS', 'Mbarara (MUST)', 'KIU Western', 'Gulu Med', 'UCU Medicine'].map((school) => (
-                          <button
-                            type="button"
-                            key={school}
-                            onClick={() => setStudentMedicalSchool(school)}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-bg border border-line hover:border-primary hover:text-primary transition-colors text-text-muted"
-                          >
-                            + {school}
-                          </button>
-                        ))}
-                      </div>
                     </div>
 
                     {/* Student ID / Registration Number */}
@@ -1299,7 +1286,7 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
                               value={displayName}
                               onChange={(e) => setDisplayName(e.target.value)}
                               className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-line bg-white text-sm sm:text-base text-text-main focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-text-muted/50"
-                              placeholder="e.g. Dr. Samantha Ainembabazi"
+                              placeholder="e.g. Dr. Jane Smith"
                             />
                           </div>
                         </div>
@@ -1358,7 +1345,7 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
                               value={hospital}
                               onChange={(e) => setHospital(e.target.value)}
                               className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-line bg-white text-sm sm:text-base text-text-main focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-text-muted/50"
-                              placeholder="e.g. Mengo Hospital / Mulago NRH"
+                              placeholder="e.g. General Hospital / Academic Medical Center"
                             />
                           </div>
                         </div>
@@ -1374,7 +1361,7 @@ export const Auth = ({ onSuccess, onUserAuthenticated, initialGoogleUser }: Auth
                               value={licenseNumber}
                               onChange={(e) => setLicenseNumber(e.target.value)}
                               className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-line bg-white text-sm sm:text-base text-text-main focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-text-muted/50"
-                              placeholder="e.g. UMDPC-49201 or Practitioner Reg #"
+                              placeholder="e.g. Practitioner License / Medical Council ID"
                             />
                           </div>
                         </div>

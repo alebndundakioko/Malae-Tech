@@ -34,15 +34,15 @@ interface ProfileProps {
 
 export const Profile = ({ onBack }: ProfileProps) => {
   const currentUser = auth.currentUser;
-  const [displayName, setDisplayName] = useState(currentUser?.displayName || 'Dr. Samantha Ainembabazi');
-  const [hospital, setHospital] = useState('Mengo Hospital');
+  const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
+  const [hospital, setHospital] = useState('');
   const [medicalCadre, setMedicalCadre] = useState('Medical Doctor (MBChB / MBBS / MD)');
   const [specialty, setSpecialty] = useState('Internal Medicine');
-  const [licenseNumber, setLicenseNumber] = useState('UMDPC-49201');
-  const [issuingCouncil, setIssuingCouncil] = useState('Uganda Medical & Dental Practitioners Council (UMDPC)');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [issuingCouncil, setIssuingCouncil] = useState('Medical & Dental Practitioners Council');
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'rejected'>('pending');
-  const [verificationRef, setVerificationRef] = useState<string>('MED-VERIF-7A89F2');
-  const [medicalIdFileName, setMedicalIdFileName] = useState<string>('medical_practicing_license.pdf');
+  const [verificationRef, setVerificationRef] = useState<string>('');
+  const [medicalIdFileName, setMedicalIdFileName] = useState<string>('');
 
   const [apiUrl, setApiUrl] = useState(() => {
     return localStorage.getItem('malae_api_url') || 'https://ais-pre-uyd6ehinkvjd3dd3ytwd53-33678728397.europe-west1.run.app';
@@ -153,7 +153,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
           if (data.medicalIdFileName) setMedicalIdFileName(data.medicalIdFileName);
         }
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.GET, path);
+        console.warn("Profile fetch notice:", err);
         setError("Failed to load profile data.");
       } finally {
         setLoading(false);
@@ -419,7 +419,7 @@ export const Profile = ({ onBack }: ProfileProps) => {
                   value={hospital}
                   onChange={(e) => setHospital(e.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-line bg-surface text-text-main focus:outline-none focus:border-primary transition-all text-sm font-medium"
-                  placeholder="Mengo Hospital"
+                  placeholder="e.g. University Hospital / Medical Center"
                 />
               </div>
             </div>

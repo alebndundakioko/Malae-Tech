@@ -579,7 +579,7 @@ const getCaseWriteUpPrompt = (formData: any) => {
   `.trim();
 
   return `
-    You are an elite Senior Clinical Consultant and a medical educator at a leading Commonwealth teaching hospital (such as Mengo Hospital or Mulago Hospital).
+    You are an elite Senior Clinical Consultant and medical educator at a leading academic teaching hospital.
     Your task is to synthesize an exceptionally high-quality, comprehensive, and detailed academic clinical case write-up based on the raw records provided.
     
     CRITICAL TONE & ANTI-AI PHRASING MANDATES:
@@ -748,7 +748,7 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
     {/* Page 1: Cover Page */}
     <Page size="A4" style={pdfStyles.page}>
       <View style={pdfStyles.coverPage}>
-        <Text style={{ fontSize: 13, color: '#475569', fontWeight: 'bold', marginBottom: 5, letterSpacing: 2, textTransform: 'uppercase' }}>UCU SCHOOL OF MEDICINE / MENGO HOSPITAL</Text>
+        <Text style={{ fontSize: 13, color: '#475569', fontWeight: 'bold', marginBottom: 5, letterSpacing: 2, textTransform: 'uppercase' }}>{formData.hospital ? formData.hospital.toUpperCase() : 'CLINICAL CASE WRITE-UP & RESEARCH WORKSPACE'}</Text>
         <Text style={{ fontSize: 9, color: '#94A3B8', marginBottom: 25, letterSpacing: 1, textTransform: 'uppercase' }}>Academic Clinical Case Workspace</Text>
         <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#1E293B' }}>{getInitials(formData.fullName)}</Text>
         <Text style={{ fontSize: 11, color: '#D4A5A5', marginBottom: 35, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 'bold' }}>{formData.specialty || 'General Clinical'} Case Write-Up</Text>
@@ -769,8 +769,8 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
         <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 6, color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 }}>Clinical Demographics Matrix</Text>
         <View style={{ flexWrap: 'wrap', flexDirection: 'row' }}>
           {[
-            { label: 'Institution', value: 'UCU School of Medicine / Mengo Hospital' },
-            { label: 'Attending Clinician', value: 'Samantha Ainembabazi, MBChB Candidate' },
+            { label: 'Institution', value: formData.hospital || 'Clinical Department' },
+            { label: 'Attending Clinician', value: formData.clinicianName || (auth.currentUser?.displayName || 'Attending Clinician') },
             { label: 'Registration No', value: formData.registrationNo },
             { label: 'Ward / Bedspace', value: formData.ward ? `${formData.ward}${formData.bed ? ` / ${formData.bed}` : ''}` : formData.bed },
             { label: 'Date of Admission', value: formData.admissionDate },
@@ -828,7 +828,7 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
       <Text style={pdfStyles.paragraph}>{storyData.fshNarrative}</Text>
 
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>UCU / Mengo Hospital - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText}>Malae Clinical Workspace - Confidential Medical Report</Text>
         <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
@@ -873,7 +873,7 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
       ))}
 
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>UCU / Mengo Hospital - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText}>Malae Clinical Workspace - Confidential Medical Report</Text>
         <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
@@ -898,7 +898,7 @@ const ClinicalCaseStoryPDF = ({ formData, storyData, title }: { formData: any, s
       ))}
 
       <View style={pdfStyles.footer}>
-        <Text style={pdfStyles.footerText}>UCU / Mengo Hospital - Confidential Academic Report</Text>
+        <Text style={pdfStyles.footerText}>Malae Clinical Workspace - Confidential Medical Report</Text>
         <Text style={pdfStyles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
       </View>
     </Page>
@@ -1002,12 +1002,20 @@ export default function App() {
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<any>(() => {
-    const saved = localStorage.getItem('malae_form_data');
-    return saved ? JSON.parse(saved) : {
-      admissionDate: new Date().toISOString().split('T')[0],
-      specialty: 'Internal Medicine',
-      address: 'Kampala',
-    };
+    try {
+      const saved = localStorage.getItem('malae_form_data');
+      return saved ? JSON.parse(saved) : {
+        admissionDate: new Date().toISOString().split('T')[0],
+        specialty: 'Internal Medicine',
+        address: '',
+      };
+    } catch {
+      return {
+        admissionDate: new Date().toISOString().split('T')[0],
+        specialty: 'Internal Medicine',
+        address: '',
+      };
+    }
   });
 
   const activeSteps = useMemo(() => {
@@ -1135,17 +1143,6 @@ export default function App() {
   }, [isMobileSidebarOpen, showReportModal, showConfirmModal.show, showSkipExamModal, view]);
 
   useEffect(() => {
-    async function testConnection() {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        if(error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration. The client is offline.");
-        }
-      }
-    }
-    testConnection();
-
     // Check user profile in Firestore (enforces student verification for new sign-ups)
     const checkUserVerificationState = async (currentUser: FirebaseUser) => {
       if (!currentUser || !currentUser.email) return;
@@ -1191,53 +1188,48 @@ export default function App() {
     let isMounted = true;
     let authUnsubscribe: (() => void) | undefined;
 
-    // First check if coming back from a Google sign-in redirect
-    const initAuth = async () => {
-      try {
-        console.log("Checking Google sign-in redirect result...");
-        const redirectRes = await getRedirectResult(auth).catch(() => null);
+    // Attach auth state changes listener immediately without waiting on network
+    try {
+      authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        if (!isMounted) return;
+        setUser(currentUser);
+
+        if (currentUser) {
+          await checkUserVerificationState(currentUser);
+        } else {
+          setNeedsVerificationOnboarding(false);
+          setUserProfileData(null);
+        }
+        setAuthLoading(false);
+      }, (authError) => {
+        console.warn("Auth state observer warning:", authError);
+        if (isMounted) setAuthLoading(false);
+      });
+    } catch (subErr) {
+      console.warn("Failed to attach auth state observer:", subErr);
+      if (isMounted) setAuthLoading(false);
+    }
+
+    // Check redirect result in background without blocking initial UI
+    getRedirectResult(auth)
+      .then(async (redirectRes) => {
         if (redirectRes && redirectRes.user && isMounted) {
           console.log("Successfully retrieved user from Google redirect:", redirectRes.user.email);
           setUser(redirectRes.user);
           await checkUserVerificationState(redirectRes.user);
           setAuthLoading(false);
-          return;
         }
-      } catch (redirectErr: any) {
+      })
+      .catch((redirectErr) => {
         console.warn("Redirect check completed:", redirectErr?.message || redirectErr);
-      }
-
-      // Listen for auth state changes
-      try {
-        authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-          if (!isMounted) return;
-          setUser(currentUser);
-
-          if (currentUser) {
-            await checkUserVerificationState(currentUser);
-          } else {
-            setNeedsVerificationOnboarding(false);
-            setUserProfileData(null);
-          }
-          setAuthLoading(false);
-        }, (authError) => {
-          console.warn("Auth state observer warning:", authError);
-          if (isMounted) setAuthLoading(false);
-        });
-      } catch (subErr) {
-        console.warn("Failed to attach auth state observer:", subErr);
-        if (isMounted) setAuthLoading(false);
-      }
-    };
-
-    initAuth();
+      });
 
     // Safety timeout: Ensure preview and app never remain stuck on loader under cold start/offline
     const authTimeout = setTimeout(() => {
       if (isMounted) {
         setAuthLoading(false);
       }
-    }, 2500);
+    }, 1200);
 
     return () => {
       isMounted = false;
@@ -2525,13 +2517,13 @@ export default function App() {
                           />
                           <InputField 
                             label="Tribe / Ethnicity" 
-                            placeholder="e.g., Mutooro, Munyankole" 
+                            placeholder="e.g., Demographic / Cultural background" 
                             value={formData.ethnicity} 
                             onChange={(v: any) => updateField('ethnicity', v)} 
                           />
                           <InputField 
                             label="Address" 
-                            placeholder="e.g., Makindye, Kampala" 
+                            placeholder="e.g., City, District / Residence" 
                             value={formData.address} 
                             onChange={(v: any) => updateField('address', v)} 
                           />
